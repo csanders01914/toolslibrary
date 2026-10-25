@@ -1,0 +1,46 @@
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
+import { z } from "zod";
+
+const credentialsSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
+
+// Full config with Prisma for API route handlers (Node.js runtime)
+export const { handlers, signIn, signOut } = NextAuth({
+  ...authConfig,
+  providers: [
+    ...authConfig.providers,
+    {
+      ...authConfig.providers[0],
+      async authorize(credentials) {
+        // Dynamic import to avoid bundling Prisma in edge runtime
+        const { prisma } = await import("@/lib/db");
+        const bcrypt = (await import("bcryptjs")).default;
+
+        const parsed = credentialsSchema.safeParse(credentials);
+        if (!parsed.success) return null;
+
+        const { username, password } = parsed.data;
+        const user = await prisma.user.findUnique({
+          where: { username },
+        });
+        if (!user) return null;
+
+        const isValid = await bcrypt.compare(password, user.passwordHash);
+        if (!isValid) return null;
+
+        return {
+          id: user.id,
+          username: user.username,
+          alias: user.alias,
+          role: user.role,
+        };
+      },
+    },
+  ],
+});
+
+// Re-export auth from auth.config for middleware
+export { auth } from "./auth.config";
