@@ -1,5 +1,7 @@
 import './globals.css';
 import type { ReactNode } from 'react';
+import { SessionProvider } from 'next-auth/react';
+import { Navbar } from '@/components/layout/Navbar';
 
 export const metadata = {
   title: 'Tool Library — Community Tool Sharing',
@@ -33,16 +35,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className="min-h-screen">
-        <a href="#main-content" className="sr-only focus:not-sr-only bg-cyan-400 text-slate-950 px-4 py-2 rounded">
-          Skip to main content
-        </a>
-        <div className="fixed -top-40 -left-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-[128px] pointer-events-none" />
-        <div className="fixed top-20 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[128px] pointer-events-none" />
-        <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] pointer-events-none" />
-        <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-          {children}
-        </main>
+      <body className="min-h-screen flex flex-col">
+        <SessionProvider>
+          <a href="#main-content" className="sr-only focus:not-sr-only bg-cyan-400 text-slate-950 px-4 py-2 rounded">
+            Skip to main content
+          </a>
+          <Navbar />
+          <div className="fixed -top-40 -left-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-[128px] pointer-events-none" />
+          <div className="fixed top-20 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[128px] pointer-events-none" />
+          <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] pointer-events-none" />
+          <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 flex-1">
+            {children}
+          </main>
+        </SessionProvider>
       </body>
     </html>
   );
