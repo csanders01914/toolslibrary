@@ -10,3 +10,12 @@ export const CATEGORIES = [
   "Safety Equipment",
   "Other",
 ];
+
+export const SKILL_CATEGORIES = [
+  "Repair & Maintenance",
+  "Carpentry",
+  "Gardening & Homestead",
+  "Electronics & Soldering",
+  "Software & Linux",
+  "Fabrication",
+];
