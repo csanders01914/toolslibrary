@@ -8,10 +8,11 @@ const credentialsSchema = z.object({
 });
 
 // Full config with Prisma for API route handlers (Node.js runtime)
+// NOTE: The credentials provider is REPLACED (not appended) so there is exactly
+// one provider with id "credentials" — a duplicate id would shadow authorize.
 export const { handlers, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
-    ...authConfig.providers,
     {
       ...authConfig.providers[0],
       async authorize(credentials) {
@@ -31,11 +32,15 @@ export const { handlers, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
+        // Banned accounts (admin or human-approved agent ban) cannot authenticate.
+        if (user.banned) return null;
+
         return {
           id: user.id,
           username: user.username,
           alias: user.alias,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     },

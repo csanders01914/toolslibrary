@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Hammer, X, Check, Loader2, Image, AlertTriangle } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 const CATEGORIES = [
   "Power Tools",
@@ -39,16 +39,14 @@ export default function NewToolPage() {
 
   if (!session) {
     return (
-      <div className="text-center py-16 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl">
-        <Hammer className="w-16 h-16 mx-auto text-slate-600 mb-4" aria-hidden="true" />
+      <div className="text-center py-16 bg-[#0a0a0a] border border-zinc-800">
         <h2 className="text-2xl font-bold text-white mb-2">Authentication Required</h2>
-        <p className="text-slate-400 mb-6">Please sign in to lend a tool to the community.</p>
+        <p className="text-zinc-400 mb-6">Please sign in to lend a tool to the community.</p>
         <a
           href="/login"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all duration-200"
+          className="inline-block font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
         >
-          <Hammer className="w-4 h-4" aria-hidden="true" />
-          Sign In to Lend
+          SIGN IN TO LEND
         </a>
       </div>
     );
@@ -133,29 +131,27 @@ export default function NewToolPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <Hammer className="w-16 h-16 mx-auto text-cyan-400 mb-4" aria-hidden="true" />
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-purple-400 bg-clip-text text-transparent">
-          Lend a Tool
-        </h1>
-        <p className="mt-3 text-slate-400 max-w-xl mx-auto">
-          Share your tools with the community. List what you have, set your terms, and help neighbors complete their projects.
+      <div>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 mb-3">NEW LISTING</p>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">Lend a Tool</h1>
+        <p className="mt-3 text-zinc-400 max-w-xl">
+          Share your tools with the community. List what you have, set your terms, and help neighbors
+          complete their projects.
         </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <p>{error}</p>
+          <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs" role="alert">
+            {error}
           </div>
         )}
 
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-            Tool Name <span className="text-rose-400">*</span>
+          <label htmlFor="name" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            TOOL NAME <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
@@ -166,14 +162,14 @@ export default function NewToolPage() {
             placeholder="e.g., DeWalt 20V Max Cordless Drill"
             maxLength={100}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
           />
         </div>
 
         {/* Category */}
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-slate-300 mb-2">
-            Category <span className="text-rose-400">*</span>
+          <label htmlFor="category" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            CATEGORY <span className="text-red-400">*</span>
           </label>
           <select
             id="category"
@@ -181,7 +177,7 @@ export default function NewToolPage() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all cursor-pointer"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
           >
             <option value="">Select a category</option>
             {CATEGORIES.map((cat) => (
@@ -194,8 +190,8 @@ export default function NewToolPage() {
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-slate-300 mb-2">
-            Description <span className="text-rose-400">*</span>
+          <label htmlFor="description" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            DESCRIPTION <span className="text-red-400">*</span>
           </label>
           <textarea
             id="description"
@@ -206,59 +202,45 @@ export default function NewToolPage() {
             rows={6}
             maxLength={2000}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-y min-h-[120px]"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-y min-h-[120px]"
           />
-          <p className="mt-1 text-xs text-slate-500 text-right">
+          <p className="mt-1 font-mono text-[11px] text-zinc-500 text-right">
             {description.length}/2000 characters (minimum 10)
           </p>
         </div>
 
         {/* Image Upload */}
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Tool Photo (Optional, max 5MB)
-          </label>
-          <div className="relative">
-            <div
-              className={`relative aspect-video rounded-xl border-2 border-dashed transition-all ${
-                imagePreview
-                  ? "border-cyan-500/50 bg-slate-900/50"
-                  : "border-white/10 hover:border-cyan-500/30 bg-slate-950/50"
-              }`}
-              onClick={() => !imagePreview && document.getElementById("image-upload")?.click()}
-            >
-              {imagePreview ? (
-                <>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover rounded-xl"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); removeImage(); }}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 transition-colors"
-                    aria-label="Remove image"
-                  >
-                    <X className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
-                  <Image className="w-12 h-12 text-slate-500 mb-3" aria-hidden="true" />
-                  <p className="text-slate-400">Click to upload or drag & drop</p>
-                  <p className="text-xs text-slate-600 mt-1">JPEG, PNG, GIF, WebP · Max 5MB</p>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleImageChange}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    aria-label="Upload tool photo"
-                  />
-                </div>
-              )}
-            </div>
+          <span className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            TOOL PHOTO (OPTIONAL, MAX 5MB)
+          </span>
+          <div className="relative border border-zinc-800 bg-black">
+            {imagePreview ? (
+              <div className="relative">
+                <img src={imagePreview} alt="Preview" className="w-full h-auto object-contain max-h-64" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 p-2 bg-black border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                  aria-label="Remove image"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative w-full h-40 flex flex-col items-center justify-center text-center">
+                <p className="font-mono text-xs text-zinc-400">CLICK TO UPLOAD</p>
+                <p className="font-mono text-[11px] text-zinc-600 mt-1">JPEG, PNG, GIF, WebP · MAX 5MB</p>
+                <input
+                  id="image-upload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  aria-label="Upload tool photo"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -267,32 +249,29 @@ export default function NewToolPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 px-6 py-3 rounded-xl font-medium text-sm bg-slate-800/50 border border-white/10 hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200"
+            className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
           >
-            Cancel
+            CANCEL
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                Creating Listing...
+                CREATING LISTING...
               </>
             ) : (
-              <>
-                <Check className="w-4 h-4" aria-hidden="true" />
-                Create Listing
-              </>
+              "CREATE LISTING"
             )}
           </button>
         </div>
 
         {/* Privacy Note */}
-        <p className="text-xs text-slate-500 text-center">
-          Zero-PII: Only your public alias and trust score are shown. No email, phone, or location shared.
+        <p className="font-mono text-[11px] text-zinc-500 text-center">
+          ZERO-PII: Only your public alias and trust score are shown. No email, phone, or location shared.
         </p>
       </form>
     </div>

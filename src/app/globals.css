@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-.bg-cypher-grid {
-  background-size: 32px 32px;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+/* Terminal canvas: plain near-black. No textures, no gradients, no patterns. */
+.bg-workshop-canvas {
+  background-color: #050505;
 }
 
 .sr-only {
@@ -43,7 +43,7 @@ html[data-contrast="high"] body {
   color: #ffffff !important;
 }
 
-html[data-contrast="high"] .bg-cypher-grid {
+html[data-contrast="high"] .bg-workshop-canvas {
   background-image: none !important;
 }
 

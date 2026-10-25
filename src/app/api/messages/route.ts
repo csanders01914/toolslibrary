@@ -18,7 +18,54 @@ export async function GET(request: NextRequest) {
   const partnerId = searchParams.get("partnerId");
 
   if (!partnerId) {
-    return NextResponse.json({ error: "Partner ID required" }, { status: 400 });
+    // Thread index (messenger widget): one row per conversation partner with
+    // the latest message snippet and the count of unread incoming messages.
+    const recentMessages = await prisma.message.findMany({
+      where: {
+        OR: [{ fromId: session.user.id }, { toId: session.user.id }],
+      },
+      include: {
+        sender: { select: { id: true, alias: true } },
+        receiver: { select: { id: true, alias: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+
+    const threads = new Map<
+      string,
+      {
+        partnerId: string;
+        partnerAlias: string;
+        lastMessage: string;
+        lastMessageAt: Date;
+        unreadCount: number;
+      }
+    >();
+
+    for (const message of recentMessages) {
+      const partner =
+        message.fromId === session.user.id ? message.receiver : message.sender;
+      const isIncoming = message.toId === session.user.id;
+      const existing = threads.get(partner.id);
+      if (!existing) {
+        threads.set(partner.id, {
+          partnerId: partner.id,
+          partnerAlias: partner.alias,
+          lastMessage: message.content,
+          lastMessageAt: message.createdAt,
+          unreadCount: isIncoming && !message.read ? 1 : 0,
+        });
+      } else if (isIncoming && !message.read) {
+        existing.unreadCount += 1;
+      }
+    }
+
+    const threadList = Array.from(threads.values()).sort(
+      (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()
+    );
+
+    return NextResponse.json({ threads: threadList });
   }
 
   const messages = await prisma.message.findMany({

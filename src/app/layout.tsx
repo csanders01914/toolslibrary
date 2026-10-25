@@ -6,15 +6,17 @@ import { Footer } from '@/components/footer/Footer';
 import { AccessibilityProvider } from '@/context/AccessibilityContext';
 import { AccessibilityMenu } from '@/components/a11y/AccessibilityMenu';
 import { ReadingGuide } from '@/components/a11y/ReadingGuide';
+import { MessengerWidget } from '@/components/messenger/MessengerWidget';
 
 export const metadata = {
   title: 'Tool Library — Community Tool Sharing',
   description: 'Zero-PII peer-to-peer tool lending and skills exchange.',
+  icons: { icon: '/icon.png' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="bg-[#05070e] text-slate-100 antialiased bg-cypher-grid relative overflow-x-hidden">
+    <html lang="en" className="bg-workshop-canvas bg-[#050505] text-zinc-100 antialiased relative overflow-x-hidden">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -42,17 +44,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-screen flex flex-col">
         <SessionProvider>
           <AccessibilityProvider>
-            <a href="#main-content" className="sr-only focus:not-sr-only bg-cyan-400 text-slate-950 px-4 py-2 rounded">
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] bg-black text-cyan-400 border border-cyan-500/60 font-mono text-xs uppercase tracking-widest px-4 py-2"
+            >
               Skip to main content
             </a>
             <Navbar />
-            <div className="fixed -top-40 -left-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-[128px] pointer-events-none" />
-            <div className="fixed top-20 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[128px] pointer-events-none" />
-            <div className="fixed -bottom-40 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] pointer-events-none" />
-            <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 flex-1">
+            <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
               {children}
             </main>
             <Footer />
+            <MessengerWidget />
             <AccessibilityMenu />
             <ReadingGuide />
           </AccessibilityProvider>

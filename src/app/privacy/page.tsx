@@ -46,30 +46,31 @@ export default function PrivacyPage() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <section className="text-center py-6">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-semibold mb-6">
-          <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+      <section className="py-6 text-center">
+        <div className="mb-6 inline-flex items-center gap-2 border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           ZERO-PII BY ARCHITECTURE, NOT BY PROMISE
         </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-cyan-200 to-purple-400 bg-clip-text text-transparent">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // PRIVACY</p>
+        <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
           Privacy Policy
         </h1>
-        <p className="mt-4 max-w-2xl mx-auto text-slate-400 text-sm sm:text-base leading-relaxed">
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
           This service is engineered so that it is structurally incapable of surveilling you. There
           is no data broker relationship to disclose, because there is no data to broker.
         </p>
       </section>
 
       {/* What we never collect */}
-      <section className="bg-slate-900/60 backdrop-blur-xl border border-rose-500/20 rounded-2xl p-6 sm:p-8 shadow-xl">
-        <h2 className="text-2xl font-bold text-rose-300 flex items-center gap-3 mb-6">
-          <Ban className="w-6 h-6" aria-hidden="true" />
+      <section className="border border-red-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
+        <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
+          <Ban className="h-5 w-5 text-red-400" aria-hidden="true" />
           What We Never Collect
         </h2>
         <ul className="space-y-3">
           {neverCollected.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-sm text-slate-300">
-              <span className="mt-1 w-2 h-2 rounded-full bg-rose-400 shrink-0" aria-hidden="true" />
+            <li key={item} className="flex items-start gap-3 text-sm text-zinc-400">
+              <span className="mt-1.5 h-2 w-2 shrink-0 bg-red-400" aria-hidden="true" />
               <span>{item}</span>
             </li>
           ))}
@@ -78,32 +79,33 @@ export default function PrivacyPage() {
 
       {/* What is stored */}
       <section>
-        <h2 className="text-2xl font-bold text-cyan-300 flex items-center gap-3 mb-6">
-          <Lock className="w-6 h-6" aria-hidden="true" />
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // DATA INVENTORY</p>
+        <h2 className="mb-6 mt-2 flex items-center gap-3 text-2xl font-bold text-white tracking-tight">
+          <Lock className="h-5 w-5 text-cyan-400" aria-hidden="true" />
           The Complete Inventory of Stored Data
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {whatIsStored.map((item) => (
             <div
               key={item.title}
-              className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_0_30px_-5px_rgba(6,182,212,0.2)]"
+              className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 transition-colors hover:border-zinc-600"
             >
-              <h3 className="font-semibold text-cyan-200 mb-2">{item.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{item.body}</p>
+              <h3 className="mb-2 font-mono text-xs uppercase tracking-widest text-cyan-400">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-zinc-400">{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Infrastructure */}
-      <section className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-xl">
-        <h2 className="text-2xl font-bold text-purple-300 flex items-center gap-3 mb-6">
-          <Server className="w-6 h-6" aria-hidden="true" />
+      <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
+        <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
+          <Server className="h-5 w-5 text-purple-400" aria-hidden="true" />
           Infrastructure & Retention
         </h2>
-        <div className="space-y-4 text-sm text-slate-300 leading-relaxed">
+        <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
           <p className="flex items-start gap-3">
-            <EyeOff className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
             <span>
               The application runs on a self-hosted Fedora CoreOS server inside a rootless Podman
               container. There is no cloud provider account, no managed database service, and no
@@ -111,7 +113,7 @@ export default function PrivacyPage() {
             </span>
           </p>
           <p className="flex items-start gap-3">
-            <FileX className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <FileX className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
             <span>
               All data lives in a single SQLite database file on the host volume. Deleting your
               account removes your user record, recovery keys, tools, skills, and messages via
@@ -127,17 +129,17 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      <p className="text-center text-sm text-slate-500">
+      <p className="text-center font-mono text-xs text-zinc-500">
         Questions about this policy? Read the{" "}
-        <Link href="/transparency" className="text-cyan-300 hover:text-cyan-200 underline underline-offset-4">
+        <Link href="/transparency" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4">
           Transparency Report
         </Link>{" "}
         or reach the collective via{" "}
         <a
-          href="https://matrix.to/#/#tools-library:matrix.org"
+          href="http://matrix.tools-library.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-cyan-300 hover:text-cyan-200 underline underline-offset-4"
+          className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4"
         >
           Matrix Chat
         </a>

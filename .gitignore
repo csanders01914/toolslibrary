@@ -13,3 +13,4 @@ data/uploads/*
 .env.local
 *.tsbuildinfo
 next-env.d.ts
+Recovery

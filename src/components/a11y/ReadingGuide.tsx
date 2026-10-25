@@ -51,7 +51,6 @@ export function ReadingGuide() {
         className="h-[2px] w-full"
         style={{
           background: "#FFE600",
-          boxShadow: "0 0 8px 2px rgba(255, 230, 0, 0.55)",
         }}
       />
     </div>

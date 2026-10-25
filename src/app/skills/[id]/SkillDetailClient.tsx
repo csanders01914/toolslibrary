@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Wrench, Shield, User, Calendar, MessageSquare, X, Check, AlertTriangle, RotateCcw, Trash2, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, MessageSquare, X, AlertTriangle, RotateCcw, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface Skill {
@@ -35,6 +35,11 @@ interface SkillDetailClientProps {
   toggleAvailability: ToggleAvailabilityAction;
   deleteSkill: DeleteSkillAction;
 }
+
+const formatVouch = (trustScore: number) => {
+  const vouch = trustScore - 100;
+  return vouch >= 0 ? `+${vouch}` : `${vouch}`;
+};
 
 export default function SkillDetailClient({ skill, toggleAvailability, deleteSkill }: SkillDetailClientProps) {
   const { data: session, status } = useSession();
@@ -83,35 +88,54 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
   const getAvailabilityDisplay = () => {
     if (skill.available) {
       return (
-        <span className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-sm font-medium">
-          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-          Available for Coordination
+        <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-emerald-500/50 text-emerald-400">
+          <span className="w-1.5 h-1.5 bg-emerald-400" aria-hidden="true" />
+          OFFERED
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-500/10 text-slate-300 border border-slate-500/30 text-sm font-medium">
-        <EyeOff className="w-4 h-4" aria-hidden="true" />
-        Currently Unavailable
+      <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-zinc-700 text-zinc-500">
+        <EyeOff className="w-3 h-3" aria-hidden="true" />
+        UNAVAILABLE
       </span>
     );
   };
 
   return (
     <div className="space-y-8">
-      {/* Header & Status */}
+      {/* Header: title + spec sheet */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="px-3 py-1 rounded-full bg-slate-800/50 text-slate-300 border border-white/10 text-sm font-medium">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-purple-500/50 text-purple-400">
             {skill.category}
           </span>
-          <span className="text-slate-500 text-sm">Listed {format(new Date(skill.createdAt), "MMM d, yyyy")}</span>
+          {getAvailabilityDisplay()}
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-400 bg-clip-text text-transparent">
-            {skill.name}
-          </h1>
-          {getAvailabilityDisplay()}
+          <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">{skill.name}</h1>
+        </div>
+        <div className="font-mono text-xs space-y-1 pt-3 border-t border-zinc-900">
+          <p>
+            <span className="text-zinc-500">PROVIDER: </span>
+            <span className="text-zinc-300">{skill.owner.alias}</span>
+          </p>
+          <p>
+            <span className="text-zinc-500">STATUS: </span>
+            {skill.available ? (
+              <span className="text-emerald-400">OFFERED</span>
+            ) : (
+              <span className="text-zinc-500">UNAVAILABLE</span>
+            )}
+          </p>
+          <p>
+            <span className="text-zinc-500">VOUCH: </span>
+            <span className="text-emerald-400">{formatVouch(skill.owner.trustScore)}</span>
+          </p>
+          <p>
+            <span className="text-zinc-500">LISTED: </span>
+            <span className="text-zinc-300">{format(new Date(skill.createdAt), "yyyy-MM-dd")}</span>
+          </p>
         </div>
       </div>
 
@@ -119,81 +143,71 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Description */}
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-slate-100 mb-3 flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-purple-400" aria-hidden="true" />
-              Description
-            </h2>
-            <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{skill.description}</p>
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-3">DESCRIPTION</h2>
+            <p className="text-zinc-400 whitespace-pre-wrap leading-relaxed">{skill.description}</p>
           </div>
 
           {/* Availability Toggle (Owner/Admin only) */}
           {(isOwner || isAdmin) && (
-            <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
-                <Eye className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-                Availability
-              </h2>
-              <form action={toggleAvailability} className="flex items-center gap-4">
+            <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+              <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">AVAILABILITY</h2>
+              <form action={toggleAvailability} className="flex flex-wrap items-center gap-4">
                 <input type="hidden" name="skillId" value={skill.id} />
                 <button
                   type="submit"
-                  className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
+                  className={`font-mono text-xs uppercase tracking-widest px-4 py-2 border transition-colors cursor-pointer inline-flex items-center gap-2 ${
                     skill.available
-                      ? "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white shadow-[0_0_20px_rgba(251,113,133,0.4)]"
-                      : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                      ? "border-red-500/60 text-red-400 hover:bg-red-500/10"
+                      : "border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10"
                   }`}
                 >
                   {skill.available ? (
                     <>
-                      <EyeOff className="w-4 h-4" aria-hidden="true" />
-                      Mark Unavailable
+                      <EyeOff className="w-3.5 h-3.5" aria-hidden="true" />
+                      MARK UNAVAILABLE
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4" aria-hidden="true" />
-                      Mark Available
+                      <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                      MARK AVAILABLE
                     </>
                   )}
                 </button>
-                <span className="text-sm text-slate-400">
+                <span className="font-mono text-xs text-zinc-500">
                   {skill.available ? "You're open to helping neighbors" : "You're not accepting new requests"}
                 </span>
               </form>
             </div>
           )}
 
-          {/* Owner Info */}
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-purple-400" aria-hidden="true" />
-              Provider
-            </h2>
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center">
-                <User className="w-7 h-7 text-purple-400" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="font-semibold text-white">{skill.owner.alias}</p>
-                <p className="text-sm text-slate-400">Member since {format(new Date(skill.owner.createdAt), "MMM yyyy")}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30 text-xs font-medium">
-                    <Shield className="w-3 h-3" aria-hidden="true" />
-                    Trust Score: {skill.owner.trustScore}
-                  </span>
-                </div>
-              </div>
+          {/* Provider Info */}
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">PROVIDER</h2>
+            <div className="font-mono text-xs space-y-1">
+              <p>
+                <span className="text-zinc-500">ALIAS: </span>
+                <span className="text-zinc-200">{skill.owner.alias}</span>
+              </p>
+              <p>
+                <span className="text-zinc-500">MEMBER SINCE: </span>
+                <span className="text-zinc-300">{format(new Date(skill.owner.createdAt), "MMM yyyy")}</span>
+              </p>
+              <p>
+                <span className="text-zinc-500">TRUST SCORE: </span>
+                <span className="text-emerald-400">{skill.owner.trustScore}</span>
+              </p>
             </div>
             {skill.owner.bio && (
-              <p className="mt-4 text-slate-300 italic">"{skill.owner.bio}"</p>
+              <p className="mt-4 text-sm text-zinc-400 italic">&quot;{skill.owner.bio}&quot;</p>
             )}
             {session && session.user.id !== skill.owner.id && (
               <a
                 href={`/messages?to=${skill.owner.id}`}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200"
+                className="mt-4 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
               >
-                <MessageSquare className="w-4 h-4" aria-hidden="true" />
-                Message Provider to Coordinate
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                MESSAGE NEIGHBOR TO COORDINATE
               </a>
             )}
           </div>
@@ -202,94 +216,93 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <h3 className="font-semibold text-slate-100 mb-4">Actions</h3>
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+            <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">ACTIONS</h3>
             <div className="space-y-3">
               {session && session.user.id !== skill.owner.id && skill.available && (
                 <a
                   href={`/messages?to=${skill.owner.id}`}
-                  className="w-full px-4 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <MessageSquare className="w-4 h-4" aria-hidden="true" />
-                  Message Provider
+                  <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                  MESSAGE PROVIDER
                 </a>
               )}
               {(isOwner || isAdmin) && (
                 <a
                   href={`/skills/${skill.id}/edit`}
-                  className="w-full px-4 py-3 rounded-xl font-semibold text-sm bg-slate-800/50 border border-white/10 hover:border-purple-500/30 hover:bg-purple-500/10 text-slate-300 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full font-mono text-xs uppercase tracking-widest px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <RotateCcw className="w-4 h-4" aria-hidden="true" />
-                  Edit Listing
+                  <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
+                  EDIT LISTING
                 </a>
               )}
               {(isOwner || isAdmin) && (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="w-full px-4 py-3 rounded-xl font-semibold text-sm bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:border-rose-500/50 text-rose-300 transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full font-mono text-xs uppercase tracking-widest px-4 py-2 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  Delete Listing
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  DELETE LISTING
                 </button>
               )}
             </div>
           </div>
 
           {/* Skill Details */}
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-            <h3 className="font-semibold text-slate-100 mb-4">Details</h3>
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Category</dt>
-                <dd className="text-slate-100 font-medium">{skill.category}</dd>
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+            <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">DETAILS</h3>
+            <dl className="font-mono text-xs space-y-2">
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">CATEGORY</dt>
+                <dd className="text-zinc-300">{skill.category}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Status</dt>
-                <dd className="text-slate-100 font-medium capitalize">{skill.available ? "available" : "unavailable"}</dd>
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">STATUS</dt>
+                <dd className="text-zinc-300">{skill.available ? "OFFERED" : "UNAVAILABLE"}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Listed</dt>
-                <dd className="text-slate-100 font-medium">{format(new Date(skill.createdAt), "MMM d, yyyy")}</dd>
+              <div className="flex justify-between gap-3">
+                <dt className="text-zinc-500">LISTED</dt>
+                <dd className="text-zinc-300">{format(new Date(skill.createdAt), "MMM d, yyyy")}</dd>
               </div>
             </dl>
           </div>
 
-          {/* Trust Badge */}
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center">
-            <Shield className="w-12 h-12 mx-auto text-purple-400 mb-3" aria-hidden="true" />
-            <p className="text-slate-400 text-sm mb-1">Provider Trust Score</p>
-            <p className="text-3xl font-extrabold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              {skill.owner.trustScore}
-            </p>
-            <p className="text-xs text-slate-500 mt-2">Based on community interactions</p>
+          {/* Trust */}
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">PROVIDER TRUST SCORE</p>
+            <p className="font-mono text-3xl font-bold text-white">{skill.owner.trustScore}</p>
+            <p className="font-mono text-[11px] text-zinc-500 mt-2">BASED ON COMMUNITY INTERACTIONS</p>
           </div>
         </div>
       </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-slate-900/95 backdrop-blur-xl border border-rose-500/30 rounded-2xl p-6 w-full max-w-md shadow-[0_0_50px_-12px_rgba(251,113,133,0.25)] animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="bg-[#0a0a0a] border border-red-500/50 rounded-none p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Delete skill listing">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Delete Skill Listing</h3>
+              <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-red-400">DELETE SKILL LISTING</h3>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
                 aria-label="Close modal"
               >
-                <X className="w-5 h-5" aria-hidden="true" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
 
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300">
-                <p className="font-medium">This action cannot be undone.</p>
-                <p className="text-sm mt-1">The skill listing "{skill.name}" will be permanently removed.</p>
+              <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400">
+                <p className="font-mono text-xs uppercase tracking-widest">THIS ACTION CANNOT BE UNDONE.</p>
+                <p className="text-sm mt-2 text-zinc-400">
+                  The skill listing &quot;{skill.name}&quot; will be permanently removed.
+                </p>
               </div>
 
               {deleteError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs flex items-center gap-2" role="alert">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                   {deleteError}
                 </div>
               )}
@@ -298,25 +311,25 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-medium text-sm bg-slate-800/50 border border-white/10 hover:border-cyan-500/30 hover:bg-cyan-500/10 text-slate-300 transition-all duration-200"
+                  className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-400 hover:to-red-500 text-white shadow-[0_0_20px_rgba(251,113,133,0.4)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {deleting ? (
                     <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                      Deleting...
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      DELETING...
                     </>
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4" aria-hidden="true" />
-                      Delete Permanently
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      DELETE PERMANENTLY
                     </>
                   )}
                 </button>

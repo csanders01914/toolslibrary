@@ -14,6 +14,7 @@ import {
   BookOpen,
   Info,
   ExternalLink,
+  LifeBuoy,
 } from "lucide-react";
 
 const sourceLicenseLinks = [
@@ -35,6 +36,7 @@ const privacyLegalLinks = [
   { href: "/privacy", label: "Privacy Policy", icon: ShieldCheck },
   { href: "/terms", label: "Terms of Service", icon: FileText },
   { href: "/transparency", label: "Transparency Report", icon: Activity },
+  { href: "/help", label: "Request Help", icon: LifeBuoy },
 ];
 
 const communityLinks = [
@@ -42,7 +44,7 @@ const communityLinks = [
   { href: "/contribute", label: "Contribute / Get Involved", icon: Code2 },
   { href: "/donate", label: "Donate / Support Us", icon: Heart },
   {
-    href: "https://matrix.to/#/#tools-library:matrix.org",
+    href: "http://matrix.tools-library.com",
     label: "Matrix Chat",
     icon: MessagesSquare,
     external: true,
@@ -52,7 +54,7 @@ const communityLinks = [
 const navigationLinks = [
   { href: "/about", label: "About / Manifesto", icon: Info },
   {
-    href: "https://wiki.tools-library.com",
+    href: "http://wiki.tools-library.com",
     label: "Project Wiki",
     icon: BookOpen,
     external: true,
@@ -72,13 +74,13 @@ function FooterLink({
 }) {
   const isExternal = external || href.startsWith("http");
   const className =
-    "group flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-300 transition-colors duration-200";
+    "group flex items-center gap-2 font-mono text-[11px] text-zinc-500 hover:text-white transition-colors";
   const inner = (
     <>
-      <Icon className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition-colors duration-200" aria-hidden="true" />
+      <Icon className="h-3.5 w-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors" aria-hidden="true" />
       <span>{label}</span>
       {isExternal && (
-        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" aria-hidden="true" />
+        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />
       )}
     </>
   );
@@ -109,11 +111,11 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 mb-4 flex items-center gap-2 flex-wrap">
+      <h3 className="mb-4 flex flex-wrap items-center gap-2 font-mono text-xs uppercase tracking-widest text-zinc-400">
         {title}
         {badge && (
           <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClasses ?? "bg-cyan-500/10 text-cyan-300 border-cyan-500/30"}`}
+            className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${badgeClasses ?? "border-cyan-500/50 bg-cyan-500/5 text-cyan-400"}`}
           >
             {badge}
           </span>
@@ -126,22 +128,21 @@ function FooterColumn({
 
 export function Footer() {
   return (
-    <footer className="bg-slate-950/90 backdrop-blur-xl border-t border-white/10 mt-20 relative z-10">
-      <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" aria-hidden="true" />
+    <footer className="bg-black border-t border-zinc-800 mt-20 relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Column 1: Source & License */}
           <FooterColumn
             title="Source & License"
             badge="AGPLv3"
-            badgeClasses="bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+            badgeClasses="border-emerald-500/50 bg-emerald-500/5 text-emerald-400"
           >
             {sourceLicenseLinks.map((link) => (
               <li key={link.href}>
                 <FooterLink {...link} />
               </li>
             ))}
-            <li className="pt-2 text-xs text-slate-500 leading-relaxed">
+            <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
               This project is free software under GNU AGPLv3. Section 13 requires that the full
               corresponding source of this network service remains available to every user.
             </li>
@@ -151,14 +152,14 @@ export function Footer() {
           <FooterColumn
             title="Privacy & Legal"
             badge="Zero-PII"
-            badgeClasses="bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+            badgeClasses="border-emerald-500/50 bg-emerald-500/5 text-emerald-400"
           >
             {privacyLegalLinks.map((link) => (
               <li key={link.href}>
                 <FooterLink {...link} />
               </li>
             ))}
-            <li className="pt-2 text-xs text-slate-500 leading-relaxed">
+            <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
               No emails. No phone numbers. No IP logging. No analytics. No third-party trackers.
               Ever.
             </li>
@@ -172,8 +173,8 @@ export function Footer() {
               </li>
             ))}
             <li>
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.25)]">
-                <MessageCircle className="w-4 h-4" aria-hidden="true" />
+              <span className="inline-flex items-center gap-2 border border-purple-500/50 bg-purple-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-purple-400">
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
                 Discord (Coming Soon)
               </span>
             </li>
@@ -186,19 +187,19 @@ export function Footer() {
                 <FooterLink {...link} />
               </li>
             ))}
-            <li className="pt-2 text-xs text-slate-500 leading-relaxed">
+            <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
               The Project Wiki runs on a self-hosted, standalone BookStack instance at
               wiki.tools-library.com — no third-party knowledge platforms involved.
             </li>
           </FooterColumn>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-500 text-center sm:text-left">
+        <div className="mt-12 border-t border-zinc-900 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-center font-mono text-[11px] text-zinc-500 sm:text-left">
             © {new Date().getFullYear()} Tool Library Collective — Licensed under GNU AGPLv3.
             Built for mutual aid, right-to-repair, and local resilience.
           </p>
-          <p className="text-xs text-slate-600 font-mono">
+          <p className="font-mono text-[11px] text-zinc-600">
             Self-hosted on Fedora CoreOS · Rootless Podman · Zero telemetry
           </p>
         </div>

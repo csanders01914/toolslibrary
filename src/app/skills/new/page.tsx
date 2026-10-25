@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Wrench, X, Check, Loader2, AlertTriangle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 export default function NewSkillPage() {
@@ -25,16 +25,14 @@ export default function NewSkillPage() {
 
   if (!session) {
     return (
-      <div className="text-center py-16 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl">
-        <Wrench className="w-16 h-16 mx-auto text-slate-600 mb-4" aria-hidden="true" />
+      <div className="text-center py-16 bg-[#0a0a0a] border border-zinc-800">
         <h2 className="text-2xl font-bold text-white mb-2">Authentication Required</h2>
-        <p className="text-slate-400 mb-6">Please sign in to offer a skill to the community.</p>
+        <p className="text-zinc-400 mb-6">Please sign in to offer a skill to the community.</p>
         <a
           href="/login"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200"
+          className="inline-block font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
         >
-          <Wrench className="w-4 h-4" aria-hidden="true" />
-          Sign In to Offer Skill
+          SIGN IN TO OFFER SKILL
         </a>
       </div>
     );
@@ -91,29 +89,27 @@ export default function NewSkillPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
-      <div className="text-center">
-        <Wrench className="w-16 h-16 mx-auto text-purple-400 mb-4" aria-hidden="true" />
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-200 to-cyan-400 bg-clip-text text-transparent">
-          Offer a Skill
-        </h1>
-        <p className="mt-3 text-slate-400 max-w-xl mx-auto">
-          Share your expertise with the community. List what you can teach or help with, and connect with neighbors who need your skills.
+      <div>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-3">NEW LISTING</p>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">Offer a Skill</h1>
+        <p className="mt-3 text-zinc-400 max-w-xl">
+          Share your expertise with the community. List what you can teach or help with, and connect
+          with neighbors who need your skills.
         </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <p>{error}</p>
+          <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs" role="alert">
+            {error}
           </div>
         )}
 
         {/* Name */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-            Skill Name <span className="text-rose-400">*</span>
+          <label htmlFor="name" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            SKILL NAME <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
@@ -124,14 +120,14 @@ export default function NewSkillPage() {
             placeholder="e.g., Small Engine Repair, Python Scripting, Drywall Patching"
             maxLength={100}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500 focus:outline-none"
           />
         </div>
 
         {/* Category */}
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-slate-300 mb-2">
-            Category <span className="text-rose-400">*</span>
+          <label htmlFor="category" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            CATEGORY <span className="text-red-400">*</span>
           </label>
           <select
             id="category"
@@ -139,7 +135,7 @@ export default function NewSkillPage() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all cursor-pointer"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
           >
             <option value="">Select a category</option>
             {SKILL_CATEGORIES.map((cat) => (
@@ -152,8 +148,8 @@ export default function NewSkillPage() {
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-slate-300 mb-2">
-            Description <span className="text-rose-400">*</span>
+          <label htmlFor="description" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+            DESCRIPTION <span className="text-red-400">*</span>
           </label>
           <textarea
             id="description"
@@ -164,9 +160,9 @@ export default function NewSkillPage() {
             rows={6}
             maxLength={2000}
             required
-            className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all resize-y min-h-[120px]"
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500 focus:outline-none resize-y min-h-[120px]"
           />
-          <p className="mt-1 text-xs text-slate-500 text-right">
+          <p className="mt-1 font-mono text-[11px] text-zinc-500 text-right">
             {description.length}/2000 characters (minimum 10)
           </p>
         </div>
@@ -176,32 +172,29 @@ export default function NewSkillPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex-1 px-6 py-3 rounded-xl font-medium text-sm bg-slate-800/50 border border-white/10 hover:border-rose-500/30 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200"
+            className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
           >
-            Cancel
+            CANCEL
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                Creating Listing...
+                CREATING LISTING...
               </>
             ) : (
-              <>
-                <Check className="w-4 h-4" aria-hidden="true" />
-                Create Listing
-              </>
+              "CREATE LISTING"
             )}
           </button>
         </div>
 
         {/* Privacy Note */}
-        <p className="text-xs text-slate-500 text-center">
-          Zero-PII: Only your public alias and trust score are shown. No email, phone, or location shared.
+        <p className="font-mono text-[11px] text-zinc-500 text-center">
+          ZERO-PII: Only your public alias and trust score are shown. No email, phone, or location shared.
         </p>
       </form>
     </div>

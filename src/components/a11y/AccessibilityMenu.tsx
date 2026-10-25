@@ -74,9 +74,9 @@ export function AccessibilityMenu() {
         aria-haspopup="dialog"
         aria-controls="a11y-menu-panel"
         aria-label="Accessibility settings (Alt+A)"
-        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-slate-950 shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:shadow-[0_0_35px_rgba(6,182,212,0.7)] hover:scale-105 transition-all duration-200 cursor-pointer"
+        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-none border border-zinc-700 bg-black text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white cursor-pointer"
       >
-        <Accessibility className="w-7 h-7" aria-hidden="true" />
+        <Accessibility className="h-6 w-6" aria-hidden="true" />
       </button>
 
       {/* Dialog panel */}
@@ -87,10 +87,12 @@ export function AccessibilityMenu() {
           role="dialog"
           aria-modal="false"
           aria-label="Accessibility settings"
-          className="fixed bottom-24 right-6 z-[9998] w-[calc(100vw-3rem)] max-w-sm max-h-[75vh] overflow-y-auto bg-slate-900/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-5 shadow-[0_0_50px_-10px_rgba(6,182,212,0.4)]"
+          className="fixed bottom-24 right-6 z-[9998] w-[calc(100vw-3rem)] max-w-sm max-h-[75vh] overflow-y-auto rounded-none border border-zinc-800 bg-black p-5"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-cyan-300">Accessibility</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">
+              ACCESSIBILITY // SETTINGS
+            </h2>
             <button
               type="button"
               data-autofocus
@@ -99,15 +101,15 @@ export function AccessibilityMenu() {
                 triggerRef.current?.focus();
               }}
               aria-label="Close accessibility settings"
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:text-slate-100 hover:bg-white/10 transition-colors cursor-pointer"
+              className="flex h-11 w-11 items-center justify-center rounded-none border border-zinc-800 text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white cursor-pointer"
             >
-              <X className="w-5 h-5" aria-hidden="true" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
           {/* Contrast mode */}
           <fieldset className="mb-4">
-            <legend className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <legend className="mb-2 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
               Contrast Mode
             </legend>
             <div role="radiogroup" aria-label="Contrast mode" className="flex flex-wrap gap-2">
@@ -120,10 +122,10 @@ export function AccessibilityMenu() {
                     role="radio"
                     aria-checked={selected}
                     onClick={() => updatePref("contrast", option.value)}
-                    className={`min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
+                    className={`min-h-[44px] min-w-[44px] rounded-none border px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer ${
                       selected
-                        ? "bg-cyan-500/20 text-cyan-200 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                        : "bg-slate-950/80 text-slate-400 border-white/15 hover:border-cyan-500/40 hover:text-cyan-300"
+                        ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-400"
+                        : "border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white"
                     }`}
                   >
                     {option.label}
@@ -135,7 +137,7 @@ export function AccessibilityMenu() {
 
           {/* Font size */}
           <fieldset className="mb-4">
-            <legend className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+            <legend className="mb-2 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
               Font Size
             </legend>
             <div role="radiogroup" aria-label="Font size" className="flex gap-2">
@@ -148,10 +150,10 @@ export function AccessibilityMenu() {
                     role="radio"
                     aria-checked={selected}
                     onClick={() => updatePref("fontSize", option.value)}
-                    className={`flex-1 min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
+                    className={`min-h-[44px] min-w-[44px] flex-1 rounded-none border px-3 py-2 font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer ${
                       selected
-                        ? "bg-cyan-500/20 text-cyan-200 border-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-                        : "bg-slate-950/80 text-slate-400 border-white/15 hover:border-cyan-500/40 hover:text-cyan-300"
+                        ? "border-cyan-500/60 bg-cyan-500/10 text-cyan-400"
+                        : "border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white"
                     }`}
                   >
                     {option.label}
@@ -162,7 +164,7 @@ export function AccessibilityMenu() {
           </fieldset>
 
           {/* Boolean toggles */}
-          <div className="space-y-2 mb-4">
+          <div className="mb-4 space-y-2">
             {TOGGLES.map((toggle) => {
               const checked = Boolean(prefs[toggle.key]);
               return (
@@ -172,25 +174,25 @@ export function AccessibilityMenu() {
                   role="switch"
                   aria-checked={checked}
                   onClick={() => updatePref(toggle.key, !checked as never)}
-                  className="w-full min-h-[44px] flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-slate-950/80 border border-white/15 hover:border-cyan-500/40 transition-all duration-200 cursor-pointer text-left"
+                  className="flex w-full min-h-[44px] items-center justify-between gap-3 rounded-none border border-zinc-800 bg-black px-4 py-2.5 text-left transition-colors hover:border-zinc-600 cursor-pointer"
                 >
                   <span>
-                    <span className="block text-sm font-medium text-slate-200">{toggle.label}</span>
-                    <span className="block text-xs text-slate-500">{toggle.hint}</span>
+                    <span className="block font-mono text-xs text-zinc-200">{toggle.label}</span>
+                    <span className="block font-mono text-[11px] text-zinc-500">{toggle.hint}</span>
                   </span>
                   <span
                     aria-hidden="true"
-                    className={`relative shrink-0 w-10 h-6 rounded-full border transition-colors duration-200 ${
+                    className={`relative h-6 w-10 shrink-0 border transition-colors ${
                       checked
-                        ? "bg-cyan-500/30 border-cyan-400/60"
-                        : "bg-slate-800 border-white/20"
+                        ? "border-emerald-500/60 bg-emerald-500/10"
+                        : "border-zinc-800 bg-black"
                     }`}
                   >
                     <span
-                      className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full transition-all duration-200 ${
+                      className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 transition-colors ${
                         checked
-                          ? "left-[calc(100%-1.25rem)] bg-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.6)]"
-                          : "left-1 bg-slate-500"
+                          ? "left-[calc(100%-1.25rem)] bg-emerald-400"
+                          : "left-1 bg-zinc-600"
                       }`}
                     />
                   </span>
@@ -203,14 +205,14 @@ export function AccessibilityMenu() {
           <button
             type="button"
             onClick={resetAll}
-            className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 hover:shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all duration-200 cursor-pointer"
+            className="flex w-full min-h-[44px] cursor-pointer items-center justify-center gap-2 rounded-none border border-red-500/60 px-4 py-2.5 font-mono text-xs uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10"
           >
-            <RotateCcw className="w-4 h-4" aria-hidden="true" />
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
             Reset All
           </button>
 
-          <p className="mt-3 text-[11px] text-slate-500 leading-relaxed flex items-start gap-1.5">
-            <Check className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-400" aria-hidden="true" />
+          <p className="mt-3 flex items-start gap-1.5 font-mono text-[11px] leading-relaxed text-zinc-500">
+            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden="true" />
             Settings are stored anonymously in a local cookie and synced to your account without
             any personal data. Shortcuts: Alt+A menu, Alt+M main content, Escape close.
           </p>

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { generateRecoveryCodes, hashRecoveryCode } from "@/lib/crypto";
@@ -152,5 +153,60 @@ export async function authenticate(
 export async function logoutAction() {
   // The actual logout is handled by NextAuth's signOut
   // This is a placeholder for any server-side cleanup if needed
+  return { success: true };
+}
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(10, "New password must be at least 10 characters"),
+});
+
+export async function changePassword(
+  prevState: { success?: boolean; error?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const rawData = {
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+  };
+
+  const parsed = changePasswordSchema.safeParse(rawData);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isValid) {
+    return { success: false, error: "Current password is incorrect" };
+  }
+
+  if (await bcrypt.compare(newPassword, user.passwordHash)) {
+    return { success: false, error: "New password must be different from the current password" };
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: newPasswordHash,
+      mustChangePassword: false,
+    },
+  });
+
   return { success: true };
 }

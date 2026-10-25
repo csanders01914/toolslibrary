@@ -29,6 +29,7 @@ export const authConfig = {
         token.username = user.username;
         token.alias = user.alias;
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword ?? false;
       }
       return token;
     },
@@ -38,6 +39,7 @@ export const authConfig = {
         session.user.username = token.username as string;
         session.user.alias = token.alias as string;
         session.user.role = token.role as string;
+        session.user.mustChangePassword = token.mustChangePassword === true;
       }
       return session;
     },
@@ -62,6 +64,10 @@ export const authConfig = {
   },
   session: {
     strategy: "jwt",
+    // Ephemeral login token: the JWT and its cookie are re-issued with a fresh
+    // expiry on every session fetch, so this acts as an inactivity timeout.
+    // One hour of inactivity invalidates the token; active browsing keeps it alive.
+    maxAge: 60 * 60,
   },
   secret: process.env.AUTH_SECRET,
 } satisfies NextAuthConfig;

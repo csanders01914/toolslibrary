@@ -4,7 +4,7 @@ import { useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { recoverAccount } from "@/lib/actions/auth";
-import { AlertCircle, Loader2, Key, Shield, ArrowLeft } from "lucide-react";
+import { AlertCircle, Key, Shield, ArrowLeft } from "lucide-react";
 
 export default function RecoverPage() {
   const router = useRouter();
@@ -13,21 +13,22 @@ export default function RecoverPage() {
   if (state?.success) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 mb-4">
-              <Shield className="w-8 h-8 text-emerald-400" aria-hidden="true" />
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-8 text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">AUTH // RECOVERY</p>
+            <div className="mx-auto mt-4 flex h-12 w-12 items-center justify-center border border-emerald-500/50 bg-emerald-500/5 text-emerald-400">
+              <Shield className="h-6 w-6" aria-hidden="true" />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white via-emerald-200 to-cyan-400 bg-clip-text text-transparent">
+            <h1 className="mt-4 text-2xl sm:text-4xl font-bold text-white tracking-tight">
               Password Reset Complete
             </h1>
-            <p className="mt-2 text-slate-400">Your password has been updated. The recovery code has been consumed.</p>
+            <p className="mt-2 text-sm text-zinc-400">Your password has been updated. The recovery code has been consumed.</p>
             <div className="mt-8">
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all duration-200"
+                className="inline-flex items-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10"
               >
-                <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 Back to Login
               </Link>
             </div>
@@ -39,49 +40,46 @@ export default function RecoverPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-8">
           {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-3 mb-6" aria-label="Tool Library Home">
-              <div className="relative p-2 bg-gradient-to-br from-purple-500/20 to-rose-500/20 rounded-xl border border-purple-500/30">
-                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <div className="mb-8">
+            <Link href="/" className="mb-6 inline-flex items-center gap-2" aria-label="Tool Library Home">
+              <span
+                className="flex h-8 w-8 items-center justify-center border border-purple-500/50 text-purple-400"
+                aria-hidden="true"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full opacity-70 blur-sm" />
-              </div>
-              <span className="font-extrabold text-xl bg-gradient-to-r from-purple-400 via-fuchsia-400 to-rose-400 bg-clip-text text-transparent">
-                Tool Library
               </span>
+              <span className="font-mono text-xs uppercase tracking-widest text-zinc-400">Tool Library</span>
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-purple-200 to-rose-400 bg-clip-text text-transparent">
-              Emergency Recovery
-            </h1>
-            <p className="mt-2 text-slate-400">Use a single-use recovery code to reset your password</p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">AUTH // RECOVERY</p>
+            <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">Emergency Recovery</h1>
+            <p className="mt-2 text-sm text-zinc-400">Use a single-use recovery code to reset your password</p>
           </div>
 
           {/* Warning Banner */}
-          <div className="mb-6 p-4 rounded-xl bg-rose-950/30 border border-rose-500/30">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
-              <div>
-                <p className="text-rose-300 font-semibold text-sm">Zero-PII Recovery System</p>
-                <p className="mt-1 text-rose-200/80 text-sm">
-                  No email, no phone, no admin override. Enter one of your 8 single-use <code className="font-mono bg-slate-900/50 px-1.5 py-0.5 rounded text-cyan-300">XXXX-XXXX</code> codes.
-                  Each code works <strong>once</strong>. Used codes are permanently invalidated.
-                </p>
-              </div>
+          <div className="mb-6 flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">Zero-PII Recovery System</p>
+              <p className="mt-1">
+                No email, no phone, no admin override. Enter one of your 8 single-use <code className="border border-zinc-800 bg-black px-1.5 py-0.5 font-mono text-cyan-400">XXXX-XXXX</code> codes.
+                Each code works <strong>once</strong>. Used codes are permanently invalidated.
+              </p>
             </div>
           </div>
 
           {/* Error Message */}
           {state?.error && (
             <div
-              className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3"
+              className="mb-6 flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400"
               role="alert"
             >
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <p>{state.error}</p>
             </div>
           )}
@@ -89,7 +87,7 @@ export default function RecoverPage() {
           {/* Recovery Form */}
           <form action={formAction} className="space-y-5" noValidate>
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="username" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
                 Username
               </label>
               <div className="relative">
@@ -99,14 +97,14 @@ export default function RecoverPage() {
                   name="username"
                   autoComplete="username"
                   required
-                  className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                  className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                   placeholder="Enter your username"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="recoveryCode" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="recoveryCode" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
                 Recovery Code
               </label>
               <div className="relative">
@@ -116,18 +114,18 @@ export default function RecoverPage() {
                   name="recoveryCode"
                   autoComplete="one-time-code"
                   required
-                  className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all font-mono text-center tracking-widest"
+                  className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 text-center font-mono text-sm tracking-widest text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                   placeholder="XXXX-XXXX"
                   maxLength={9}
                   pattern="[A-Z0-9]{4}-[A-Z0-9]{4}"
                   title="Format: XXXX-XXXX (8 alphanumeric characters)"
                 />
               </div>
-              <p className="mt-1.5 text-xs text-slate-500">Enter one of your 8 single-use recovery codes (format: XXXX-XXXX)</p>
+              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Enter one of your 8 single-use recovery codes (format: XXXX-XXXX)</p>
             </div>
 
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="newPassword" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
                 New Password
               </label>
               <div className="relative">
@@ -137,35 +135,35 @@ export default function RecoverPage() {
                   name="newPassword"
                   autoComplete="new-password"
                   required
-                  className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                  className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                   placeholder="At least 10 characters"
                   minLength={10}
                 />
               </div>
-              <p className="mt-1.5 text-xs text-slate-500">Minimum 10 characters. Use a strong passphrase.</p>
+              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 10 characters. Use a strong passphrase.</p>
             </div>
 
             <button
               type="submit"
-              className="w-full px-5 py-2.5 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-rose-600 hover:from-purple-400 hover:to-rose-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              className="flex w-full cursor-pointer items-center justify-center gap-2 border border-purple-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-purple-400 transition-colors hover:bg-purple-500/10"
             >
-              <Key className="w-4 h-4" aria-hidden="true" />
+              <Key className="h-4 w-4" aria-hidden="true" />
               Reset Password
             </button>
           </form>
 
           {/* Footer Links */}
-          <div className="mt-8 space-y-3 text-center text-sm text-slate-500">
+          <div className="mt-8 space-y-3 text-center font-mono text-xs text-zinc-500">
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 transition-colors"
+              className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-white"
             >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               Back to Login
             </Link>
             <Link
               href="/"
-              className="block text-slate-500 hover:text-slate-400 transition-colors inline-block"
+              className="block text-zinc-400 transition-colors hover:text-white"
             >
               ← Back to Home
             </Link>

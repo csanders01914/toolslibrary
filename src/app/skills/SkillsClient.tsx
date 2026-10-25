@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, Filter, Wrench, Users, Shield, User, Plus } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 const ALL_CATEGORIES = ["All", ...SKILL_CATEGORIES];
@@ -26,6 +25,11 @@ interface SkillsClientProps {
   totalCount: number;
 }
 
+const formatVouch = (trustScore: number) => {
+  const vouch = trustScore - 100;
+  return vouch >= 0 ? `+${vouch}` : `${vouch}`;
+};
+
 export default function SkillsClient({ initialSkills, totalCount }: SkillsClientProps) {
   const [skills, setSkills] = useState<Skill[]>(initialSkills);
   const [search, setSearch] = useState("");
@@ -41,136 +45,121 @@ export default function SkillsClient({ initialSkills, totalCount }: SkillsClient
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-  const getAvailabilityBadge = (available: boolean) => {
-    if (available) {
-      return (
-        <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-medium">
-          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
-          Available
-        </span>
-      );
-    }
-    return (
-      <span className="px-3 py-1 rounded-full bg-slate-500/10 text-slate-300 border border-slate-500/30 text-xs font-medium">
-        Unavailable
-      </span>
-    );
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Hero Search Section */}
-      <section className="relative">
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-2 sm:p-4 shadow-[0_0_40px_-10px_rgba(168,85,247,0.3)]">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" aria-hidden="true" />
-              <input
-                type="search"
-                placeholder="Search skills by name, description, or category..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 pl-12 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
-                aria-label="Search skills"
-              />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full sm:w-56 bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 pl-10 pr-8 text-sm text-slate-100 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all appearance-none cursor-pointer"
-                  aria-label="Filter by category"
-                >
-                  {ALL_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={availableOnly}
-                  onChange={(e) => setAvailableOnly(e.target.checked)}
-                  className="w-4 h-4 rounded border-white/15 bg-slate-950/80 text-purple-500 focus:ring-purple-500/20 focus:ring-2"
-                  aria-label="Show only available skills"
-                />
-                <span className="text-sm text-slate-300">Available only</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="space-y-6">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="font-mono text-sm text-purple-400 tracking-[0.2em] uppercase">SKILLS EXCHANGE</h1>
+        <span className="font-mono text-xs text-zinc-500">
+          {filteredSkills.length} of {totalCount} listings
+        </span>
+      </div>
 
-      {/* Skills Grid */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-400 bg-clip-text text-transparent">
-            Skills Exchange ({filteredSkills.length} of {totalCount})
-          </h2>
-          <Link
-            href="/skills/new"
-            className="px-4 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200 cursor-pointer flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            Offer a Skill
-          </Link>
-        </div>
+      {/* Search */}
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        role="search"
+        aria-label="Search skills"
+        className="flex flex-col sm:flex-row gap-3"
+      >
+        <input
+          type="search"
+          placeholder="SEARCH EXCHANGE..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500 focus:outline-none"
+          aria-label="Search skills"
+        />
+        <button
+          type="submit"
+          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+        >
+          SEARCH
+        </button>
+      </form>
 
-        {filteredSkills.length === 0 ? (
-          <div className="text-center py-16 bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl">
-            <Wrench className="w-16 h-16 mx-auto text-slate-600 mb-4" aria-hidden="true" />
-            <h3 className="text-xl font-semibold text-slate-300 mb-2">No skills found</h3>
-            <p className="text-slate-500 mb-6">Try adjusting your search or filters, or be the first to offer a skill!</p>
-            <Link
-              href="/skills/new"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-500 to-fuchsia-600 hover:from-purple-400 hover:to-fuchsia-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-all duration-200"
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by category">
+          {ALL_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              aria-pressed={category === cat}
+              className={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 border transition-colors cursor-pointer ${
+                category === cat
+                  ? "border-purple-500/60 text-purple-400 bg-purple-500/10"
+                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+              }`}
             >
-              <Plus className="w-4 h-4" aria-hidden="true" />
-              Offer a Skill
+              {cat}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-400">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => setAvailableOnly(e.target.checked)}
+            className="w-3.5 h-3.5 bg-black border border-zinc-700 accent-purple-500 cursor-pointer"
+            aria-label="Show only available skills"
+          />
+          AVAILABLE ONLY
+        </label>
+        <Link
+          href="/skills/new"
+          className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+        >
+          OFFER A SKILL
+        </Link>
+      </div>
+
+      {/* Skills grid */}
+      {filteredSkills.length === 0 ? (
+        <div className="bg-[#0a0a0a] border border-zinc-800 p-8 text-center">
+          <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">NO SKILLS FOUND</p>
+          <p className="text-sm text-zinc-400 mt-2">
+            Try adjusting your search or filters, or be the first to offer a skill.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredSkills.map((skill) => (
+            <Link
+              key={skill.id}
+              href={`/skills/${skill.id}`}
+              className="block bg-[#0a0a0a] border border-zinc-800 rounded-none p-5 hover:border-zinc-600 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-bold text-white">{skill.name}</h2>
+                <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-purple-500/50 text-purple-400 whitespace-nowrap">
+                  {skill.category}
+                </span>
+              </div>
+              <p className="text-sm text-zinc-400 line-clamp-2 mt-2">{skill.description}</p>
+              <div className="font-mono text-xs space-y-1 pt-3 mt-3 border-t border-zinc-900">
+                <p>
+                  <span className="text-zinc-500">PROVIDER: </span>
+                  <span className="text-zinc-300">{skill.owner.alias}</span>
+                </p>
+                <p>
+                  <span className="text-zinc-500">STATUS: </span>
+                  {skill.available ? (
+                    <span className="text-emerald-400">OFFERED</span>
+                  ) : (
+                    <span className="text-zinc-500">UNAVAILABLE</span>
+                  )}
+                </p>
+                <p>
+                  <span className="text-zinc-500">VOUCH: </span>
+                  <span className="text-emerald-400">{formatVouch(skill.owner.trustScore)}</span>
+                </p>
+              </div>
             </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSkills.map((skill) => (
-              <Link
-                key={skill.id}
-                href={`/skills/${skill.id}`}
-                className="group bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/40 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.25)]"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-                    <Wrench className="w-7 h-7 text-purple-400" aria-hidden="true" />
-                  </div>
-                  {getAvailabilityBadge(skill.available)}
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
-                    {skill.name}
-                  </h3>
-                  <p className="text-sm text-slate-400 line-clamp-2">{skill.description}</p>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-purple-400" aria-hidden="true" />
-                      <span className="text-xs font-medium text-purple-300">{skill.owner.trustScore}</span>
-                      <User className="w-4 h-4 text-slate-500" aria-hidden="true" />
-                      <span className="text-xs text-slate-400">{skill.owner.alias}</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-800/50 text-slate-300 border border-white/10">
-                      {skill.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

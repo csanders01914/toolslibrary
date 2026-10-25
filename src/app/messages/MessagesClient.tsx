@@ -137,38 +137,42 @@ export default function MessagesClient({ initialConversations, currentUserId, un
   };
 
   return (
-    <div className="h-[calc(100vh-6rem)] min-h-[600px] bg-slate-900/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex flex-col">
+    <div className="h-[calc(100vh-6rem)] min-h-[600px] bg-black border border-zinc-800 rounded-none overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/50">
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-black px-4 py-3">
         <div className="flex items-center gap-3">
-          <MessageSquare className="w-6 h-6 text-cyan-400" aria-hidden="true" />
+          <MessageSquare className="h-5 w-5 text-emerald-400" aria-hidden="true" />
           <div>
-            <h1 className="text-lg font-semibold text-white">Messages</h1>
-            <p className="text-xs text-slate-400">Zero-PII peer-to-peer messaging</p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">
+              EPHEMERAL MESSENGER // FULL CONSOLE
+            </p>
+            <h1 className="mt-0.5 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+              Zero-PII peer-to-peer messaging
+            </h1>
           </div>
         </div>
         {unreadCount > 0 && (
-          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-medium border border-cyan-500/30">
+          <span className="border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
             {unreadCount} unread
           </span>
         )}
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Pane - Conversation List */}
         <aside
-          className={`flex-col w-full md:w-80 border-r border-white/10 bg-slate-950/50 transition-all duration-300 md:flex ${
+          className={`w-full flex-col border-r border-zinc-800 bg-black md:flex md:w-80 ${
             isMobile && selectedPartner ? "hidden" : "flex"
           }`}
         >
           {/* Search/Filter */}
-          <div className="p-3 border-b border-white/10">
+          <div className="border-b border-zinc-800 p-3">
             <div className="relative">
-              <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" aria-hidden="true" />
+              <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600" aria-hidden="true" />
               <input
                 type="search"
                 placeholder="Search conversations..."
-                className="w-full bg-slate-900/80 border border-white/15 rounded-xl px-4 py-2 pl-10 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                className="w-full rounded-none border border-zinc-800 bg-black py-2 pl-10 pr-3 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                 aria-label="Search conversations"
               />
             </div>
@@ -177,10 +181,10 @@ export default function MessagesClient({ initialConversations, currentUserId, un
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto p-2">
             {conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <MessageSquare className="w-16 h-16 text-slate-600 mb-4" aria-hidden="true" />
-                <h3 className="text-lg font-semibold text-slate-300 mb-1">No conversations yet</h3>
-                <p className="text-sm text-slate-500">Start a conversation from a tool or skill page</p>
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <MessageSquare className="mb-4 h-12 w-12 text-zinc-600" aria-hidden="true" />
+                <h3 className="mb-1 font-mono text-xs uppercase tracking-widest text-zinc-300">No conversations yet</h3>
+                <p className="font-mono text-[11px] text-zinc-500">Start a conversation from a tool or skill page</p>
               </div>
             ) : (
               <ul className="space-y-1" role="list" aria-label="Conversations">
@@ -188,33 +192,33 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                   <li key={conv.partnerId}>
                     <button
                       onClick={() => handleSelectConversation(conv)}
-                      className={`w-full text-left p-3 rounded-xl transition-all duration-200 flex items-start gap-3 ${
+                      className={`flex w-full items-start gap-3 border-l-2 p-3 text-left transition-colors ${
                         selectedPartner?.partnerId === conv.partnerId
-                          ? "bg-cyan-500/10 border border-cyan-500/30"
-                          : "hover:bg-slate-900/50 hover:border-white/10 border border-transparent"
+                          ? "border-l-cyan-500 bg-zinc-900/60"
+                          : "border-l-transparent hover:bg-zinc-900/40"
                       }`}
                       aria-current={selectedPartner?.partnerId === conv.partnerId ? "true" : "false"}
                     >
-                      <div className="relative flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 flex items-center justify-center overflow-hidden">
-                        <User className="w-5 h-5 text-purple-400" aria-hidden="true" />
-                        {conv.unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-500 text-slate-950 text-[10px] font-bold rounded-full flex items-center justify-center">
-                            {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
-                          </span>
-                        )}
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-zinc-800 bg-black text-zinc-500">
+                        <User className="h-4 w-4" aria-hidden="true" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-medium text-white truncate">{conv.partnerAlias}</h4>
-                          <time className="text-xs text-slate-500 whitespace-nowrap" dateTime={conv.lastMessageTime.toISOString()}>
+                          <h4 className="truncate font-mono text-xs text-zinc-200">{conv.partnerAlias}</h4>
+                          <time className="whitespace-nowrap font-mono text-[10px] text-zinc-600" dateTime={conv.lastMessageTime.toISOString()}>
                             {formatTime(conv.lastMessageTime)}
                           </time>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Shield className="w-3 h-3 text-cyan-400" aria-hidden="true" />
-                          <span className="text-xs font-medium text-cyan-300">{conv.partnerTrustScore}</span>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Shield className="h-3 w-3 text-cyan-400" aria-hidden="true" />
+                          <span className="font-mono text-[10px] text-cyan-400">{conv.partnerTrustScore}</span>
+                          {conv.unreadCount > 0 && (
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+                              {conv.unreadCount > 9 ? "9+" : conv.unreadCount} UNREAD
+                            </span>
+                          )}
                         </div>
-                        <p className="text-sm text-slate-400 truncate mt-1">{conv.lastMessage}</p>
+                        <p className="mt-1 truncate font-mono text-[11px] text-zinc-500">{conv.lastMessage}</p>
                       </div>
                     </button>
                   </li>
@@ -225,46 +229,52 @@ export default function MessagesClient({ initialConversations, currentUserId, un
         </aside>
 
         {/* Right Pane - Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col">
           {selectedPartner ? (
             <>
               {/* Chat Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/50">
+              <div className="flex items-center justify-between border-b border-zinc-800 bg-black px-4 py-3">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedPartner(null)}
-                    className="md:hidden p-2 rounded-xl text-slate-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all"
+                    className="p-2 text-zinc-400 transition-colors hover:text-white md:hidden"
                     aria-label="Back to conversations"
                   >
-                    <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                   </button>
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-fuchsia-500/20 border border-purple-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <User className="w-5 h-5 text-purple-400" aria-hidden="true" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-zinc-800 bg-black text-zinc-500">
+                    <User className="h-4 w-4" aria-hidden="true" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-white truncate">{selectedPartner.partnerAlias}</h3>
+                    <h3 className="truncate font-mono text-xs text-zinc-200">{selectedPartner.partnerAlias}</h3>
                     <div className="flex items-center gap-2">
-                      <Shield className="w-3 h-3 text-cyan-400" aria-hidden="true" />
-                      <span className="text-xs font-medium text-cyan-300">Trust: {selectedPartner.partnerTrustScore}</span>
+                      <Shield className="h-3 w-3 text-cyan-400" aria-hidden="true" />
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-cyan-400">
+                        Trust: {selectedPartner.partnerTrustScore}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-xl text-slate-400 hover:text-slate-300 hover:bg-white/5 transition-all" aria-label="Notifications">
-                    <Bell className="w-5 h-5" aria-hidden="true" />
+                  <button className="p-2 text-zinc-500 transition-colors hover:text-white" aria-label="Notifications">
+                    <Bell className="h-4 w-4" aria-hidden="true" />
                   </button>
-                  <button className="p-2 rounded-xl text-slate-400 hover:text-slate-300 hover:bg-white/5 transition-all" aria-label="More options">
-                    <MoreVertical className="w-5 h-5" aria-hidden="true" />
+                  <button className="p-2 text-zinc-500 transition-colors hover:text-white" aria-label="More options">
+                    <MoreVertical className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-live="polite" aria-label="Messages">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center px-4 text-slate-500">
-                    <MessageSquare className="w-12 h-12 mb-3" aria-hidden="true" />
-                    <p className="text-sm">No messages yet. Start the conversation!</p>
+              <div className="flex-1 space-y-4 overflow-y-auto bg-black p-4" role="log" aria-live="polite" aria-label="Messages">
+                {isLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">Loading thread...</p>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center px-4 text-center text-zinc-500">
+                    <MessageSquare className="mb-3 h-10 w-10 text-zinc-700" aria-hidden="true" />
+                    <p className="font-mono text-[11px] uppercase tracking-widest">No messages yet. Start the conversation!</p>
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -275,14 +285,14 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                         className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                       >
                         <div
-                          className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                          className={`max-w-[70%] rounded-none border p-3 font-mono text-xs ${
                             isOwn
-                              ? "bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-400/30 rounded-tr-none"
-                              : "bg-slate-800/70 border border-white/10 rounded-tl-none"
+                              ? "border-cyan-500/30 bg-cyan-500/5 text-zinc-100"
+                              : "border-zinc-800 bg-[#0a0a0a] text-zinc-100"
                           }`}
                         >
-                          <p className="text-sm text-slate-100 whitespace-pre-wrap">{msg.content}</p>
-                          <time className={`text-[11px] mt-1 block text-right ${isOwn ? "text-cyan-200/70" : "text-slate-500"}`}>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                          <time className={`mt-1 block text-right font-mono text-[10px] text-zinc-600`}>
                             {formatTime(msg.createdAt)}
                           </time>
                         </div>
@@ -294,7 +304,7 @@ export default function MessagesClient({ initialConversations, currentUserId, un
               </div>
 
               {/* Message Input */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-slate-950/50">
+              <form onSubmit={handleSendMessage} className="border-t border-zinc-800 bg-black p-4">
                 <div className="flex items-end gap-3">
                   <div className="relative flex-1">
                     <textarea
@@ -302,7 +312,7 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
                       rows={1}
-                      className="w-full bg-slate-900/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none max-h-32"
+                      className="max-h-32 w-full resize-none rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                       aria-label="Message"
                       disabled={sending}
                     />
@@ -310,19 +320,20 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                   <button
                     type="submit"
                     disabled={!newMessage.trim() || sending}
-                    className="p-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(6,182,212,0.4)] hover:shadow-[0_0_30px_rgba(6,182,212,0.6)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="flex shrink-0 cursor-pointer items-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
                     aria-label="Send message"
                   >
-                    <Send className="w-5 h-5" aria-hidden="true" />
+                    <Send className="h-4 w-4" aria-hidden="true" />
+                    Send
                   </button>
                 </div>
               </form>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-              <MessageSquare className="w-20 h-20 text-slate-700 mb-6" aria-hidden="true" />
-              <h2 className="text-2xl font-bold text-slate-300 mb-2">Select a conversation</h2>
-              <p className="text-slate-500 max-w-sm">Choose a conversation from the sidebar or start a new one from a tool or skill page.</p>
+            <div className="flex flex-1 flex-col items-center justify-center bg-black px-6 text-center">
+              <MessageSquare className="mb-6 h-14 w-14 text-zinc-700" aria-hidden="true" />
+              <h2 className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-zinc-300">Select a conversation</h2>
+              <p className="max-w-sm font-mono text-[11px] text-zinc-500">Choose a conversation from the sidebar or start a new one from a tool or skill page.</p>
             </div>
           )}
         </div>

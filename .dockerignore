@@ -1,0 +1,39 @@
+# .dockerignore — build-context filter for `podman build` (Buildah also honors
+# .dockerignore when .containerignore is absent). Everything listed here is
+# kept OUT of the image build context: secrets, live runtime data, editor
+# backups, and regenerable outputs never reach the builder stage.
+
+# --- Secrets & local environment (NEVER bake into an image) ---
+.env
+.env.local
+.env.*.local
+Recovery/
+
+# --- Runtime data volume (bind-mounted at `podman run`, never baked) ---
+data/
+
+# --- Dependencies & build outputs (regenerated inside the build) ---
+node_modules/
+.next/
+out/
+dist/
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# --- VCS, agent handoff state, editor droppings ---
+.git/
+.gitignore
+.handoff/
+nppBackup/
+*.bak
+
+# --- Docs & legacy design assets (not needed at runtime) ---
+*.md
+image.png
+image(1).png
+
+# --- Packaging & ops files themselves (not needed inside the image) ---
+Containerfile
+.dockerignore
+deploy.sh
+scripts/
