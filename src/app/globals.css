@@ -26,3 +26,149 @@
   clip: auto;
   white-space: normal;
 }
+
+/* ============================================================
+   WCAG 2.1 Level AAA Accessibility Suite — attribute selectors
+   All rules are local-only: zero external network calls.
+   ============================================================ */
+
+/* High contrast: pure black canvas, white text, yellow highlights (>= 7:1 AAA) */
+html[data-contrast="high"] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-contrast="high"] body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-contrast="high"] .bg-cypher-grid {
+  background-image: none !important;
+}
+
+html[data-contrast="high"] *:not(html):not(body) {
+  background-color: transparent;
+}
+
+html[data-contrast="high"] section,
+html[data-contrast="high"] nav,
+html[data-contrast="high"] footer,
+html[data-contrast="high"] header,
+html[data-contrast="high"] aside,
+html[data-contrast="high"] article,
+html[data-contrast="high"] div,
+html[data-contrast="high"] li,
+html[data-contrast="high"] td,
+html[data-contrast="high"] th {
+  background-color: #000000 !important;
+  border-color: #ffe600 !important;
+}
+
+html[data-contrast="high"] p,
+html[data-contrast="high"] span,
+html[data-contrast="high"] li,
+html[data-contrast="high"] td,
+html[data-contrast="high"] th,
+html[data-contrast="high"] label,
+html[data-contrast="high"] small,
+html[data-contrast="high"] strong,
+html[data-contrast="high"] em,
+html[data-contrast="high"] h1,
+html[data-contrast="high"] h2,
+html[data-contrast="high"] h3,
+html[data-contrast="high"] h4,
+html[data-contrast="high"] h5,
+html[data-contrast="high"] h6,
+html[data-contrast="high"] a,
+html[data-contrast="high"] button,
+html[data-contrast="high"] input,
+html[data-contrast="high"] select,
+html[data-contrast="high"] textarea {
+  color: #ffffff !important;
+  border-color: #ffe600 !important;
+}
+
+html[data-contrast="high"] a,
+html[data-contrast="high"] button,
+html[data-contrast="high"] input,
+html[data-contrast="high"] select,
+html[data-contrast="high"] textarea,
+html[data-contrast="high"] [role="button"],
+html[data-contrast="high"] [role="switch"],
+html[data-contrast="high"] [role="radio"] {
+  outline-color: #ffe600 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html[data-contrast="high"] input,
+html[data-contrast="high"] select,
+html[data-contrast="high"] textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-contrast="high"] svg {
+  color: #ffe600 !important;
+}
+
+/* Inverted colors */
+html[data-contrast="inverted"] {
+  filter: invert(100%) hue-rotate(180deg);
+}
+
+/* Monochrome */
+html[data-contrast="monochrome"] {
+  filter: grayscale(100%);
+}
+
+/* Font size scaling */
+html[data-font-size="100"] {
+  font-size: 16px;
+}
+
+html[data-font-size="125"] {
+  font-size: 20px;
+}
+
+html[data-font-size="150"] {
+  font-size: 24px;
+}
+
+/* Dyslexia-friendly local font stack */
+html[data-dyslexic="true"] * {
+  font-family: "OpenDyslexic", "Comic Sans MS", "Verdana", sans-serif !important;
+}
+
+/* Increased text spacing */
+html[data-text-spacing="true"] * {
+  line-height: 2 !important;
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+}
+
+/* Enhanced focus indicators */
+html[data-focus-indicators="true"] :focus-visible {
+  outline: 4px solid #ffe600 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px #000000 !important;
+}
+
+/* Reduced motion */
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Big high-contrast cursor (inline SVG data URI — no network) */
+html[data-big-cursor="true"],
+html[data-big-cursor="true"] * {
+  cursor: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='48' viewBox='0 0 40 48'%3E%3Cpath d='M4 2 L4 38 L13 29 L19 44 L26 41 L20 27 L32 27 Z' fill='%23FFE600' stroke='%23000000' stroke-width='2.5'/%3E%3C/svg%3E")
+      4 2,
+    auto !important;
+}
