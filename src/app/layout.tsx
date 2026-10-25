@@ -2,6 +2,7 @@ import './globals.css';
 import type { ReactNode } from 'react';
 import { SessionProvider } from 'next-auth/react';
 import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/footer/Footer';
 
 export const metadata = {
   title: 'Tool Library — Community Tool Sharing',
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 flex-1">
             {children}
           </main>
+          <Footer />
         </SessionProvider>
       </body>
     </html>
