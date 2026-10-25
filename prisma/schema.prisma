@@ -1,0 +1,108 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  alias        String
+  passwordHash String
+  role         String        @default("USER") // "USER" | "ADMIN"
+  bio          String?
+  trustScore   Int           @default(100)
+  a11yPrefs    String?       // Anonymous JSON string for synced accessibility prefs
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  recoveryKeys RecoveryKey[]
+  tools        Tool[]        @relation("OwnerTools")
+  loans        Loan[]        @relation("BorrowerLoans")
+  skills       Skill[]       @relation("OwnerSkills")
+  sentMsgs     Message[]     @relation("SentMessages")
+  receivedMsgs Message[]     @relation("ReceivedMessages")
+
+  @@index([username])
+}
+
+model RecoveryKey {
+  id        String    @id @default(cuid())
+  keyHash   String    @unique
+  usedAt    DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  status      String   @default("AVAILABLE") // "AVAILABLE" | "BORROWED" | "MAINTENANCE"
+  imageUrl    String?
+  ownerId     String
+  owner       User     @relation("OwnerTools", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  loans       Loan[]
+
+  @@index([status, category])
+  @@index([ownerId])
+}
+
+model Loan {
+  id              String    @id @default(cuid())
+  toolId          String
+  tool            Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  borrowerId      String
+  borrower        User      @relation("BorrowerLoans", fields: [borrowerId], references: [id], onDelete: Cascade)
+  status          String    @default("REQUESTED") // "REQUESTED" | "APPROVED" | "ACTIVE" | "RETURNED" | "REJECTED"
+  startDate       DateTime
+  endDate         DateTime
+  returnedAt      DateTime?
+  returnCondition String?   // "GOOD" | "DAMAGED"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([toolId])
+  @@index([borrowerId])
+}
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  available   Boolean  @default(true)
+  ownerId     String
+  owner       User     @relation("OwnerSkills", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, available])
+  @@index([ownerId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  fromId    String
+  toId      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  sender    User     @relation("SentMessages", fields: [fromId], references: [id], onDelete: Cascade)
+  receiver  User     @relation("ReceivedMessages", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId, toId])
+  @@index([toId, read])
+}
