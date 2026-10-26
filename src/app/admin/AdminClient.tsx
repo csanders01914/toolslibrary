@@ -22,6 +22,7 @@ import {
   KeyRound,
   Terminal,
   LifeBuoy,
+  Trash2,
 } from "lucide-react";
 import type { AdminAudit } from "@/lib/services/admin-ai";
 import {
@@ -30,6 +31,7 @@ import {
   updateUserRole,
   adjustTrustScore,
   setToolStatus,
+  deleteUser,
   type AdminActionState,
 } from "@/lib/actions/admin";
 import {
@@ -78,6 +80,8 @@ interface UserRow {
   role: string;
   trustScore: number;
   banned: boolean;
+  toolCount: number;
+  skillCount: number;
   createdAt: Date;
 }
 
@@ -250,6 +254,72 @@ function DecisionBadge({ decision }: { decision: string }) {
   );
 }
 
+// ---- Member deletion control (destructive, confirmation-gated) ----
+
+function DeleteUserControl({
+  user,
+  deleteAction,
+  deletePending,
+}: {
+  user: UserRow;
+  deleteAction: (formData: FormData) => void;
+  deletePending: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer flex items-center gap-1.5"
+      >
+        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <form action={deleteAction} className="space-y-2 min-w-[260px]">
+      <input type="hidden" name="userId" value={user.id} />
+      <p className="font-mono text-[10px] text-red-400 leading-relaxed">
+        PERMANENT: deletes @{user.username}, their {user.toolCount} tool(s), {user.skillCount}{" "}
+        skill(s), and all their loans and messages. Cannot be undone.
+      </p>
+      <label className="flex items-start gap-2 font-mono text-[10px] text-zinc-400 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={acknowledged}
+          onChange={(e) => setAcknowledged(e.target.checked)}
+          className="mt-0.5 w-4 h-4 accent-red-500 cursor-pointer"
+        />
+        <span>I authorize permanent deletion of this member and all their data.</span>
+      </label>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={!acknowledged || deletePending}
+          className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {deletePending ? "Deleting..." : "Confirm Delete"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(false);
+            setAcknowledged(false);
+          }}
+          className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-zinc-500 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function AuditResultPanel({
   audit,
   targetType,
@@ -345,6 +415,7 @@ export default function AdminClient({
   const [roleState, roleAction, rolePending] = useActionState<ActionState, FormData>(updateUserRole, undefined);
   const [trustState, trustAction, trustPending] = useActionState<ActionState, FormData>(adjustTrustScore, undefined);
   const [statusState, statusAction, statusPending] = useActionState<ActionState, FormData>(setToolStatus, undefined);
+  const [deleteState, deleteAction, deletePending] = useActionState<ActionState, FormData>(deleteUser, undefined);
   const [resolveState, resolveAction, resolvePending] = useActionState<HelpActionState, FormData>(
     resolveHelpRequestAction,
     undefined
@@ -369,10 +440,10 @@ export default function AdminClient({
     }
   }, [auditState]);
 
-  // Refresh server data after help queue actions.
+  // Refresh server data after help queue and member governance actions.
   useEffect(() => {
-    if (resolveState?.success || escalateState?.success) router.refresh();
-  }, [resolveState, escalateState, router]);
+    if (resolveState?.success || escalateState?.success || deleteState?.success) router.refresh();
+  }, [resolveState, escalateState, deleteState, router]);
 
   // ---------------- AUTOMATION CONFIGURATION ----------------
 
@@ -549,10 +620,15 @@ export default function AdminClient({
   ];
 
   const moderationError =
-    roleState?.error || trustState?.error || statusState?.error || applyState?.error;
+    roleState?.error || trustState?.error || statusState?.error || applyState?.error || deleteState?.error;
   const moderationSuccess =
-    (roleState?.success || trustState?.success || statusState?.success || applyState?.success) &&
+    (roleState?.success ||
+      trustState?.success ||
+      statusState?.success ||
+      applyState?.success ||
+      deleteState?.success) &&
     !moderationError;
+  const moderationDetail = deleteState?.detail;
 
   const openHelp = helpRequests.filter((r) => r.status === "OPEN" || r.status === "AGENT_DISPATCHED");
   const closedHelp = helpRequests.filter((r) => r.status === "RESOLVED" || r.status === "ESCALATED");
@@ -756,7 +832,7 @@ export default function AdminClient({
               : "border-emerald-500/50 text-emerald-400 bg-emerald-500/5"
           }`}
         >
-          {moderationError || "Action applied successfully."}
+          {moderationError || moderationDetail || "Action applied successfully."}
         </div>
       )}
       {auditState?.error && (
@@ -1261,6 +1337,7 @@ export default function AdminClient({
                 <th scope="col" className="px-6 py-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500">Joined</th>
                 <th scope="col" className="px-6 py-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500">Trust</th>
                 <th scope="col" className="px-6 py-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500">Role</th>
+                <th scope="col" className="px-6 py-4 font-mono text-[11px] uppercase tracking-widest text-zinc-500">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1343,6 +1420,15 @@ export default function AdminClient({
                           Save
                         </button>
                       </form>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {user.id === currentUserId || user.role === "ADMIN" ? (
+                      <span className="font-mono text-[11px] text-zinc-600" title="Administrators cannot be deleted directly — demote to USER first">
+                        —
+                      </span>
+                    ) : (
+                      <DeleteUserControl user={user} deleteAction={deleteAction} deletePending={deletePending} />
                     )}
                   </td>
                 </tr>

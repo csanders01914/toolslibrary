@@ -53,6 +53,7 @@ export default async function AdminPage() {
         trustScore: true,
         banned: true,
         createdAt: true,
+        _count: { select: { tools: true, skills: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -61,6 +62,18 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  const userRows = users.map((user) => ({
+    id: user.id,
+    username: user.username,
+    alias: user.alias,
+    role: user.role,
+    trustScore: user.trustScore,
+    banned: user.banned,
+    toolCount: user._count.tools,
+    skillCount: user._count.skills,
+    createdAt: user.createdAt,
+  }));
 
   return (
     <AdminClient
@@ -76,7 +89,7 @@ export default async function AdminPage() {
       }}
       auditTools={recentTools}
       auditSkills={recentSkills}
-      users={users}
+      users={userRows}
       helpRequests={helpRequests}
     />
   );
