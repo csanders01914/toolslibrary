@@ -26,6 +26,9 @@ next-env.d.ts
 .handoff/
 nppBackup/
 *.bak
+CLEANUP_REPORT.md
+IMPLEMENTATION_PLAN.md
+AGENTS.md
 
 # --- Docs & legacy design assets (not needed at runtime) ---
 *.md
