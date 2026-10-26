@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Request Help — ToolsLibrary",
-  description: "Triage-assisted help requests: automated agent resolution or human admin intervention.",
+  description: "Request help with tools, skills, loans, or your account.",
 };
 
 export default async function HelpPage() {

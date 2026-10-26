@@ -8,9 +8,9 @@ import { triageHelpRequest, HELP_CATEGORIES } from "@/lib/services/triage";
 import { AGENT_SYSTEM_PROMPT, runAgentTurn } from "@/lib/agent/run";
 
 /**
- * Help request pipeline: public submission → random forest triage →
- * either automated LLM agent dispatch (safe tools only; destructive calls
- * are guardrail-intercepted) or the human admin intervention queue.
+ * Help request pipeline: public submission → triage →
+ * either automated dispatch (safe tools only; destructive calls
+ * are guardrail-intercepted) or the admin intervention queue.
  */
 
 export type HelpActionState = {
@@ -18,14 +18,32 @@ export type HelpActionState = {
   error?: string;
   ticket?: {
     id: string;
-    route: string;
+    route: string; // public-safe: "AUTO" | "ADMIN"
     urgency: string;
-    confidence: number;
-    triageReason: string;
-    status: string;
+    status: string; // public-safe: "OPEN" | "HANDLED" | "RESOLVED" | "ESCALATED"
     resolution: string | null;
   };
 } | undefined;
+
+/**
+ * Public-safe ticket view: internal route/status enum values and classifier
+ * internals (confidence, triage reason) never leave the server.
+ */
+function publicTicket(t: {
+  route: string;
+  urgency: string;
+  status: string;
+  resolution: string | null;
+  id: string;
+}) {
+  return {
+    id: t.id,
+    route: t.route === "LLM_AGENT" ? "AUTO" : "ADMIN",
+    urgency: t.urgency,
+    status: t.status === "AGENT_DISPATCHED" ? "HANDLED" : t.status,
+    resolution: t.resolution,
+  };
+}
 
 const submitSchema = z.object({
   category: z.enum(HELP_CATEGORIES),
@@ -62,12 +80,12 @@ export async function submitHelpRequest(
   let route = verdict.route;
   let triageReason = verdict.reason;
 
-  // Fail-safe: if the forest routed to the agent but no LLM is configured,
-  // fall back to the human queue.
+  // Fail-safe: if triage routed to automated handling but no endpoint is
+  // configured, fall back to the admin queue.
   const resolved = route === "LLM_AGENT" ? await resolveLlm() : null;
   if (route === "LLM_AGENT" && !resolved) {
     route = "HUMAN_ADMIN";
-    triageReason += "; LLM agent not configured — fell back to human queue";
+    triageReason += "; automated dispatch unavailable — queued for admin review";
   }
 
   const created = await prisma.helpRequest.create({
@@ -84,7 +102,7 @@ export async function submitHelpRequest(
     },
   });
 
-  // Automated resolution attempt for agent-routed tickets.
+  // Automated resolution attempt for auto-routed tickets.
   if (route === "LLM_AGENT" && resolved) {
     try {
       const turn = await runAgentTurn(resolved, [
@@ -110,66 +128,22 @@ export async function submitHelpRequest(
           where: { id: created.id },
           data: { status: "AGENT_DISPATCHED", resolution: turn.reply },
         });
-        return {
-          success: true,
-          ticket: {
-            id: updated.id,
-            route: updated.route,
-            urgency: updated.urgency,
-            confidence: updated.confidence,
-            triageReason: updated.triageReason,
-            status: updated.status,
-            resolution: updated.resolution,
-          },
-        };
+        return { success: true, ticket: publicTicket(updated) };
       }
-      // Agent turn failed — leave OPEN for the human queue.
+      // Automated turn failed — leave OPEN for the admin queue.
       const updated = await prisma.helpRequest.update({
         where: { id: created.id },
         data: {
-          triageReason: `${triageReason}; agent dispatch failed (${turn.error})`,
+          triageReason: `${triageReason}; automated dispatch failed (${turn.error})`,
         },
       });
-      return {
-        success: true,
-        ticket: {
-          id: updated.id,
-          route: updated.route,
-          urgency: updated.urgency,
-          confidence: updated.confidence,
-          triageReason: updated.triageReason,
-          status: updated.status,
-          resolution: null,
-        },
-      };
+      return { success: true, ticket: publicTicket(updated) };
     } catch {
-      return {
-        success: true,
-        ticket: {
-          id: created.id,
-          route: created.route,
-          urgency: created.urgency,
-          confidence: created.confidence,
-          triageReason: created.triageReason,
-          status: created.status,
-          resolution: null,
-        },
-      };
+      return { success: true, ticket: publicTicket(created) };
     }
   }
 
-  return {
-    success: true,
-    ticket: {
-      id: created.id,
-      route: created.route,
-      urgency: created.urgency,
-      confidence: created.confidence,
-      triageReason: created.triageReason,
-      status: created.status,
-      resolution: null,
-    },
-  };
+  return { success: true, ticket: publicTicket(created) };
 }
 
 // ----------------------------------------------------------------

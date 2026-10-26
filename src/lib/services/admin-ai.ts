@@ -1,12 +1,11 @@
 import { z } from "zod";
 
 /**
- * Qwen 2.5 7B Admin Helper Service
+ * Admin audit helper service.
  *
- * Strictly gated to ADMIN sessions. Connects to an OpenAI-compatible chat
- * completions endpoint (default: OpenRouter serving qwen/qwen-2.5-7b-instruct)
- * and evaluates tool/skill listings or free-form admin prompts. All model
- * output is validated with Zod before it ever reaches the admin console.
+ * Strictly gated to ADMIN sessions. Connects to a chat-completions endpoint
+ * and evaluates tool/skill listings or free-form admin prompts. All output
+ * is validated with Zod before it ever reaches the admin console.
  */
 
 export const AdminAuditSchema = z.object({
@@ -103,7 +102,7 @@ function extractJson(content: string): unknown {
 }
 
 /**
- * Runs an AI audit. The caller must pass the live NextAuth session; the
+ * Runs a listing audit. The caller must pass the live NextAuth session; the
  * service refuses to run for anyone without the ADMIN role.
  */
 export async function runAdminAudit(
@@ -111,7 +110,7 @@ export async function runAdminAudit(
   target: AuditTarget
 ): Promise<AdminAuditResult> {
   if (session?.user?.role !== "ADMIN") {
-    return { ok: false, error: "Admin privileges required to run AI audits" };
+    return { ok: false, error: "Admin privileges required to run audits" };
   }
 
   const endpoint = process.env.AI_INFERENCE_URL || "https://openrouter.ai/api/v1/chat/completions";
@@ -142,29 +141,29 @@ export async function runAdminAudit(
       signal: AbortSignal.timeout(30000),
     });
   } catch {
-    return { ok: false, error: "AI inference endpoint unreachable" };
+    return { ok: false, error: "Audit service endpoint unreachable" };
   }
 
   if (!response.ok) {
-    return { ok: false, error: `AI inference endpoint returned ${response.status}` };
+    return { ok: false, error: `Audit service endpoint returned ${response.status}` };
   }
 
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    return { ok: false, error: "AI inference endpoint returned invalid JSON" };
+    return { ok: false, error: "Audit service endpoint returned invalid JSON" };
   }
 
   const choices = (payload as { choices?: Array<{ message?: { content?: string } }> })?.choices;
   const content = choices?.[0]?.message?.content;
   if (typeof content !== "string" || content.length === 0) {
-    return { ok: false, error: "AI response contained no message content" };
+    return { ok: false, error: "Audit response contained no message content" };
   }
 
   const parsed = AdminAuditSchema.safeParse(extractJson(content));
   if (!parsed.success) {
-    return { ok: false, error: "AI response failed schema validation" };
+    return { ok: false, error: "Audit response failed schema validation" };
   }
 
   return { ok: true, audit: parsed.data };

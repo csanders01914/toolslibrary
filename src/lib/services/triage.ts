@@ -1,14 +1,14 @@
 /**
- * Random Forest triage classifier for incoming help requests.
+ * Help-request triage classifier.
  *
- * A lightweight, dependency-free implementation: five independent decision
- * trees, each a deterministic heuristic path over extracted features, vote
- * on the routing decision. Majority weighted vote wins; ties fail safe to
+ * A lightweight, dependency-free implementation: five independent heuristic
+ * rules, each a deterministic path over extracted features, vote on the
+ * routing decision. Majority weighted vote wins; ties fail safe to
  * HUMAN_ADMIN. Confidence is the winning route's share of total vote weight.
  *
  * Routes:
- *   LLM_AGENT   — automated resolution by the operations agent (safe tools only)
- *   HUMAN_ADMIN — human intervention queue
+ *   LLM_AGENT   — automated resolution (safe tools only)
+ *   HUMAN_ADMIN — admin intervention queue
  */
 
 export type TriageRoute = "LLM_AGENT" | "HUMAN_ADMIN";
@@ -45,7 +45,7 @@ export type TriageVerdict = {
   urgency: Urgency;
   reason: string;
   votes: { LLM_AGENT: number; HUMAN_ADMIN: number };
-  treeDecisions: Array<{ tree: string; route: TriageRoute; weight: number }>;
+  ruleDecisions: Array<{ rule: string; route: TriageRoute; weight: number }>;
 };
 
 // ----------------------------------------------------------------
@@ -158,99 +158,99 @@ export function extractFeatures(
 }
 
 // ----------------------------------------------------------------
-// The forest: five independent decision trees
+// Five independent voting rules
 // ----------------------------------------------------------------
 
-type TreeResult = { tree: string; route: TriageRoute; weight: number };
+type RuleResult = { rule: string; route: TriageRoute; weight: number };
 
-type DecisionTree = {
+type TriageRule = {
   name: string;
-  decide: (f: TriageFeatures, text: string) => TreeResult;
+  decide: (f: TriageFeatures, text: string) => RuleResult;
 };
 
-const forest: DecisionTree[] = [
+const RULES: TriageRule[] = [
   {
-    // Tree 1 — safety first: anything touching physical harm goes to humans.
+    // Rule 1 — safety first: anything touching physical harm goes to humans.
     name: "SAFETY_FIRST",
     decide: (f) => {
       if (f.scores.safety >= 2 || f.urgency === "CRITICAL") {
-        return { tree: "SAFETY_FIRST", route: "HUMAN_ADMIN", weight: 1.0 };
+        return { rule: "SAFETY_FIRST", route: "HUMAN_ADMIN", weight: 1.0 };
       }
       if (f.scores.safety === 1) {
-        return { tree: "SAFETY_FIRST", route: "HUMAN_ADMIN", weight: 0.8 };
+        return { rule: "SAFETY_FIRST", route: "HUMAN_ADMIN", weight: 0.8 };
       }
-      return { tree: "SAFETY_FIRST", route: "LLM_AGENT", weight: 0.6 };
+      return { rule: "SAFETY_FIRST", route: "LLM_AGENT", weight: 0.6 };
     },
   },
   {
-    // Tree 2 — interpersonal disputes and trust violations need human judgment.
+    // Rule 2 — interpersonal disputes and trust violations need human judgment.
     name: "INTERPERSONAL",
     decide: (f, text) => {
       if (
         f.scores.dispute >= 2 ||
         /harass|threaten|scam|stole|stolen/.test(text)
       ) {
-        return { tree: "INTERPERSONAL", route: "HUMAN_ADMIN", weight: 0.9 };
+        return { rule: "INTERPERSONAL", route: "HUMAN_ADMIN", weight: 0.9 };
       }
       if (f.scores.dispute === 1) {
-        return { tree: "INTERPERSONAL", route: "HUMAN_ADMIN", weight: 0.6 };
+        return { rule: "INTERPERSONAL", route: "HUMAN_ADMIN", weight: 0.6 };
       }
-      return { tree: "INTERPERSONAL", route: "LLM_AGENT", weight: 0.6 };
+      return { rule: "INTERPERSONAL", route: "LLM_AGENT", weight: 0.6 };
     },
   },
   {
-    // Tree 3 — account/access issues: agent can explain, humans handle locks.
+    // Rule 3 — account/access issues: automated answers where safe, humans handle locks.
     name: "ACCOUNT_TRUST",
     decide: (f) => {
       if (f.scores.account >= 1 && (f.urgency === "HIGH" || f.urgency === "CRITICAL")) {
-        return { tree: "ACCOUNT_TRUST", route: "HUMAN_ADMIN", weight: 0.7 };
+        return { rule: "ACCOUNT_TRUST", route: "HUMAN_ADMIN", weight: 0.7 };
       }
       if (f.scores.account >= 1) {
-        return { tree: "ACCOUNT_TRUST", route: "LLM_AGENT", weight: 0.7 };
+        return { rule: "ACCOUNT_TRUST", route: "LLM_AGENT", weight: 0.7 };
       }
-      return { tree: "ACCOUNT_TRUST", route: "LLM_AGENT", weight: 0.5 };
+      return { rule: "ACCOUNT_TRUST", route: "LLM_AGENT", weight: 0.5 };
     },
   },
   {
-    // Tree 4 — self-service: bugs and how-to questions are agent territory,
-    // but defer to the specialist trees when dispute/safety signals exist.
+    // Rule 4 — self-service: bugs and how-to questions are automation territory,
+    // but defer to the specialist rules when dispute/safety signals exist.
     name: "SELF_SERVICE",
     decide: (f, text) => {
       if (f.scores.dispute >= 1 || f.scores.safety >= 1) {
-        return { tree: "SELF_SERVICE", route: "HUMAN_ADMIN", weight: 0.5 };
+        return { rule: "SELF_SERVICE", route: "HUMAN_ADMIN", weight: 0.5 };
       }
       if (f.scores.bug >= 1) {
         if (/data loss|deleted everything|lost all/.test(text)) {
-          return { tree: "SELF_SERVICE", route: "HUMAN_ADMIN", weight: 0.8 };
+          return { rule: "SELF_SERVICE", route: "HUMAN_ADMIN", weight: 0.8 };
         }
-        return { tree: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.7 };
+        return { rule: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.7 };
       }
       if (f.scores.howto >= 1) {
-        return { tree: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.8 };
+        return { rule: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.8 };
       }
-      return { tree: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.4 };
+      return { rule: "SELF_SERVICE", route: "LLM_AGENT", weight: 0.4 };
     },
   },
   {
-    // Tree 5 — urgency escalation: high heat goes to humans regardless of topic.
+    // Rule 5 — urgency escalation: high heat goes to humans regardless of topic.
     name: "URGENCY_ESCALATION",
     decide: (f) => {
       if (f.urgency === "CRITICAL") {
-        return { tree: "URGENCY_ESCALATION", route: "HUMAN_ADMIN", weight: 1.0 };
+        return { rule: "URGENCY_ESCALATION", route: "HUMAN_ADMIN", weight: 1.0 };
       }
       if (f.urgency === "HIGH") {
-        return { tree: "URGENCY_ESCALATION", route: "HUMAN_ADMIN", weight: 0.6 };
+        return { rule: "URGENCY_ESCALATION", route: "HUMAN_ADMIN", weight: 0.6 };
       }
       if (f.urgency === "MEDIUM") {
-        return { tree: "URGENCY_ESCALATION", route: "LLM_AGENT", weight: 0.6 };
+        return { rule: "URGENCY_ESCALATION", route: "LLM_AGENT", weight: 0.6 };
       }
-      return { tree: "URGENCY_ESCALATION", route: "LLM_AGENT", weight: 0.7 };
+      return { rule: "URGENCY_ESCALATION", route: "LLM_AGENT", weight: 0.7 };
     },
   },
 ];
 
 // ----------------------------------------------------------------
-// Forest vote
+// Weighted vote
 // ----------------------------------------------------------------
 
 export function triageHelpRequest(
@@ -261,27 +261,23 @@ export function triageHelpRequest(
   const features = extractFeatures(category, message, hasUserId);
   const text = message.toLowerCase();
 
-  const treeDecisions = forest.map((tree) => tree.decide(features, text));
+  const ruleDecisions = RULES.map((rule) => rule.decide(features, text));
 
-  let llmWeight = 0;
+  let autoWeight = 0;
   let humanWeight = 0;
-  for (const decision of treeDecisions) {
-    if (decision.route === "LLM_AGENT") llmWeight += decision.weight;
+  for (const decision of ruleDecisions) {
+    if (decision.route === "LLM_AGENT") autoWeight += decision.weight;
     else humanWeight += decision.weight;
   }
 
   // Fail-safe: ties and near-ties go to humans.
   const route: TriageRoute =
-    humanWeight > llmWeight || Math.abs(humanWeight - llmWeight) < 0.1
+    humanWeight > autoWeight || Math.abs(humanWeight - autoWeight) < 0.1
       ? "HUMAN_ADMIN"
       : "LLM_AGENT";
 
-  const total = llmWeight + humanWeight;
-  const confidence = total > 0 ? Math.max(llmWeight, humanWeight) / total : 0;
-
-  const dominant = treeDecisions
-    .filter((d) => d.route === route)
-    .sort((a, b) => b.weight - a.weight)[0];
+  const total = autoWeight + humanWeight;
+  const confidence = total > 0 ? Math.max(autoWeight, humanWeight) / total : 0;
 
   const featureSummary = Object.entries(features.scores)
     .filter(([, v]) => v > 0)
@@ -289,8 +285,6 @@ export function triageHelpRequest(
     .join(" ");
 
   const reason = [
-    `Forest vote ${treeDecisions.filter((d) => d.route === "HUMAN_ADMIN").length}/5 trees → ${route}`,
-    dominant ? `decisive tree ${dominant.tree}` : "",
     `urgency ${features.urgency}`,
     featureSummary ? `signals [${featureSummary}]` : "no strong signals",
   ]
@@ -302,7 +296,7 @@ export function triageHelpRequest(
     confidence: Math.round(confidence * 100) / 100,
     urgency: features.urgency,
     reason,
-    votes: { LLM_AGENT: llmWeight, HUMAN_ADMIN: humanWeight },
-    treeDecisions,
+    votes: { LLM_AGENT: autoWeight, HUMAN_ADMIN: humanWeight },
+    ruleDecisions,
   };
 }

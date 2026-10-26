@@ -124,7 +124,7 @@ export async function runAiAudit(
 }
 
 /**
- * Applies a previously returned AI audit decision. Requires explicit human
+ * Applies a previously returned audit decision. Requires explicit human
  * confirmation — the console only calls this after the admin has reviewed the
  * audit summary and checked the confirmation box.
  */

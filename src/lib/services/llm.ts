@@ -2,14 +2,14 @@ import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret, maskSecret } from "@/lib/crypto";
 
 /**
- * LLM provider service.
+ * Automation provider service.
  *
- * Resolves the active LLM endpoint from the admin-managed configuration row
- * (LlmConfig table, API key stored AES-256-GCM encrypted) with a fallback to
- * legacy environment variables (AI_INFERENCE_URL / AI_INFERENCE_KEY /
- * AI_MODEL_NAME). All endpoints are OpenAI-compatible /chat/completions APIs
- * with function calling. No API key is ever hardcoded and no key material is
- * ever returned to the client — only a masked last-4 hint.
+ * Resolves the active chat-completions endpoint from the admin-managed
+ * configuration row (LlmConfig table, API key stored AES-256-GCM encrypted)
+ * with a fallback to legacy environment variables (AI_INFERENCE_URL /
+ * AI_INFERENCE_KEY / AI_MODEL_NAME). All endpoints are chat-completions
+ * compatible APIs with function calling. No API key is ever hardcoded and no
+ * key material is ever returned to the client — only a masked last-4 hint.
  */
 
 export type ProviderId =
@@ -112,8 +112,8 @@ export type ResolvedLlm = {
 };
 
 /**
- * Resolves the active LLM endpoint. Returns null when neither the DB config
- * nor the legacy environment variables define a usable endpoint.
+ * Resolves the active automation endpoint. Returns null when neither the DB
+ * config nor the legacy environment variables define a usable endpoint.
  */
 export async function resolveLlm(): Promise<ResolvedLlm | null> {
   const row = await prisma.llmConfig.findFirst({
@@ -216,7 +216,7 @@ export type CompletionResult =
 /**
  * Runs one non-streaming chat completion against the resolved endpoint with
  * optional function-calling tools. Returns the raw assistant message
- * (including any tool_calls) for the caller's agent loop to handle.
+ * (including any tool_calls) for the caller's tool loop to handle.
  */
 export async function chatCompletion(
   resolved: ResolvedLlm,
@@ -231,7 +231,7 @@ export async function chatCompletion(
   if (resolved.provider === "OPENROUTER") {
     // OpenRouter attribution headers (optional, no PII).
     headers["HTTP-Referer"] = "http://localhost:3000";
-    headers["X-Title"] = "ToolsLibrary Admin Agent";
+    headers["X-Title"] = "ToolsLibrary Admin";
   }
 
   const body: Record<string, unknown> = {
@@ -254,7 +254,7 @@ export async function chatCompletion(
       signal: AbortSignal.timeout(60000),
     });
   } catch {
-    return { ok: false, error: "LLM endpoint unreachable" };
+    return { ok: false, error: "Service endpoint unreachable" };
   }
 
   if (!response.ok) {
@@ -265,14 +265,14 @@ export async function chatCompletion(
     } catch {
       detail = "";
     }
-    return { ok: false, error: `LLM endpoint returned ${response.status}${detail}` };
+    return { ok: false, error: `Service endpoint returned ${response.status}${detail}` };
   }
 
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    return { ok: false, error: "LLM endpoint returned invalid JSON" };
+    return { ok: false, error: "Service endpoint returned invalid JSON" };
   }
 
   const choice = (payload as {
@@ -280,7 +280,7 @@ export async function chatCompletion(
   })?.choices?.[0]?.message;
 
   if (!choice || (typeof choice.content !== "string" && !choice.tool_calls)) {
-    return { ok: false, error: "LLM response contained no message content" };
+    return { ok: false, error: "Service response contained no message content" };
   }
 
   return { ok: true, message: choice };

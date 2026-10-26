@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 /**
- * Action-oriented LLM agent tool registry.
+ * Automation tool registry.
  *
  * Every tool declares whether it is DESTRUCTIVE. The guardedToolCall
  * interceptor enforces the platform guardrail: destructive calls are NEVER
@@ -454,7 +454,7 @@ export function getAgentToolDef(name: string): AgentToolDef | null {
   return AGENT_TOOLS.find((t) => t.name === name) ?? null;
 }
 
-/** OpenAI function-calling schema array for the chat completions API. */
+/** Function-calling schema array for the chat completions API. */
 export function agentToolSchemas() {
   return AGENT_TOOLS.map((t) => ({
     type: "function" as const,
@@ -539,7 +539,7 @@ export type ToolCallOutcome =
   | { kind: "ERROR"; error: string };
 
 /**
- * THE GUARDRAIL. Every LLM tool call passes through here.
+ * THE GUARDRAIL. Every automated tool call passes through here.
  *
  * - Destructive tools are intercepted: the call is persisted as PENDING and
  *   nothing is executed. It surfaces in the admin guardrail queue and only
@@ -605,7 +605,7 @@ export async function confirmAgentAction(
   session: { user?: { id?: string; role?: string } | null } | null
 ): Promise<ConfirmResult> {
   if (session?.user?.role !== "ADMIN") {
-    return { ok: false, error: "Admin privileges required to confirm agent actions" };
+    return { ok: false, error: "Admin privileges required to confirm automated actions" };
   }
 
   const action = await prisma.agentAction.findUnique({ where: { id: actionId } });

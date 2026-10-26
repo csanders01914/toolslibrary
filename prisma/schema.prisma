@@ -15,7 +15,7 @@ model User {
   passwordHash       String
   role               String        @default("USER") // "USER" | "ADMIN"
   mustChangePassword Boolean       @default(false) // Stock seeded credentials force a change on first login
-  banned             Boolean       @default(false) // Set by admin (or LLM agent via human-approved ban action)
+  banned             Boolean       @default(false) // Set by admin (or via human-approved automated ban action)
   bio                String?
   trustScore         Int           @default(100)
   a11yPrefs          String?       // Anonymous JSON string for synced accessibility prefs
@@ -109,7 +109,7 @@ model Message {
   @@index([toId, read])
 }
 
-// LLM provider configuration. Single-row table (upserted). The API key is
+// Automation provider configuration. Single-row table (upserted). The API key is
 // stored AES-256-GCM encrypted (see src/lib/crypto.ts) and is NEVER returned
 // to the client — only a masked hint (last 4 chars) is ever exposed.
 model LlmConfig {
@@ -122,9 +122,8 @@ model LlmConfig {
   updatedAt DateTime @updatedAt
 }
 
-// User-submitted help requests, triaged by the random-forest classifier in
-// src/lib/services/triage.ts into either the LLM agent pipeline or the
-// human admin intervention queue.
+// User-submitted help requests, triaged in src/lib/services/triage.ts into
+// either the automated pipeline or the admin intervention queue.
 model HelpRequest {
   id           String   @id @default(cuid())
   userId       String?  // Set when an authenticated user files the request
@@ -132,18 +131,18 @@ model HelpRequest {
   category     String // "TOOL_ISSUE" | "SKILL_ISSUE" | "LOAN_DISPUTE" | "ACCOUNT_ACCESS" | "SAFETY_INCIDENT" | "BUG_REPORT" | "GENERAL"
   message      String
   urgency      String // Classifier feature output: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
-  route        String // Forest vote result: "LLM_AGENT" | "HUMAN_ADMIN"
+  route        String // Routing result: "LLM_AGENT" | "HUMAN_ADMIN"
   triageReason String
-  confidence   Float // Fraction of trees agreeing with the winning route (0..1)
+  confidence   Float // Agreement fraction for the winning route (0..1)
   status       String   @default("OPEN") // "OPEN" | "AGENT_DISPATCHED" | "RESOLVED" | "ESCALATED"
-  resolution   String?  // Agent reply draft or human admin resolution note
+  resolution   String?  // Automated reply draft or admin resolution note
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([status, route])
 }
 
-// Audit trail + human-in-the-loop confirmation gate for LLM agent tool calls.
+// Audit trail + human-in-the-loop confirmation gate for automated tool calls.
 // Destructive calls are ALWAYS created as status=PENDING and are never
 // executed until an admin approves them (see src/lib/agent/tools.ts).
 model AgentAction {

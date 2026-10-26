@@ -20,7 +20,7 @@ dist/
 tsconfig.tsbuildinfo
 next-env.d.ts
 
-# --- VCS, agent handoff state, editor droppings ---
+# --- VCS, handoff state, editor droppings ---
 .git/
 .gitignore
 .handoff/

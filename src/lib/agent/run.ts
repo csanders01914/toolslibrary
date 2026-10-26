@@ -9,10 +9,10 @@ import {
 } from "@/lib/agent/tools";
 
 /**
- * Shared agent turn runner: drives the tool-calling loop against the
- * configured LLM. Safe tool calls execute immediately through the guardrail;
- * destructive calls come back as PENDING_APPROVAL records that the model is
- * informed about (it cannot bypass the human gate).
+ * Shared automation turn runner: drives the tool-calling loop against the
+ * configured endpoint. Safe tool calls execute immediately through the
+ * guardrail; destructive calls come back as PENDING_APPROVAL records that the
+ * model is informed about (it cannot bypass the human gate).
  */
 
 export const AGENT_SYSTEM_PROMPT = [
@@ -57,10 +57,10 @@ function parseToolCallArguments(raw: string): { ok: true; args: unknown } | { ok
 }
 
 /**
- * Runs one full agent turn (up to MAX_TOOL_ITERATIONS tool rounds) against
- * the resolved LLM endpoint. `history` must already include the system prompt
- * and the conversation so far; the assistant reply is returned along with a
- * record of every tool call attempt for UI rendering and audit.
+ * Runs one full automation turn (up to MAX_TOOL_ITERATIONS tool rounds)
+ * against the resolved endpoint. `history` must already include the system
+ * prompt and the conversation so far; the assistant reply is returned along
+ * with a record of every tool call attempt for UI rendering and audit.
  */
 export async function runAgentTurn(
   resolved: ResolvedLlm,

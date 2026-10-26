@@ -9,7 +9,6 @@ import {
   Hammer,
   ArrowLeftRight,
   Wrench,
-  Bot,
   ScanSearch,
   Check,
   X,
@@ -41,9 +40,9 @@ import {
 
 // ================================================================
 // Admin Command Console — terminal aesthetic.
-// Sections: telemetry, LLM CONFIGURATION, AGENT CONSOLE (tool-calling),
-// GUARDRAIL QUEUE (human-in-the-loop), HELP QUEUE (triage outcomes),
-// audit queues, member governance.
+// Sections: telemetry, AUTOMATION CONFIGURATION, OPERATIONS CONSOLE
+// (tool-calling), GUARDRAIL QUEUE (human-in-the-loop), HELP QUEUE
+// (triage outcomes), audit queues, member governance.
 // ================================================================
 
 interface OwnerRef {
@@ -117,7 +116,7 @@ interface AdminClientProps {
 
 type ActionState = AdminActionState;
 
-// ---- LLM config types (mirror /api/llm/config GET) ----
+// ---- Automation config types (mirror /api/llm/config GET) ----
 
 interface PublicLlmConfig {
   configured: boolean;
@@ -136,7 +135,7 @@ interface ProviderOption {
   requiresKey: boolean;
 }
 
-// ---- Agent chat types (mirror /api/agent/chat POST) ----
+// ---- Operations chat types (mirror /api/agent/chat POST) ----
 
 interface AgentToolCallRecord {
   name: string;
@@ -204,8 +203,14 @@ const STATUS_CHIP: Record<string, string> = {
   LOW: "zinc",
 };
 
+// Public-safe chip labels for internal enum values.
+const CHIP_LABEL: Record<string, string> = {
+  LLM_AGENT: "AUTOMATED",
+  AGENT_DISPATCHED: "DISPATCHED",
+};
+
 function StatusChip({ value }: { value: string }) {
-  return <span className={chip(STATUS_CHIP[value] ?? "zinc")}>{value}</span>;
+  return <span className={chip(STATUS_CHIP[value] ?? "zinc")}>{CHIP_LABEL[value] ?? value}</span>;
 }
 
 function formatDate(date: Date | string) {
@@ -292,7 +297,7 @@ function AuditResultPanel({
               className="mt-0.5 w-4 h-4 accent-cyan-500 cursor-pointer"
             />
             <span>
-              HUMAN CONFIRMATION REQUIRED: I have reviewed this AI audit and authorize the
+              HUMAN CONFIRMATION REQUIRED: I have reviewed this audit and authorize the
               {audit.decision === "FLAG" ? " lockout" : " approval"} of this listing.
             </span>
           </label>
@@ -369,7 +374,7 @@ export default function AdminClient({
     if (resolveState?.success || escalateState?.success) router.refresh();
   }, [resolveState, escalateState, router]);
 
-  // ---------------- LLM CONFIGURATION ----------------
+  // ---------------- AUTOMATION CONFIGURATION ----------------
 
   const [llmConfig, setLlmConfig] = useState<PublicLlmConfig | null>(null);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
@@ -398,7 +403,7 @@ export default function AdminClient({
       setBaseUrl((prev) => prev || data.config.baseUrl || "");
     } catch {
       // Config panel stays empty; status line shows the error.
-      setCfgMsg({ ok: false, text: "Failed to load LLM configuration" });
+      setCfgMsg({ ok: false, text: "Failed to load configuration" });
     }
   }, []);
 
@@ -437,7 +442,7 @@ export default function AdminClient({
 
   const selectedProvider = providers.find((p) => p.id === provider);
 
-  // ---------------- AGENT CONSOLE ----------------
+  // ---------------- OPERATIONS CONSOLE ----------------
 
   const [chatLog, setChatLog] = useState<ChatEntry[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -517,7 +522,7 @@ export default function AdminClient({
         error?: string;
       };
       if (!res.ok) {
-        setChatLog([...withUser, { role: "assistant", content: `ERROR: ${data.error ?? "agent turn failed"}` }]);
+        setChatLog([...withUser, { role: "assistant", content: `ERROR: ${data.error ?? "request failed"}` }]);
       } else {
         setChatLog([
           ...withUser,
@@ -528,7 +533,7 @@ export default function AdminClient({
         }
       }
     } catch {
-      setChatError("Network error — agent unreachable");
+      setChatError("Network error — service unreachable");
     } finally {
       setChatting(false);
     }
@@ -579,7 +584,7 @@ export default function AdminClient({
               disabled={auditPending}
               className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {auditPending ? "Auditing..." : "Run AI Audit"}
+              {auditPending ? "Auditing..." : "Run Audit"}
             </button>
           </form>
           {tool.status !== "BORROWED" && (
@@ -651,7 +656,7 @@ export default function AdminClient({
               disabled={auditPending}
               className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {auditPending ? "Auditing..." : "Run AI Audit"}
+              {auditPending ? "Auditing..." : "Run Audit"}
             </button>
           </form>
         </div>
@@ -706,7 +711,7 @@ export default function AdminClient({
             ADMIN // COMMAND CONSOLE
           </p>
           <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
-            Fleet telemetry, agent operations, and member governance.
+            Fleet telemetry, operations, and member governance.
           </h1>
         </div>
         <span className={`self-start ${chip("red")} px-3 py-1`}>
@@ -756,16 +761,16 @@ export default function AdminClient({
       )}
       {auditState?.error && (
         <div role="status" className="px-4 py-3 border border-red-500/50 text-red-400 bg-red-500/5 font-mono text-xs">
-          AI audit failed: {auditState.error}
+          Audit failed: {auditState.error}
         </div>
       )}
 
-      {/* LLM CONFIGURATION */}
-      <section aria-label="LLM configuration">
+      {/* AUTOMATION CONFIGURATION */}
+      <section aria-label="Automation configuration">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
           <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 flex items-center gap-2 mb-1">
             <KeyRound className="w-4 h-4" aria-hidden="true" />
-            LLM CONFIGURATION
+            AUTOMATION CONFIGURATION
           </h2>
           <p className="font-mono text-[11px] text-zinc-500 mb-6">
             API key is encrypted at rest (AES-256-GCM) and never returned to the browser. No keys are hardcoded.
@@ -795,11 +800,11 @@ export default function AdminClient({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="llm-provider" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+              <label htmlFor="automation-provider" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
                 Provider
               </label>
               <select
-                id="llm-provider"
+                id="automation-provider"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
                 className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
@@ -812,30 +817,30 @@ export default function AdminClient({
               </select>
             </div>
             <div>
-              <label htmlFor="llm-model" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+              <label htmlFor="automation-model" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
                 Model
               </label>
               <input
-                id="llm-model"
+                id="automation-model"
                 type="text"
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                list="llm-model-suggestions"
+                list="automation-model-suggestions"
                 placeholder="e.g. z-ai/glm-5.3, deepseek-chat"
                 className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
               />
-              <datalist id="llm-model-suggestions">
+              <datalist id="automation-model-suggestions">
                 {modelSuggestions.map((m) => (
                   <option key={m} value={m} />
                 ))}
               </datalist>
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="llm-baseurl" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+              <label htmlFor="automation-baseurl" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
                 Base URL {provider === "CUSTOM" ? "(required)" : "(optional override)"}
               </label>
               <input
-                id="llm-baseurl"
+                id="automation-baseurl"
                 type="url"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
@@ -844,11 +849,11 @@ export default function AdminClient({
               />
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="llm-apikey" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+              <label htmlFor="automation-apikey" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
                 API Key {llmConfig?.hasApiKey ? `(configured: ${llmConfig.keyHint ?? "••••"} — leave blank to keep)` : "(masked input)"}
               </label>
               <input
-                id="llm-apikey"
+                id="automation-apikey"
                 type="password"
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
@@ -899,21 +904,21 @@ export default function AdminClient({
         </div>
       </section>
 
-      {/* AGENT CONSOLE */}
-      <section aria-label="Agent console">
+      {/* OPERATIONS CONSOLE */}
+      <section aria-label="Operations console">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
           <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 flex items-center gap-2 mb-1">
             <Terminal className="w-4 h-4" aria-hidden="true" />
-            AGENT CONSOLE
+            OPERATIONS CONSOLE
           </h2>
           <p className="font-mono text-[11px] text-zinc-500 mb-4">
-            Action-oriented operations agent with tool calling. Destructive calls are guardrail-intercepted and
+            Automated operations with tool calling. Destructive calls are guardrail-intercepted and
             require human approval below.
           </p>
 
           {!llmConfig?.configured && (
             <p className="mb-4 px-4 py-3 border border-amber-500/50 text-amber-400 bg-amber-500/5 font-mono text-xs">
-              NO LLM CONFIGURED — set a provider and model in LLM CONFIGURATION above to activate the agent.
+              NOT CONFIGURED — set a provider and model in AUTOMATION CONFIGURATION above to activate.
             </p>
           )}
 
@@ -921,11 +926,11 @@ export default function AdminClient({
             className="border border-zinc-800 bg-black p-4 h-80 overflow-y-auto space-y-3"
             role="log"
             aria-live="polite"
-            aria-label="Agent conversation log"
+            aria-label="Operations conversation log"
           >
             {chatLog.length === 0 && (
               <p className="font-mono text-[11px] text-zinc-600">
-                AGENT STANDBY. Issue an operational directive — e.g. &quot;query available tools&quot;, &quot;set tool
+                STANDBY. Issue an operational directive — e.g. &quot;query available tools&quot;, &quot;set tool
                 X to maintenance&quot;, &quot;summarize open help tickets&quot;.
               </p>
             )}
@@ -941,7 +946,7 @@ export default function AdminClient({
                 )}
               </div>
             ))}
-            {chatting && <p className="font-mono text-[11px] text-zinc-600">AGENT WORKING...</p>}
+            {chatting && <p className="font-mono text-[11px] text-zinc-600">WORKING...</p>}
           </div>
 
           <form
@@ -951,11 +956,11 @@ export default function AdminClient({
               sendChat();
             }}
           >
-            <label htmlFor="agent-input" className="sr-only">
-              Agent directive
+            <label htmlFor="operations-input" className="sr-only">
+              Operations directive
             </label>
             <input
-              id="agent-input"
+              id="operations-input"
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
@@ -987,7 +992,7 @@ export default function AdminClient({
             GUARDRAIL QUEUE — DESTRUCTIVE ACTIONS
           </h2>
           <p className="font-mono text-[11px] text-zinc-500 mb-4">
-            Every destructive agent call (ban, delete, purge) is intercepted here. Nothing executes until a human
+            Every destructive automated call (ban, delete, purge) is intercepted here. Nothing executes until a human
             approves it.
           </p>
 
@@ -1064,7 +1069,7 @@ export default function AdminClient({
             HELP QUEUE — TRIAGE OUTCOMES
           </h2>
           <p className="font-mono text-[11px] text-zinc-500 mb-4">
-            Random forest triage routes requests to the LLM agent (automated) or this human queue.
+            Requests are triaged automatically and routed here when human judgment is needed.
           </p>
 
           {(resolveState?.error || escalateState?.error) && (
@@ -1161,17 +1166,17 @@ export default function AdminClient({
         </div>
       </section>
 
-      {/* Free-form AI prompt audit */}
-      <section aria-label="AI prompt audit">
+      {/* Free-form prompt audit */}
+      <section aria-label="Prompt audit">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
           <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 flex items-center gap-2 mb-4">
-            <Bot className="w-4 h-4" aria-hidden="true" />
+            <ScanSearch className="w-4 h-4" aria-hidden="true" />
             LISTING AUDIT — FREE-FORM PROMPT
           </h2>
           <form action={auditAction} className="space-y-4">
             <input type="hidden" name="targetType" value="PROMPT" />
             <label htmlFor="prompt" className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-              Ask the model to evaluate a policy question or listing snippet
+              Ask the audit service to evaluate a policy question or listing snippet
             </label>
             <textarea
               id="prompt"
@@ -1210,7 +1215,7 @@ export default function AdminClient({
         </div>
       </section>
 
-      {/* AI Audit Queue — Tools */}
+      {/* Audit Queue — Tools */}
       <section aria-label="Tool audit queue">
         <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 mb-6">
           TOOL AUDIT QUEUE ({auditTools.length})
@@ -1226,7 +1231,7 @@ export default function AdminClient({
         )}
       </section>
 
-      {/* AI Audit Queue — Skills */}
+      {/* Audit Queue — Skills */}
       <section aria-label="Skill audit queue">
         <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-6">
           SKILL AUDIT QUEUE ({auditSkills.length})

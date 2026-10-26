@@ -23,10 +23,10 @@ export function hashRecoveryCode(code: string): string {
 }
 
 // ============================================================
-// Server-side secret encryption (AES-256-GCM) for LLM API keys.
-// The master key is derived from AUTH_SECRET (or a dedicated
-// LLM_ENCRYPTION_KEY) via scrypt and never leaves the server.
-// Ciphertext format: iv:tag:ciphertext (all hex).
+// Server-side secret encryption (AES-256-GCM) for integration
+// API keys. The master key is derived from AUTH_SECRET (or a
+// dedicated LLM_ENCRYPTION_KEY) via scrypt and never leaves the
+// server. Ciphertext format: iv:tag:ciphertext (all hex).
 // ============================================================
 
 const SECRET_SALT = 'toolslibrary.llm-key.v1';
@@ -35,7 +35,7 @@ function getMasterKey(): Buffer {
   const material = process.env.LLM_ENCRYPTION_KEY || process.env.AUTH_SECRET;
   if (!material || material.length < 16) {
     throw new Error(
-      'Missing LLM_ENCRYPTION_KEY or AUTH_SECRET (min 16 chars) required to encrypt LLM credentials'
+      'Missing LLM_ENCRYPTION_KEY or AUTH_SECRET (min 16 chars) required to encrypt integration credentials'
     );
   }
   return crypto.scryptSync(material, SECRET_SALT, 32);

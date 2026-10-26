@@ -32,7 +32,7 @@ export const { handlers, signIn, signOut } = NextAuth({
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
-        // Banned accounts (admin or human-approved agent ban) cannot authenticate.
+        // Banned accounts (admin or approved automated ban) cannot authenticate.
         if (user.banned) return null;
 
         return {

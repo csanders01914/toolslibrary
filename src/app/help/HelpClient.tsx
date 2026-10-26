@@ -6,10 +6,10 @@ import { submitHelpRequest, type HelpActionState } from "@/lib/actions/help";
 import { HELP_CATEGORIES } from "@/lib/services/triage";
 
 /**
- * Request Help — public triage intake.
- * Submissions run through the random forest classifier (src/lib/services/triage.ts)
- * and are routed to either the LLM agent (automated resolution) or the human
- * admin intervention queue. The verdict is rendered immediately.
+ * Request Help — public intake form.
+ * Submissions are classified (src/lib/services/triage.ts) and routed to either
+ * the support pipeline or the admin review queue. The verdict is rendered
+ * immediately.
  */
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -23,17 +23,17 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const ROUTE_COPY: Record<string, { label: string; variant: string; blurb: string }> = {
-  LLM_AGENT: {
-    label: "ROUTED TO LLM AGENT",
+  AUTO: {
+    label: "IN REVIEW",
     variant: "border-cyan-500/60 text-cyan-400",
     blurb:
-      "The operations agent is handling this ticket with read-only and safe tools. Destructive actions it attempts are intercepted and require human approval.",
+      "Your request has been received and is being handled. The response will appear here.",
   },
-  HUMAN_ADMIN: {
-    label: "ROUTED TO HUMAN ADMIN QUEUE",
+  ADMIN: {
+    label: "QUEUED FOR ADMIN REVIEW",
     variant: "border-red-500/60 text-red-400",
     blurb:
-      "This request needs human judgment. An administrator will pick it up from the intervention queue.",
+      "This request needs human judgment. An administrator will pick it up from the review queue.",
   },
 };
 
@@ -62,12 +62,11 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
           SUPPORT // REQUEST HELP
         </p>
         <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
-          Describe the problem. The triage forest decides who handles it.
+          Describe the problem and we&apos;ll route it to the right place.
         </h1>
         <p className="mt-3 text-sm text-zinc-400 max-w-2xl">
-          Requests are classified by a random forest decision pipeline and routed to either the
-          autonomous LLM operations agent or a human administrator. Safety incidents and disputes
-          always reach a human. Zero PII required — an optional alias is enough.
+          Your request is reviewed and sent to whoever can resolve it. Safety incidents and
+          disputes always reach a person. Zero PII required — an optional alias is enough.
         </p>
       </section>
 
@@ -147,15 +146,15 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
               className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Send className="w-3.5 h-3.5" aria-hidden="true" />
-              {pending ? "Triaging..." : "Submit Request"}
+              {pending ? "Submitting..." : "Submit Request"}
             </button>
           </form>
         </div>
       </section>
 
-      {/* Triage verdict */}
+      {/* Request status */}
       {ticket && routeInfo && (
-        <section aria-label="Triage verdict" aria-live="polite">
+        <section aria-label="Request status" aria-live="polite">
           <div className="bg-[#0a0a0a] border border-zinc-800 p-6 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-mono text-xs px-3 py-1 border ${routeInfo.variant}`}>
@@ -165,17 +164,16 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
                 {ticket.urgency}
               </span>
               <span className="font-mono text-[10px] text-zinc-600">
-                TICKET {ticket.id.slice(0, 10)} · CONFIDENCE {Math.round(ticket.confidence * 100)}%
+                TICKET {ticket.id.slice(0, 10)}
               </span>
             </div>
 
-            <p className="font-mono text-[11px] text-zinc-500">{ticket.triageReason}</p>
             <p className="text-sm text-zinc-400">{routeInfo.blurb}</p>
 
             {ticket.resolution && (
               <div className="border-l-2 border-cyan-500/50 pl-4">
                 <p className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 mb-2">
-                  AGENT RESPONSE
+                  RESPONSE
                 </p>
                 <p className="font-mono text-xs text-zinc-300 whitespace-pre-wrap">{ticket.resolution}</p>
               </div>

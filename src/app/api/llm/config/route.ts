@@ -11,7 +11,7 @@ import {
 } from "@/lib/services/llm";
 
 /**
- * LLM configuration endpoint. ADMIN-gated.
+ * Automation configuration endpoint. ADMIN-gated.
  * GET  → masked, client-safe view of the active config (never returns keys).
  * POST → upserts the config row; the API key is encrypted at rest with
  *        AES-256-GCM and never echoed back to the client.

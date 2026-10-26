@@ -8,7 +8,7 @@ import { confirmAgentAction } from "@/lib/agent/tools";
  * Guardrail confirmation endpoint. ADMIN-gated.
  * GET  → pending destructive actions + recent action audit trail.
  * POST { actionId, approve } → human-in-the-loop decision on a pending
- *                              destructive agent action.
+ *                              destructive automated action.
  */
 
 const confirmSchema = z.object({

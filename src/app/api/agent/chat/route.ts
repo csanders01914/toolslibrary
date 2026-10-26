@@ -5,10 +5,10 @@ import { resolveLlm, type ChatMessage } from "@/lib/services/llm";
 import { AGENT_SYSTEM_PROMPT, runAgentTurn } from "@/lib/agent/run";
 
 /**
- * Admin agent chat endpoint. ADMIN-gated.
- * POST { messages: [{ role: "user"|"assistant", content }] } → runs one agent
- * turn with the full tool registry. Safe tools execute through the guardrail;
- * destructive tools are intercepted into the PENDING approval queue.
+ * Admin operations chat endpoint. ADMIN-gated.
+ * POST { messages: [{ role: "user"|"assistant", content }] } → runs one
+ * automation turn with the full tool registry. Safe tools execute through the
+ * guardrail; destructive tools are intercepted into the PENDING approval queue.
  */
 
 const chatSchema = z.object({
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const resolved = await resolveLlm();
   if (!resolved) {
     return NextResponse.json(
-      { error: "No LLM configured. Set up a provider in LLM CONFIGURATION first." },
+      { error: "No provider configured. Set up a provider in AUTOMATION CONFIGURATION first." },
       { status: 409 }
     );
   }

@@ -22,8 +22,8 @@
 #   DATA_DIR   (default: /var/home/core/srv/tool-library/data)
 #   APP_PORT   (default: 3000)
 #   AI_INFERENCE_URL / AI_MODEL_NAME / AI_INFERENCE_KEY
-#              (legacy LLM fallback; primary LLM config lives in the Admin
-#              Console, encrypted at rest with AES-256-GCM)
+#              (legacy fallback; primary config lives in the Admin Console,
+#              encrypted at rest with AES-256-GCM)
 #   LLM_ENCRYPTION_KEY (optional dedicated master secret for API-key encryption)
 #
 # Notes:

@@ -58,13 +58,13 @@ Notes:
 - On first start the entrypoint runs `prisma db push --skip-generate` to create
   or migrate the SQLite schema, then launches `node server.js`.
 - `AI_INFERENCE_URL`, `AI_INFERENCE_KEY`, and `AI_MODEL_NAME` are only a
-  legacy fallback. The primary LLM configuration now lives in the app:
-  **Admin Console → LLM CONFIGURATION** lets an admin pick a provider
+  legacy fallback. The primary configuration now lives in the app:
+  **Admin Console → AUTOMATION CONFIGURATION** lets an admin pick a provider
   (OpenRouter, OpenAI, DeepSeek, Z.ai/GLM, local Ollama, or a custom
-  OpenAI-compatible endpoint), set the model id, and store the API key —
+  chat-completions endpoint), set the model id, and store the API key —
   which is encrypted at rest with AES-256-GCM (key material derived from
   `AUTH_SECRET`, or set `LLM_ENCRYPTION_KEY` to use a dedicated master
-  secret) and is never returned to the browser. The action-oriented agent
+  secret) and is never returned to the browser. The operations console
   and the help-ticket auto-dispatch both use this configuration. If no
   in-app config exists, the environment variables above are used.
 
