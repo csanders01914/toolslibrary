@@ -37,7 +37,7 @@ import {
 
 const sourceLicenseLinks = [
   {
-    href: "https://github.com/csanders01914/tool-library",
+    href: "https://github.com/csanders01914/toolslibrary",
     label: "Source Code (GitHub)",
     icon: Github,
     external: true,

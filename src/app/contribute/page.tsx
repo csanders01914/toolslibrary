@@ -30,14 +30,14 @@ const paths = [
     accent: "cyan" as const,
     title: "Code Contributions",
     body: "The entire stack is AGPLv3 free software: Next.js 15 App Router, React 19, TypeScript, Prisma with SQLite, and Tailwind CSS v4. Clone the repository, pick an issue, and open a pull request. Every merged PR is reviewed for the project's privacy invariants — no analytics, no PII, no external CDNs.",
-    action: { href: "https://github.com/csanders01914/tool-library", label: "Open the repository", external: true },
+    action: { href: "https://github.com/csanders01914/toolslibrary", label: "Open the repository", external: true },
   },
   {
     icon: Bug,
     accent: "rose" as const,
     title: "Bug Reports & Security Disclosures",
     body: "Found a bug or a security issue? Open a GitHub issue for bugs. For security vulnerabilities, use a private GitHub security advisory rather than a public issue — we coordinate disclosure and credit reporters in the release notes.",
-    action: { href: "https://github.com/csanders01914/tool-library", label: "Report an issue", external: true },
+    action: { href: "https://github.com/csanders01914/toolslibrary", label: "Report an issue", external: true },
   },
   {
     icon: Wrench,

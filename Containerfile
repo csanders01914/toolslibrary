@@ -73,7 +73,7 @@ COPY --from=builder --chown=node:node /app/prisma ./prisma
 LABEL org.opencontainers.image.title="tool-library" \
       org.opencontainers.image.description="Zero-PII community tool & skills library (Next.js standalone + Prisma/SQLite)" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
-      org.opencontainers.image.source="https://github.com/csanders01914/tool-library"
+      org.opencontainers.image.source="https://github.com/csanders01914/toolslibrary"
 
 # Liveness probe: the landing page is force-dynamic and touches the database,
 # so a 200 here proves both the server and the SQLite volume are healthy.
