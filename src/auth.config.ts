@@ -61,6 +61,25 @@ export const authConfig = {
       }
       return session;
     },
+    redirect({ url, baseUrl }) {
+      // Open-redirect guard. Relative URLs resolve against the current
+      // deployment origin. Absolute URLs are honored only when they target
+      // the canonical public site origin (e.g. the Burn Session post-logout
+      // redirect) or the deployment origin itself; everything else falls
+      // back to the deployment origin. Override NEXT_PUBLIC_SITE_URL for
+      // alternative self-hosted deployments.
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      const allowedOrigins = new Set([
+        baseUrl,
+        process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.tools-library.com",
+      ]);
+      try {
+        if (allowedOrigins.has(new URL(url).origin)) return url;
+      } catch {
+        // Malformed URL: fall through to the safe default below.
+      }
+      return baseUrl;
+    },
     authorized({ auth, request: { nextUrl } }) {
       const { pathname } = nextUrl;
       const isProtected =

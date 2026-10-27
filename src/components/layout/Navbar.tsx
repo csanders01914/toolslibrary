@@ -23,6 +23,12 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
 
+// Post-logout landing target: the canonical public site. The absolute URL is
+// honored server-side by the redirect callback allowlist in auth.config.ts,
+// so burning a session always lands here instead of the container's internal
+// bind address (0.0.0.0:3000).
+const POST_LOGOUT_URL = "https://www.tools-library.com";
+
 function formatCountdown(totalSeconds: number): string {
   const clamped = Math.max(0, totalSeconds);
   const h = String(Math.floor(clamped / 3600)).padStart(2, "0");
@@ -111,7 +117,7 @@ export function Navbar() {
                 DASHBOARD
               </Link>
               <button
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={() => signOut({ callbackUrl: POST_LOGOUT_URL })}
                 className="font-mono text-xs px-2 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
                 BURN SESSION
@@ -197,7 +203,7 @@ export function Navbar() {
               <button
                 onClick={() => {
                   closeMenu();
-                  signOut({ callbackUrl: "/" });
+                  signOut({ callbackUrl: POST_LOGOUT_URL });
                 }}
                 className="block w-full text-left font-mono text-xs px-2 py-3 border border-red-500/60 text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors cursor-pointer"
               >
