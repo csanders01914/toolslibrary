@@ -84,7 +84,7 @@ export function MessengerWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-24 z-50 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 bg-black hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors cursor-pointer flex items-center gap-2"
+        className="fixed bottom-6 left-6 z-50 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 bg-black hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors cursor-pointer flex items-center gap-2"
         aria-haspopup="dialog"
         aria-expanded={false}
       >
@@ -98,7 +98,7 @@ export function MessengerWidget() {
     <div
       role="dialog"
       aria-label="Ephemeral messenger"
-      className="fixed bottom-6 right-24 z-50 w-[calc(100vw-7.5rem)] max-w-[380px] h-[min(420px,calc(100dvh-9rem))] bg-black border border-emerald-500/40 rounded-none flex flex-col"
+      className="fixed bottom-6 left-6 z-50 w-[calc(100vw-3rem)] max-w-[380px] h-[min(420px,calc(100dvh-9rem))] bg-black border border-emerald-500/40 rounded-none flex flex-col"
     >
       <div className="bg-[#0a0a0a] border-b border-emerald-500/30 px-3 py-2 flex items-center justify-between">
         <span className="font-mono text-xs text-emerald-400 tracking-widest">EPHEMERAL MESSENGER</span>
