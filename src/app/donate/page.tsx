@@ -31,7 +31,7 @@ const channels = [
     iconColor: "text-cyan-400",
     title: "Open Collective",
     body: "Our transparent fiscal host publishes every expense and contribution publicly. Monthly recurring contributions fund hosting hardware, replacement parts, and shared consumables like sandpaper, blades, and fasteners.",
-    note: "opencollective.com/tool-library",
+    note: "Coming Soon",
   },
   {
     icon: Users,
@@ -39,7 +39,7 @@ const channels = [
     iconColor: "text-purple-400",
     title: "Liberapay",
     body: "Recurring donations with zero platform tracking. Liberapay is itself a free-software, self-hostable patronage network — aligned with our values of decentralization and no-surveillance funding.",
-    note: "liberapay.com/tool-library",
+    note: "Coming Soon",
   },
   {
     icon: Wrench,
