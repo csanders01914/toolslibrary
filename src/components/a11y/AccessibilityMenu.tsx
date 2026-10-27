@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Accessibility, X, RotateCcw, Check } from "lucide-react";
+import { X, RotateCcw, Check } from "lucide-react";
 import { useAccessibility, type A11yPrefs } from "@/context/AccessibilityContext";
 
 const FONT_SIZES: Array<{ value: A11yPrefs["fontSize"]; label: string }> = [
@@ -24,6 +24,7 @@ const TOGGLES: Array<{ key: keyof A11yPrefs; label: string; hint: string }> = [
   { key: "reducedMotion", label: "Reduce Motion", hint: "Disable animations and transitions" },
   { key: "bigCursor", label: "Large High-Contrast Cursor", hint: "Enlarged yellow pointer" },
   { key: "readingGuide", label: "Reading Guide", hint: "Horizontal bar follows the cursor" },
+  { key: "underlineLinks", label: "Underline All Links", hint: "Always underline links (WCAG 1.4.1 Use of Color)" },
 ];
 
 export function AccessibilityMenu() {
@@ -76,7 +77,7 @@ export function AccessibilityMenu() {
         aria-label="Accessibility settings (Alt+A)"
         className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-none border border-zinc-700 bg-black text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white cursor-pointer"
       >
-        <Accessibility className="h-6 w-6" aria-hidden="true" />
+        <img src="/web-accessibility-icon.png" alt="" width={28} height={28} className="h-7 w-7" aria-hidden="true" />
       </button>
 
       {/* Dialog panel */}

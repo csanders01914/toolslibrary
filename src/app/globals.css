@@ -28,9 +28,20 @@
 }
 
 /* ============================================================
-   WCAG 2.1 Level AAA Accessibility Suite — attribute selectors
+   WCAG 2.2 Level AAA Accessibility Suite — attribute selectors
    All rules are local-only: zero external network calls.
+   WCAG 3.0 draft practices adopted ahead of publication:
+   focus appearance, target size, OS-preference respect
+   (prefers-reduced-motion / prefers-contrast / forced-colors),
+   and personalization via user-controlled preferences.
    ============================================================ */
+
+/* Focus Not Obscured (WCAG 2.2 2.4.11): the sticky navbar must never
+   cover a keyboard-focused target, so every scroll-into-view and
+   fragment navigation reserves clearance above the target. */
+html {
+  scroll-padding-top: 5.5rem;
+}
 
 /* High contrast: pure black canvas, white text, yellow highlights (>= 7:1 AAA) */
 html[data-contrast="high"] {
@@ -148,6 +159,13 @@ html[data-text-spacing="true"] * {
   word-spacing: 0.16em !important;
 }
 
+/* Underline links toggle (WCAG 1.4.1 Use of Color): color alone must
+   never be the only visual means of identifying a link. */
+html[data-underline-links="true"] a {
+  text-decoration: underline !important;
+  text-underline-offset: 0.2em !important;
+}
+
 /* Enhanced focus indicators */
 html[data-focus-indicators="true"] :focus-visible {
   outline: 4px solid #ffe600 !important;
@@ -171,4 +189,47 @@ html[data-big-cursor="true"] * {
   cursor: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='48' viewBox='0 0 40 48'%3E%3Cpath d='M4 2 L4 38 L13 29 L19 44 L26 41 L20 27 L32 27 Z' fill='%23FFE600' stroke='%23000000' stroke-width='2.5'/%3E%3C/svg%3E")
       4 2,
     auto !important;
+}
+
+/* ============================================================
+   OS-preference respect (WCAG 3.0 draft practice): honor the
+   user's operating-system accessibility settings even when the
+   in-app toggles have not been switched on.
+   ============================================================ */
+
+/* Reduced motion straight from the OS setting (WCAG 2.2 2.3.3 AAA) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Extra contrast straight from the OS setting: a thick, high-luminance
+   focus outline so the focused element is always unmistakable. */
+@media (prefers-contrast: more) {
+  :focus-visible {
+    outline: 3px solid #ffe600 !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* Forced colors safety (Windows High Contrast mode): let the system
+   palette govern colors while guaranteeing form controls and buttons
+   keep a visible border so their boundaries never disappear. */
+@media (forced-colors: active) {
+  html {
+    forced-color-adjust: auto;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonBorder;
+  }
 }

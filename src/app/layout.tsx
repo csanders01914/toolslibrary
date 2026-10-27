@@ -34,6 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     if (p.focusIndicators) d.setAttribute('data-focus-indicators', 'true');
                     if (p.reducedMotion) d.setAttribute('data-reduced-motion', 'true');
                     if (p.bigCursor) d.setAttribute('data-big-cursor', 'true');
+                    if (p.underlineLinks) d.setAttribute('data-underline-links', 'true');
                   }
                 } catch(e) {}
               })();

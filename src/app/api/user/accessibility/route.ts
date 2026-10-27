@@ -12,6 +12,7 @@ const a11yPrefsSchema = z.object({
   reducedMotion: z.boolean(),
   bigCursor: z.boolean(),
   readingGuide: z.boolean(),
+  underlineLinks: z.boolean(),
 });
 
 export async function GET() {

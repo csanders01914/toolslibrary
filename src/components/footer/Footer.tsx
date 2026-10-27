@@ -202,6 +202,15 @@ export function Footer() {
           <p className="font-mono text-[11px] text-zinc-600">
             Self-hosted on Fedora CoreOS · Rootless Podman · Zero telemetry
           </p>
+          <Link href="/accessibility" aria-label="WCAG 2.2 Level AAA accessibility statement">
+            <img
+              src="/wcag2.2-aaa.png"
+              alt="WCAG 2.2 Level AAA"
+              width={110}
+              height={39}
+              className="opacity-90 hover:opacity-100 transition-opacity"
+            />
+          </Link>
         </div>
       </div>
     </footer>

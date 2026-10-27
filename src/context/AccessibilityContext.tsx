@@ -21,6 +21,7 @@ export interface A11yPrefs {
   reducedMotion: boolean;
   bigCursor: boolean;
   readingGuide: boolean;
+  underlineLinks: boolean;
 }
 
 export const DEFAULT_PREFS: A11yPrefs = {
@@ -32,6 +33,7 @@ export const DEFAULT_PREFS: A11yPrefs = {
   reducedMotion: false,
   bigCursor: false,
   readingGuide: false,
+  underlineLinks: false,
 };
 
 const COOKIE_NAME = "a11y_prefs";
@@ -78,6 +80,8 @@ function applyPrefsToDocument(prefs: A11yPrefs) {
   else root.removeAttribute("data-reduced-motion");
   if (prefs.bigCursor) root.setAttribute("data-big-cursor", "true");
   else root.removeAttribute("data-big-cursor");
+  if (prefs.underlineLinks) root.setAttribute("data-underline-links", "true");
+  else root.removeAttribute("data-underline-links");
 }
 
 interface AccessibilityContextValue {
@@ -109,6 +113,7 @@ const LABELS: Record<keyof A11yPrefs, string> = {
   reducedMotion: "Reduced motion",
   bigCursor: "Large high-contrast cursor",
   readingGuide: "Reading guide",
+  underlineLinks: "Underline all links",
 };
 
 export function AccessibilityProvider({ children }: { children: ReactNode }) {

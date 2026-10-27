@@ -4,7 +4,7 @@
 - **Stack:** Next.js (App Router, `output: 'standalone'`), React 19, TypeScript, Tailwind CSS v4, Prisma 5.22 (SQLite), NextAuth v5 (Auth.js JWT), Zod, bcryptjs, Lucide Icons.
 - **Database & Storage:** Single persistent volume directory (`./data` locally, `/app/data` in Podman). SQLite database at `data/tool_library.db` with WAL mode enabled; uploaded images stored in `data/uploads/`.
 - **Identity:** Zero-PII handle (`username`), public display name (`alias`), password hash, and 8 single-use SHA-256 recovery tokens (`XXXX-XXXX`). Optional anonymous JSON column (`a11yPrefs`) for syncing accessibility settings.
-- **Compliance:** GNU AGPLv3 compliant with full source link, legal hub, self-hosted BookStack wiki integration (`[https://wiki.tools-library.com](https://wiki.tools-library.com)`), and WCAG 2.1 Level AAA accessibility suite.
+- **Compliance:** GNU AGPLv3 compliant with full source link, legal hub, self-hosted BookStack wiki integration (`[https://wiki.tools-library.com](https://wiki.tools-library.com)`), and WCAG 2.2 Level AAA accessibility suite (with WCAG 3.0 draft adoptions).
 
 ---
 
@@ -540,7 +540,7 @@ Style all 7 pages inside glassmorphic Bento containers with glowing semantic bad
 
 ---
 
-## PHASE_08_A11Y_SUITE: WCAG 2.1 Level AAA Accessibility Suite
+## PHASE_08_A11Y_SUITE: WCAG 2.2 Level AAA Accessibility Suite
 **Files Created/Modified:** `src/app/globals.css`, `src/context/AccessibilityContext.tsx`, `src/components/a11y/AccessibilityMenu.tsx`, `src/components/a11y/ReadingGuide.tsx`, `src/app/api/user/accessibility/route.ts`.
 
 ### 1. CSS Custom Properties & Attribute Selectors (`src/app/globals.css`)
