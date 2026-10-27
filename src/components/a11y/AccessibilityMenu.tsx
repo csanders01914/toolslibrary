@@ -1,6 +1,24 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, RotateCcw, Check } from "lucide-react";
 import { useAccessibility, type A11yPrefs } from "@/context/AccessibilityContext";
 
@@ -31,6 +49,18 @@ export function AccessibilityMenu() {
   const { prefs, menuOpen, setMenuOpen, updatePref, resetAll } = useAccessibility();
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // Mouse-only features (reading guide, big cursor) are dead controls on
+  // touch devices, so they are hidden on coarse pointers. Persisted prefs
+  // stay valid and simply have no effect there.
+  const [coarsePointer, setCoarsePointer] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => setCoarsePointer(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   // Global keyboard shortcuts: Alt+A toggle menu, Alt+M focus main content, Escape close.
   useEffect(() => {
@@ -75,7 +105,7 @@ export function AccessibilityMenu() {
         aria-haspopup="dialog"
         aria-controls="a11y-menu-panel"
         aria-label="Accessibility settings (Alt+A)"
-        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-none border border-zinc-700 bg-black text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white cursor-pointer"
+        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-none border border-zinc-700 bg-black text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white active:border-cyan-500/60 active:text-cyan-400 cursor-pointer"
       >
         <img src="/web-accessibility-icon.png" alt="" width={28} height={28} className="h-7 w-7" aria-hidden="true" />
       </button>
@@ -164,9 +194,12 @@ export function AccessibilityMenu() {
             </div>
           </fieldset>
 
-          {/* Boolean toggles */}
+          {/* Boolean toggles (mouse-only features hidden on touch devices) */}
           <div className="mb-4 space-y-2">
-            {TOGGLES.map((toggle) => {
+            {TOGGLES.filter(
+              (toggle) =>
+                !(coarsePointer && (toggle.key === "readingGuide" || toggle.key === "bigCursor"))
+            ).map((toggle) => {
               const checked = Boolean(prefs[toggle.key]);
               return (
                 <button

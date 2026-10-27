@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 @import "tailwindcss";
 
 /* Terminal canvas: plain near-black. No textures, no gradients, no patterns. */
@@ -25,6 +43,19 @@
   overflow: visible;
   clip: auto;
   white-space: normal;
+}
+
+/* ============================================================
+   Touch target standard (WCAG 2.2 2.5.5 AAA / 2.5.8 AA):
+   every interactive element gets a 44x44 CSS px minimum hit
+   area, matching the AccessibilityMenu control standard.
+   ============================================================ */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ============================================================
@@ -157,6 +188,17 @@ html[data-text-spacing="true"] * {
   line-height: 2 !important;
   letter-spacing: 0.12em !important;
   word-spacing: 0.16em !important;
+}
+
+/* WCAG 1.4.12 Text Spacing: the forced letter/word spacing above must never
+   push content off-canvas on narrow (320px) viewports, so wrapping is
+   mandatory while the override is active. */
+html[data-text-spacing="true"] {
+  overflow-wrap: break-word;
+}
+
+html[data-text-spacing="true"] body {
+  overflow-wrap: break-word;
 }
 
 /* Underline links toggle (WCAG 1.4.1 Use of Color): color alone must

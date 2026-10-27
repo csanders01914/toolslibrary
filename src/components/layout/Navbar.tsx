@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -125,12 +143,12 @@ export function Navbar() {
           aria-expanded={menuOpen}
           aria-controls="mobile-nav"
           aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
-          className="md:hidden p-2 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors cursor-pointer"
+          className="md:hidden p-3 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 active:text-cyan-400 active:border-cyan-500/60 transition-colors cursor-pointer"
         >
           {menuOpen ? (
-            <X className="w-4 h-4" aria-hidden="true" />
+            <X className="w-5 h-5" aria-hidden="true" />
           ) : (
-            <Menu className="w-4 h-4" aria-hidden="true" />
+            <Menu className="w-5 h-5" aria-hidden="true" />
           )}
         </button>
       </div>
@@ -143,7 +161,7 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               onClick={closeMenu}
-              className="block font-mono text-xs uppercase tracking-widest text-zinc-400 hover:text-white transition-colors py-1"
+              className="block font-mono text-xs uppercase tracking-widest text-zinc-400 hover:text-white active:text-cyan-400 transition-colors py-3"
             >
               {link.label}
             </Link>
@@ -164,7 +182,7 @@ export function Navbar() {
                 <Link
                   href="/admin"
                   onClick={closeMenu}
-                  className="block font-mono text-xs px-2 py-1 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors"
+                  className="block font-mono text-xs px-2 py-3 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 active:bg-purple-500/20 transition-colors"
                 >
                   ADMIN
                 </Link>
@@ -172,7 +190,7 @@ export function Navbar() {
               <Link
                 href="/dashboard"
                 onClick={closeMenu}
-                className="block font-mono text-xs px-2 py-1 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                className="block font-mono text-xs px-2 py-3 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors"
               >
                 DASHBOARD
               </Link>
@@ -181,7 +199,7 @@ export function Navbar() {
                   closeMenu();
                   signOut({ callbackUrl: "/" });
                 }}
-                className="block w-full text-left font-mono text-xs px-2 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                className="block w-full text-left font-mono text-xs px-2 py-3 border border-red-500/60 text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors cursor-pointer"
               >
                 BURN SESSION
               </button>
@@ -191,14 +209,14 @@ export function Navbar() {
               <Link
                 href="/login"
                 onClick={closeMenu}
-                className="block font-mono text-xs px-2 py-1 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
+                className="block font-mono text-xs px-2 py-3 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 active:text-white transition-colors"
               >
                 LOGIN
               </Link>
               <Link
                 href="/register"
                 onClick={closeMenu}
-                className="block font-mono text-xs px-2 py-1 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                className="block font-mono text-xs px-2 py-3 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors"
               >
                 JOIN
               </Link>

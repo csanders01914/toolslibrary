@@ -94,7 +94,8 @@ Your final output message for the session must conform strictly to this JSON str
         "PHASE_06_MESSAGING_TRUST",
         "PHASE_07_LEGAL_FOOTER",
         "PHASE_08_A11Y_SUITE",
-        "PHASE_09_ADMIN_AI_PODMAN"
+        "PHASE_09_ADMIN_AI_PODMAN",
+        "PHASE_10_MOBILE_RESPONSIVE"
       ]
     },
     "status": {

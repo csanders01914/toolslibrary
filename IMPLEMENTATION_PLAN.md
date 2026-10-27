@@ -1,4 +1,4 @@
-# IMPLEMENTATION_PLAN.md — 9-Phase Greenfield Rebuild (From Empty Directory)
+# IMPLEMENTATION_PLAN.md — 10-Phase Build Plan (9-Phase Greenfield Rebuild + PHASE_10 Mobile Hardening Extension)
 
 ## Architecture Summary
 - **Stack:** Next.js (App Router, `output: 'standalone'`), React 19, TypeScript, Tailwind CSS v4, Prisma 5.22 (SQLite), NextAuth v5 (Auth.js JWT), Zod, bcryptjs, Lucide Icons.
@@ -656,3 +656,58 @@ podman run -d \
 ### Phase 9 Gate
 1. Run `npx tsc --noEmit && npm run build`
 2. Run `node scripts/record-handoff.mjs PHASE_09_ADMIN_AI_PODMAN "ALL_PHASES_COMPLETED"`
+
+---
+
+## PHASE_10_MOBILE_RESPONSIVE: Mobile-First Hardening (Zero Feature Loss, Zero A11y Regression)
+**Goal:** Make every route fully usable on 320–430px touch viewports while preserving 100% of existing features and the WCAG 2.2 Level AAA accessibility suite. No schema changes, no API changes, no new npm dependencies, no feature removals. The current terminal aesthetic (flat black canvas, zinc borders, `font-mono` labels) is the visual contract — no restyle.
+
+**Files Created:** `src/components/ui/Modal.tsx`.
+**Files Modified:** `AGENTS.md` (Section 4 phase enum only), `src/app/globals.css`, `src/components/messenger/MessengerWidget.tsx`, `src/components/a11y/AccessibilityMenu.tsx`, `src/components/layout/Navbar.tsx`, `src/components/footer/Footer.tsx`, `src/app/messages/MessagesClient.tsx`, `src/app/tools/ToolsClient.tsx`, `src/app/skills/SkillsClient.tsx`, `src/app/admin/AdminClient.tsx`, `src/app/tools/[id]/ToolDetailClient.tsx`, `src/app/skills/[id]/SkillDetailClient.tsx`, `src/app/dashboard/DashboardClient.tsx`, `src/app/help/HelpClient.tsx`, `src/app/tools/new/page.tsx`, `src/app/skills/new/page.tsx`, `src/app/login/page.tsx`, `src/app/register/page.tsx`, `src/app/recover/page.tsx`, `src/app/change-password/page.tsx`.
+
+### 1. Fixed-Widget Collision & Messenger Panel Sizing (`src/components/messenger/MessengerWidget.tsx`)
+- The MESSENGER trigger (`fixed bottom-4 right-4 z-50`) and the Accessibility Menu trigger (`fixed bottom-6 right-6 z-[9998] h-14 w-14`) currently overlap in the bottom-right corner. Restack: keep the a11y trigger at `bottom-6 right-6` unchanged; move the MESSENGER trigger to `bottom-24 right-6` so both stack on the right edge with no overlap at any viewport width.
+- Open panel: replace `w-[320px] sm:w-[380px] h-[420px]` with `w-[calc(100vw-3rem)] max-w-[380px] h-[min(420px,calc(100dvh-9rem))]` anchored `bottom-24 right-6` — no horizontal overflow at 320px, no vertical overflow on short viewports (iPhone SE, 568px tall).
+- Header close button: give it a real touch target (`min-h-[44px] min-w-[44px]` with padding) instead of a bare 16px icon.
+
+### 2. Dynamic Viewport Units (`src/app/messages/MessagesClient.tsx`, auth pages)
+- Messages console: `h-[calc(100vh-6rem)] min-h-[600px]` → `h-[calc(100dvh-6rem)] min-h-[480px]` so the iOS collapsing URL bar cannot clip the message composer.
+- `login`, `register`, `recover`, `change-password`: `min-h-[calc(100vh-4rem)]` → `min-h-[calc(100dvh-4rem)]`.
+
+### 3. 16px Form Controls — Prevent iOS Focus Zoom (all forms)
+- Replace `text-sm` with `text-base` on every `<input>`, `<select>`, and `<textarea>` (34 controls across the files listed above). iOS Safari auto-zooms on focus for font sizes under 16px; `maximum-scale=1` in the viewport meta is forbidden because it would violate WCAG 1.4.4 (Resize Text). Labels, buttons, and body text keep their current sizes.
+
+### 4. Touch Target Pass — 44px Standard (WCAG 2.5.5 AAA / 2.5.8 AA)
+- Add a `.tap-target` utility to `src/app/globals.css` (`min-height: 44px;` with inline-flex alignment) and apply it to: the navbar hamburger toggle (`p-3` + `w-5 h-5` icon = 44px) and its mobile panel links (`py-3`), Tools/Skills filter chips (`px-3` + `min-h-[44px]`), the Skills "AVAILABLE ONLY" checkbox row, admin trust ±/− buttons (`w-7 h-7` → `w-11 h-11`), admin role select + Save, footer links (block-level `py-1.5` hit area), and the messenger close button.
+- Add `active:` state variants alongside existing `hover:` variants on primary buttons so touch users get pressed-state feedback (hover does not exist on touch).
+
+### 5. A11y-Pref × Narrow-Screen Safety (`src/app/globals.css`, `src/components/a11y/AccessibilityMenu.tsx`)
+- Under `html[data-text-spacing="true"]`, add `overflow-wrap: break-word;` so the forced `letter-spacing: 0.12em` / `line-height: 2` cannot push content off-canvas at 320px (WCAG 1.4.12 Text Spacing: no loss of content or functionality).
+- In `AccessibilityMenu`, detect `window.matchMedia('(pointer: coarse)')` and hide the `readingGuide` and `bigCursor` toggles on touch devices — both are mouse-only features and dead controls on mobile. Persisted prefs remain valid and simply have no effect on touch.
+
+### 6. Shared Modal Behavior (`src/components/ui/Modal.tsx` NEW, `ToolDetailClient.tsx`, `SkillDetailClient.tsx`)
+- Extract a small client `Modal` primitive implementing what the loan modals declare but do not do: `aria-modal="true"` focus trap (Tab/Shift+Tab cycling), Escape-to-close, background scroll lock (`body.overflow`), initial focus on open, and focus restored to the trigger on close.
+- Mount it for the "Request to Borrow" modal in both detail clients. The Accessibility Menu stays non-modal (`aria-modal="false"`) and unchanged.
+
+### 7. Wire the Dead Conversation Search (`src/app/messages/MessagesClient.tsx`)
+- The conversation-list search input currently has no `onChange` handler. Wire it to a client-side filter over `conversations` (alias + lastMessage, case-insensitive) so the control functions on mobile, where the list is the primary navigation.
+
+### 8. Documentation Contract (`AGENTS.md`)
+- Add `"PHASE_10_MOBILE_RESPONSIVE"` to the `phase` enum in the Section 4 final-output JSON schema so the handoff report validates.
+
+### Non-Goals (Explicitly Out of Scope)
+- No new npm dependencies (verification uses the environment's Playwright tooling, not a project install).
+- No `next/image` migration for `/api/uploads/` photos (candidate for a separate performance phase).
+- No PWA manifest, safe-area insets, or service worker.
+- No design-system restyle; no removal of any a11y toggle or feature.
+
+### Verification Matrix (must all pass before the gate)
+- Widths 320 / 375 / 768 / 1280 px × font-size 100% / 125% / 150% × toggles {high contrast, text spacing, underline links, reduced motion} on the routes: `/`, `/tools`, `/tools/[id]` (+ loan modal), `/skills`, `/skills/[id]`, `/messages`, `/dashboard`, `/admin`, `/login`, `/register`, `/help`.
+- No horizontal scroll at 320px on any route; both fixed widgets tappable with no overlap; loan-modal keyboard paths work (trap, Escape, focus restore).
+- Keyboard-only pass (skip link, Alt+A, Alt+M, Escape) and `forced-colors: active` spot check unchanged from PHASE_08 behavior.
+- Lighthouse mobile (before/after) recorded in `verification_output`; accessibility score must not decrease.
+
+### Phase 10 Gate
+1. Run `npx tsc --noEmit && npm run build`
+2. Run the Verification Matrix above and record results
+3. Run `node scripts/record-handoff.mjs PHASE_10_MOBILE_RESPONSIVE "ALL_PHASES_COMPLETED — mobile hardening verified; redeploy container: podman build -t localhost/tool-library:latest -f Containerfile . then deploy.sh"`

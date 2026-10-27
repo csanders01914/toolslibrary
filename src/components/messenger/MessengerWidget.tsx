@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -66,7 +84,7 @@ export function MessengerWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 bg-black hover:bg-emerald-500/10 transition-colors cursor-pointer flex items-center gap-2"
+        className="fixed bottom-24 right-6 z-50 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 bg-black hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors cursor-pointer flex items-center gap-2"
         aria-haspopup="dialog"
         aria-expanded={false}
       >
@@ -80,14 +98,14 @@ export function MessengerWidget() {
     <div
       role="dialog"
       aria-label="Ephemeral messenger"
-      className="fixed bottom-4 right-4 z-50 w-[320px] sm:w-[380px] h-[420px] bg-black border border-emerald-500/40 rounded-none flex flex-col"
+      className="fixed bottom-24 right-6 z-50 w-[calc(100vw-3rem)] max-w-[380px] h-[min(420px,calc(100dvh-9rem))] bg-black border border-emerald-500/40 rounded-none flex flex-col"
     >
       <div className="bg-[#0a0a0a] border-b border-emerald-500/30 px-3 py-2 flex items-center justify-between">
         <span className="font-mono text-xs text-emerald-400 tracking-widest">EPHEMERAL MESSENGER</span>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center text-zinc-500 hover:text-white active:text-white transition-colors cursor-pointer"
           aria-label="Close messenger"
         >
           <X className="w-4 h-4" aria-hidden="true" />

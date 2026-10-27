@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useActionState, useCallback, useEffect, useState } from "react";
@@ -883,7 +901,7 @@ export default function AdminClient({
                 id="automation-provider"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
+                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
               >
                 {providers.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -903,7 +921,7 @@ export default function AdminClient({
                 onChange={(e) => setModel(e.target.value)}
                 list="automation-model-suggestions"
                 placeholder="e.g. z-ai/glm-5.3, deepseek-chat"
-                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
               />
               <datalist id="automation-model-suggestions">
                 {modelSuggestions.map((m) => (
@@ -921,7 +939,7 @@ export default function AdminClient({
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 placeholder="https://openrouter.ai/api/v1/chat/completions"
-                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
               />
             </div>
             <div className="md:col-span-2">
@@ -935,7 +953,7 @@ export default function AdminClient({
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder={llmConfig?.hasApiKey ? "••••••••••••" : "sk-..."}
                 autoComplete="off"
-                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
               />
             </div>
           </div>
@@ -1042,7 +1060,7 @@ export default function AdminClient({
               onChange={(e) => setChatInput(e.target.value)}
               placeholder="Enter directive..."
               maxLength={4000}
-              className="flex-1 bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+              className="flex-1 bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
             />
             <button
               type="submit"
@@ -1197,7 +1215,7 @@ export default function AdminClient({
                           maxLength={2000}
                           required
                           placeholder="Resolution note (min 10 chars)..."
-                          className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-none"
+                          className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-none"
                         />
                         <button
                           type="submit"
@@ -1262,7 +1280,7 @@ export default function AdminClient({
               rows={3}
               maxLength={2000}
               placeholder="e.g. Audit this description: 'Cordless drill, 18V, includes two batteries...'"
-              className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-none"
+              className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-none"
             />
             <button
               type="submit"
@@ -1374,7 +1392,7 @@ export default function AdminClient({
                           type="submit"
                           disabled={trustPending}
                           aria-label={`Decrease trust score for ${user.alias} by 5`}
-                          className="w-7 h-7 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
+                          className="w-11 h-11 border border-red-500/60 text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
                         >
                           <Minus className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
@@ -1386,7 +1404,7 @@ export default function AdminClient({
                           type="submit"
                           disabled={trustPending}
                           aria-label={`Increase trust score for ${user.alias} by 5`}
-                          className="w-7 h-7 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
+                          className="w-11 h-11 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors cursor-pointer disabled:opacity-40 flex items-center justify-center"
                         >
                           <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
@@ -1406,7 +1424,7 @@ export default function AdminClient({
                           id={`role-${user.id}`}
                           name="role"
                           defaultValue={user.role}
-                          className="bg-black border border-zinc-800 px-3 py-1.5 font-mono text-xs text-zinc-100 focus:border-cyan-500 focus:outline-none cursor-pointer"
+                          className="bg-black border border-zinc-800 px-3 py-2 min-h-[44px] font-mono text-base text-zinc-100 focus:border-cyan-500 focus:outline-none cursor-pointer"
                         >
                           <option value="USER">USER</option>
                           <option value="ADMIN">ADMIN</option>
@@ -1414,7 +1432,7 @@ export default function AdminClient({
                         <button
                           type="submit"
                           disabled={rolePending}
-                          className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-cyan-500/60 hover:text-cyan-400 transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
+                          className="font-mono text-xs uppercase tracking-widest px-3 min-h-[44px] border border-zinc-700 text-zinc-400 hover:border-cyan-500/60 hover:text-cyan-400 active:text-cyan-400 transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
                         >
                           <Save className="w-3.5 h-3.5" aria-hidden="true" />
                           Save

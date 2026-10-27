@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useState } from "react";
@@ -79,12 +97,12 @@ export default function ToolsClient({ initialTools }: ToolsClientProps) {
           placeholder="SEARCH CATALOG..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+          className="flex-1 bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
           aria-label="Search tools"
         />
         <button
           type="submit"
-          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors cursor-pointer"
         >
           SEARCH
         </button>
@@ -99,10 +117,10 @@ export default function ToolsClient({ initialTools }: ToolsClientProps) {
               type="button"
               onClick={() => setCategory(cat)}
               aria-pressed={category === cat}
-              className={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 border transition-colors cursor-pointer ${
+              className={`tap-target font-mono text-[10px] uppercase tracking-wider px-3 border transition-colors cursor-pointer ${
                 category === cat
                   ? "border-cyan-500/60 text-cyan-400 bg-cyan-500/10"
-                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white active:text-white"
               }`}
             >
               {cat}
@@ -112,7 +130,7 @@ export default function ToolsClient({ initialTools }: ToolsClientProps) {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
+          className="bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
           aria-label="Filter by status"
         >
           {STATUS_OPTIONS.map((s) => (
@@ -123,7 +141,7 @@ export default function ToolsClient({ initialTools }: ToolsClientProps) {
         </select>
         <Link
           href="/tools/new"
-          className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+          className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors cursor-pointer"
         >
           LEND A TOOL
         </Link>

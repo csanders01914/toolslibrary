@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useState } from "react";
@@ -67,12 +85,12 @@ export default function SkillsClient({ initialSkills, totalCount }: SkillsClient
           placeholder="SEARCH EXCHANGE..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500 focus:outline-none"
+          className="flex-1 bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-purple-500 focus:outline-none"
           aria-label="Search skills"
         />
         <button
           type="submit"
-          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 active:bg-purple-500/20 transition-colors cursor-pointer"
         >
           SEARCH
         </button>
@@ -87,29 +105,29 @@ export default function SkillsClient({ initialSkills, totalCount }: SkillsClient
               type="button"
               onClick={() => setCategory(cat)}
               aria-pressed={category === cat}
-              className={`font-mono text-[10px] uppercase tracking-wider px-2 py-1 border transition-colors cursor-pointer ${
+              className={`tap-target font-mono text-[10px] uppercase tracking-wider px-3 border transition-colors cursor-pointer ${
                 category === cat
                   ? "border-purple-500/60 text-purple-400 bg-purple-500/10"
-                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                  : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white active:text-white"
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-400">
+        <label className="tap-target gap-2 cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-400">
           <input
             type="checkbox"
             checked={availableOnly}
             onChange={(e) => setAvailableOnly(e.target.checked)}
-            className="w-3.5 h-3.5 bg-black border border-zinc-700 accent-purple-500 cursor-pointer"
+            className="w-4 h-4 bg-black border border-zinc-700 accent-purple-500 cursor-pointer"
             aria-label="Show only available skills"
           />
           AVAILABLE ONLY
         </label>
         <Link
           href="/skills/new"
-          className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer"
+          className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 active:bg-purple-500/20 transition-colors cursor-pointer"
         >
           OFFER A SKILL
         </Link>

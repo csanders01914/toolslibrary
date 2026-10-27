@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useState } from "react";
@@ -5,6 +23,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Truck, RotateCcw, Calendar, X, AlertTriangle, MessageSquare, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { Modal } from "@/components/ui/Modal";
 
 interface Tool {
   id: string;
@@ -400,14 +419,13 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
       </div>
 
       {/* Loan Request Modal */}
-      {showLoanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-label="Request to borrow">
+      <Modal open={showLoanModal} onClose={() => setShowLoanModal(false)} label="Request to borrow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">REQUEST TO BORROW</h3>
               <button
                 onClick={() => setShowLoanModal(false)}
-                className="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                data-autofocus
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-zinc-500 hover:text-white active:text-white transition-colors cursor-pointer"
                 aria-label="Close modal"
               >
                 <X className="w-4 h-4" aria-hidden="true" />
@@ -434,7 +452,7 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                   value={loanStart}
                   onChange={(e) => setLoanStart(e.target.value)}
                   required
-                  className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                  className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                 />
               </div>
 
@@ -450,7 +468,7 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                   value={loanEnd}
                   onChange={(e) => setLoanEnd(e.target.value)}
                   required
-                  className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                  className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                 />
               </div>
 
@@ -465,7 +483,7 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
@@ -478,9 +496,7 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

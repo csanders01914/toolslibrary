@@ -1,3 +1,21 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -40,6 +58,7 @@ export default function MessagesClient({ initialConversations, currentUserId, un
   const [sending, setSending] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [isMobile, setIsMobile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -136,8 +155,18 @@ export default function MessagesClient({ initialConversations, currentUserId, un
     return formatDistanceToNow(d, { addSuffix: true });
   };
 
+  // Client-side filter for the conversation list (alias + last message).
+  const filteredConversations = conversations.filter((conv) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      conv.partnerAlias.toLowerCase().includes(q) ||
+      conv.lastMessage.toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="h-[calc(100vh-6rem)] min-h-[600px] bg-black border border-zinc-800 rounded-none overflow-hidden flex flex-col">
+    <div className="h-[calc(100dvh-6rem)] min-h-[480px] bg-black border border-zinc-800 rounded-none overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-zinc-800 bg-black px-4 py-3">
         <div className="flex items-center gap-3">
@@ -172,7 +201,9 @@ export default function MessagesClient({ initialConversations, currentUserId, un
               <input
                 type="search"
                 placeholder="Search conversations..."
-                className="w-full rounded-none border border-zinc-800 bg-black py-2 pl-10 pr-3 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-none border border-zinc-800 bg-black py-2 pl-10 pr-3 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                 aria-label="Search conversations"
               />
             </div>
@@ -186,9 +217,15 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                 <h3 className="mb-1 font-mono text-xs uppercase tracking-widest text-zinc-300">No conversations yet</h3>
                 <p className="font-mono text-[11px] text-zinc-500">Start a conversation from a tool or skill page</p>
               </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+                <MessageSquare className="mb-4 h-12 w-12 text-zinc-600" aria-hidden="true" />
+                <h3 className="mb-1 font-mono text-xs uppercase tracking-widest text-zinc-300">No matches</h3>
+                <p className="font-mono text-[11px] text-zinc-500">No conversation matches &quot;{searchQuery}&quot;</p>
+              </div>
             ) : (
               <ul className="space-y-1" role="list" aria-label="Conversations">
-                {conversations.map((conv) => (
+                {filteredConversations.map((conv) => (
                   <li key={conv.partnerId}>
                     <button
                       onClick={() => handleSelectConversation(conv)}
@@ -312,7 +349,7 @@ export default function MessagesClient({ initialConversations, currentUserId, un
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Type a message..."
                       rows={1}
-                      className="max-h-32 w-full resize-none rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                      className="max-h-32 w-full resize-none rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                       aria-label="Message"
                       disabled={sending}
                     />
