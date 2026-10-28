@@ -402,7 +402,7 @@ const deleteSkillTool: AgentToolDef = {
 };
 
 // ----------------------------------------------------------------
-// resolveHelpRequest / escalateHelpRequest — safe triage outcomes
+// resolveHelpRequest — safe triage outcome
 // ----------------------------------------------------------------
 
 const resolveHelpRequestTool: AgentToolDef = {
@@ -430,29 +430,6 @@ const resolveHelpRequestTool: AgentToolDef = {
   },
 };
 
-const escalateHelpRequestTool: AgentToolDef = {
-  name: "escalateHelpRequest",
-  description:
-    "Escalate a help request to the human admin intervention queue (status ESCALATED) when automated handling is inappropriate.",
-  parameters: {
-    type: "object",
-    properties: {
-      requestId: { type: "string", minLength: 1, maxLength: 64, description: "HelpRequest id" },
-    },
-    required: ["requestId"],
-  },
-  destructive: false,
-  execute: async (args) => {
-    const request = await prisma.helpRequest.findUnique({ where: { id: String(args.requestId) } });
-    if (!request) return { ok: false, error: "Help request not found" };
-    const updated = await prisma.helpRequest.update({
-      where: { id: request.id },
-      data: { status: "ESCALATED" },
-    });
-    return { ok: true, result: { requestId: updated.id, status: updated.status } };
-  },
-};
-
 // ----------------------------------------------------------------
 // Registry + argument validation + GUARDRAIL INTERCEPTOR
 // ----------------------------------------------------------------
@@ -462,7 +439,6 @@ export const AGENT_TOOLS: AgentToolDef[] = [
   updateToolStatusTool,
   modifySkillListingTool,
   resolveHelpRequestTool,
-  escalateHelpRequestTool,
   banUserAliasTool,
   deleteToolTool,
   deleteSkillTool,

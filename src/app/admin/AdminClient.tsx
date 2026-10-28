@@ -39,7 +39,6 @@ import {
 } from "@/lib/actions/admin";
 import {
   resolveHelpRequestAction,
-  escalateHelpRequestAction,
   clearHelpQueueAction,
   type HelpActionState,
 } from "@/lib/actions/help";
@@ -258,10 +257,6 @@ export default function AdminClient({
     resolveHelpRequestAction,
     undefined
   );
-  const [escalateState, escalateAction, escalatePending] = useActionState<HelpActionState, FormData>(
-    escalateHelpRequestAction,
-    undefined
-  );
   const [clearState, clearAction, clearPending] = useActionState<HelpActionState, FormData>(
     clearHelpQueueAction,
     undefined
@@ -269,10 +264,10 @@ export default function AdminClient({
 
   // Refresh server data after help queue and member governance actions.
   useEffect(() => {
-    if (resolveState?.success || escalateState?.success || clearState?.success || deleteState?.success) {
+    if (resolveState?.success || clearState?.success || deleteState?.success) {
       router.refresh();
     }
-  }, [resolveState, escalateState, clearState, deleteState, router]);
+  }, [resolveState, clearState, deleteState, router]);
 
   // ---------------- Derived ----------------
 
@@ -291,7 +286,7 @@ export default function AdminClient({
   const moderationDetail = deleteState?.detail;
 
   const openHelp = helpRequests.filter((r) => r.status === "OPEN" || r.status === "AGENT_DISPATCHED");
-  const closedHelp = helpRequests.filter((r) => r.status === "RESOLVED" || r.status === "ESCALATED");
+  const closedHelp = helpRequests.filter((r) => r.status === "RESOLVED");
 
   const renderToolCard = (tool: ToolRow) => {
     return (
@@ -478,12 +473,12 @@ export default function AdminClient({
             )}
           </div>
 
-          {(resolveState?.error || escalateState?.error || clearState?.error) && (
+          {(resolveState?.error || clearState?.error) && (
             <p role="status" className="mb-4 px-4 py-3 border border-red-500/50 text-red-400 bg-red-500/5 font-mono text-xs">
-              {resolveState?.error || escalateState?.error || clearState?.error}
+              {resolveState?.error || clearState?.error}
             </p>
           )}
-          {(resolveState?.success || escalateState?.success || clearState?.success) && (
+          {(resolveState?.success || clearState?.success) && (
             <p role="status" className="mb-4 px-4 py-3 border border-emerald-500/50 text-emerald-400 bg-emerald-500/5 font-mono text-xs">
               {clearState?.detail || "Help queue updated."}
             </p>
@@ -535,16 +530,6 @@ export default function AdminClient({
                           className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {resolvePending ? "..." : "Resolve"}
-                        </button>
-                      </form>
-                      <form action={escalateAction}>
-                        <input type="hidden" name="requestId" value={request.id} />
-                        <button
-                          type="submit"
-                          disabled={escalatePending}
-                          className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {escalatePending ? "..." : "Escalate to Human"}
                         </button>
                       </form>
                     </div>

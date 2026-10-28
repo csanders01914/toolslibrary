@@ -150,7 +150,7 @@ model HelpRequest {
   route        String // Routing result: "LLM_AGENT" | "HUMAN_ADMIN"
   triageReason String
   confidence   Float // Agreement fraction for the winning route (0..1)
-  status       String   @default("OPEN") // "OPEN" | "AGENT_DISPATCHED" | "RESOLVED" | "ESCALATED"
+  status       String   @default("OPEN") // "OPEN" | "AGENT_DISPATCHED" | "RESOLVED"
   resolution   String?  // Automated reply draft or admin resolution note
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

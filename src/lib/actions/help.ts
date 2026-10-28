@@ -39,7 +39,7 @@ export type HelpActionState = {
     id: string;
     route: string; // public-safe: "AUTO" | "ADMIN"
     urgency: string;
-    status: string; // public-safe: "OPEN" | "HANDLED" | "RESOLVED" | "ESCALATED"
+    status: string; // public-safe: "OPEN" | "HANDLED" | "RESOLVED"
     resolution: string | null;
   };
 } | undefined;
@@ -137,7 +137,7 @@ export async function submitHelpRequest(
             "Message:",
             message,
             "",
-            "Handle this request with your tools if appropriate (query the database first, act only with safe tools, resolve or escalate the ticket when done). Destructive tools will be guardrail-intercepted and require human approval — prefer escalateHelpRequest instead for anything like that.",
+            "Handle this request with your tools if appropriate (query the database first, act only with safe tools, resolve the ticket when done). Destructive tools will be guardrail-intercepted and require human approval — if the request needs one, do not act; explain what needs human attention in your reply and leave the ticket for admin review.",
           ].join("\n"),
         },
       ]);
@@ -208,7 +208,7 @@ const clearQueueSchema = z.object({
 });
 
 /**
- * Admin queue hygiene: purge closed tickets (RESOLVED/ESCALATED) so the triage
+ * Admin queue hygiene: purge closed tickets (RESOLVED) so the triage
  * queue stays readable, or wipe the entire queue. The ALL scope is destructive
  * and is gated in the console behind an explicit acknowledgment checkbox.
  */
@@ -230,7 +230,7 @@ export async function clearHelpQueueAction(
 
   const { scope } = parsed.data;
   const deleted = await prisma.helpRequest.deleteMany({
-    where: scope === "ALL" ? {} : { status: { in: ["RESOLVED", "ESCALATED"] } },
+    where: scope === "ALL" ? {} : { status: "RESOLVED" },
   });
 
   return {
@@ -240,36 +240,4 @@ export async function clearHelpQueueAction(
         ? `Help queue cleared — ${deleted.count} ticket(s) purged.`
         : `Closed tickets cleared — ${deleted.count} ticket(s) purged.`,
   };
-}
-
-const escalateSchema = z.object({
-  requestId: z.string().min(1),
-});
-
-export async function escalateHelpRequestAction(
-  prevState: HelpActionState,
-  formData: FormData
-): Promise<HelpActionState> {
-  const session = await auth();
-  if (session?.user?.role !== "ADMIN") {
-    return { success: false, error: "Admin privileges required" };
-  }
-
-  const parsed = escalateSchema.safeParse({
-    requestId: formData.get("requestId"),
-  });
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
-  }
-
-  const request = await prisma.helpRequest.findUnique({
-    where: { id: parsed.data.requestId },
-  });
-  if (!request) return { success: false, error: "Help request not found" };
-
-  await prisma.helpRequest.update({
-    where: { id: request.id },
-    data: { status: "ESCALATED" },
-  });
-  return { success: true };
 }

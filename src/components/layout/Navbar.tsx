@@ -29,6 +29,16 @@ import { Menu, X } from "lucide-react";
 // bind address (0.0.0.0:3000).
 const POST_LOGOUT_URL = "https://www.tools-library.com";
 
+// Session countdown anchor. The auth server issues a sliding JWT: every
+// session fetch re-anchors session.expires to "now + maxAge" (inactivity
+// timeout, see auth.config.ts), so reading session.expires directly resets
+// the countdown on every page refresh. The deadline is therefore anchored
+// once per session window in localStorage and reused until it passes, so a
+// refresh continues the countdown instead of restarting it. A new window is
+// anchored only after the current one has passed (fresh login or a re-issued
+// window), never mid-window.
+const SESSION_DEADLINE_KEY = "toolslibrary.session.deadline";
+
 function formatCountdown(totalSeconds: number): string {
   const clamped = Math.max(0, totalSeconds);
   const h = String(Math.floor(clamped / 3600)).padStart(2, "0");
@@ -41,21 +51,45 @@ export function Navbar() {
   const { data: session, status } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
 
   const expiresAt = session?.expires ? new Date(session.expires).getTime() : null;
 
   useEffect(() => {
+    // Wait for the session to resolve before touching the persisted deadline:
+    // the loading state carries no session and must not wipe the anchor.
+    if (status === "loading") return;
     if (!expiresAt) {
+      // Signed out: drop the persisted window so the next login anchors fresh.
+      window.localStorage.removeItem(SESSION_DEADLINE_KEY);
+      setDeadline(null);
+      return;
+    }
+    const stored = Number(window.localStorage.getItem(SESSION_DEADLINE_KEY));
+    if (Number.isFinite(stored) && stored > Date.now()) {
+      // Window already anchored by an earlier fetch or refresh: keep counting
+      // down to it instead of restarting from the freshly issued expiry.
+      setDeadline(stored);
+      return;
+    }
+    // New session window (fresh login, expired window, or first visit):
+    // anchor to the expiry the server just issued and persist it.
+    window.localStorage.setItem(SESSION_DEADLINE_KEY, String(expiresAt));
+    setDeadline(expiresAt);
+  }, [status, expiresAt]);
+
+  useEffect(() => {
+    if (deadline === null) {
       setSecondsLeft(null);
       return;
     }
     const tick = () => {
-      setSecondsLeft(Math.floor((expiresAt - Date.now()) / 1000));
+      setSecondsLeft(Math.floor((deadline - Date.now()) / 1000));
     };
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [expiresAt]);
+  }, [deadline]);
 
   const navLinks = [
     { href: "/tools", label: "TOOLS" },
@@ -117,7 +151,12 @@ export function Navbar() {
                 DASHBOARD
               </Link>
               <button
-                onClick={() => signOut({ callbackUrl: POST_LOGOUT_URL })}
+                onClick={() => {
+                  // Clear the countdown anchor before the external redirect:
+                  // the next login must start a fresh session window.
+                  window.localStorage.removeItem(SESSION_DEADLINE_KEY);
+                  signOut({ callbackUrl: POST_LOGOUT_URL });
+                }}
                 className="font-mono text-xs px-2 py-1 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
               >
                 BURN SESSION
@@ -203,6 +242,9 @@ export function Navbar() {
               <button
                 onClick={() => {
                   closeMenu();
+                  // Clear the countdown anchor before the external redirect:
+                  // the next login must start a fresh session window.
+                  window.localStorage.removeItem(SESSION_DEADLINE_KEY);
                   signOut({ callbackUrl: POST_LOGOUT_URL });
                 }}
                 className="block w-full text-left font-mono text-xs px-2 py-3 border border-red-500/60 text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors cursor-pointer"

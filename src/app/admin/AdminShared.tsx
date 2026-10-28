@@ -76,7 +76,6 @@ export const STATUS_CHIP: Record<string, string> = {
   OPEN: "cyan",
   AGENT_DISPATCHED: "cyan",
   RESOLVED: "green",
-  ESCALATED: "red",
   LLM_AGENT: "cyan",
   HUMAN_ADMIN: "red",
   CRITICAL: "red",
