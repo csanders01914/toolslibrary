@@ -38,6 +38,11 @@ function ChangePasswordForm() {
   const [showNew, setShowNew] = useState(false);
   const [clientError, setClientError] = useState("");
 
+  // Forced mode: the session is flagged with stock seeded credentials and the
+  // middleware locks every other route until the password is replaced.
+  // Voluntary mode: a signed-in member changing their password by choice.
+  const forced = session?.user?.mustChangePassword === true;
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -106,24 +111,30 @@ function ChangePasswordForm() {
         <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center border border-red-500/50 bg-red-500/5 text-red-400">
-              <ShieldAlert className="h-6 w-6" aria-hidden="true" />
+            <div className={`mb-4 flex h-12 w-12 items-center justify-center border ${forced ? "border-red-500/50 bg-red-500/5 text-red-400" : "border-cyan-500/50 bg-cyan-500/5 text-cyan-400"}`}>
+              {forced ? <ShieldAlert className="h-6 w-6" aria-hidden="true" /> : <Lock className="h-6 w-6" aria-hidden="true" />}
             </div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">AUTH // PASSWORD CHANGE</p>
-            <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">Change Required</h1>
+            <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
+              {forced ? "Change Required" : "Change Password"}
+            </h1>
             <p className="mt-2 text-sm text-zinc-400">
               {session?.user?.alias ? `Signed in as ${session.user.alias}. ` : ""}
-              This account is using stock seeded credentials and must set a new password before continuing.
+              {forced
+                ? "This account is using stock seeded credentials and must set a new password before continuing."
+                : "Set a new password for this account. You will stay signed in until you sign out."}
             </p>
           </div>
 
-          {/* Warning Banner */}
-          <div className="mb-6 flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400" role="alert">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p>
-              The stock password is publicly documented. All other actions are locked until you replace it.
-            </p>
-          </div>
+          {/* Warning Banner — forced stock-credential rotation only */}
+          {forced && (
+            <div className="mb-6 flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400" role="alert">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <p>
+                The stock password is publicly documented. All other actions are locked until you replace it.
+              </p>
+            </div>
+          )}
 
           {/* Error Messages */}
           {(clientError || state?.error) && (
@@ -140,7 +151,7 @@ function ChangePasswordForm() {
           <form action={formAction} onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <label htmlFor="currentPassword" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
-                Current (Stock) Password
+                {forced ? "Current (Stock) Password" : "Current Password"}
               </label>
               <div className="relative">
                 <input
@@ -152,8 +163,8 @@ function ChangePasswordForm() {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                   disabled={isPending}
-                  className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 pr-10 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
-                  placeholder="Enter the stock password"
+                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 pr-10 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
+                   placeholder={forced ? "Enter the stock password" : "Enter your current password"}
                 />
                 <button
                   type="button"

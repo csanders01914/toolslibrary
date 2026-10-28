@@ -29,6 +29,13 @@ const createSkillSchema = z.object({
   category: z.string().min(1, "Category is required"),
 });
 
+const updateSkillSchema = z.object({
+  skillId: z.string().min(1),
+  name: z.string().min(1, "Skill name is required").max(100, "Name too long"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long"),
+  category: z.string().min(1, "Category is required"),
+});
+
 export async function createSkill(
   prevState: { success?: boolean; error?: string; skillId?: string } | undefined,
   formData: FormData
@@ -62,6 +69,53 @@ export async function createSkill(
       category,
       ownerId: session.user.id,
     },
+  });
+
+  return { success: true, skillId: skill.id };
+}
+
+/**
+ * Owner (or admin) edit path for an existing skill listing.
+ */
+export async function updateSkill(
+  prevState: { success?: boolean; error?: string; skillId?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const rawData = {
+    skillId: formData.get("skillId"),
+    name: formData.get("name"),
+    description: formData.get("description"),
+    category: formData.get("category"),
+  };
+
+  const parsed = updateSkillSchema.safeParse(rawData);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const { skillId, name, description, category } = parsed.data;
+
+  if (!SKILL_CATEGORIES.includes(category)) {
+    return { success: false, error: "Invalid category" };
+  }
+
+  const skill = await prisma.skill.findUnique({ where: { id: skillId } });
+  if (!skill) {
+    return { success: false, error: "Skill not found" };
+  }
+
+  if (skill.ownerId !== session.user.id && session.user.role !== "ADMIN") {
+    return { success: false, error: "Not authorized to modify this skill" };
+  }
+
+  await prisma.skill.update({
+    where: { id: skill.id },
+    data: { name, description, category },
   });
 
   return { success: true, skillId: skill.id };

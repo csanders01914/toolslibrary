@@ -29,14 +29,15 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [user, toolsLent, activeBorrows, skillsOffered, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower] = await Promise.all([
+  const [user, toolsLent, activeBorrows, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, alias: true, bio: true, trustScore: true, role: true, createdAt: true },
+      select: { id: true, username: true, alias: true, bio: true, trustScore: true, role: true, createdAt: true },
     }),
     prisma.tool.count({ where: { ownerId: session.user.id } }),
     prisma.loan.count({ where: { borrowerId: session.user.id, status: { in: ["APPROVED", "ACTIVE"] } } }),
     prisma.skill.count({ where: { ownerId: session.user.id, available: true } }),
+    prisma.skill.count({ where: { ownerId: session.user.id } }),
     prisma.loan.findMany({
       where: { tool: { ownerId: session.user.id }, status: "REQUESTED" },
       include: { tool: true, borrower: { select: { id: true, alias: true, trustScore: true } } },
@@ -61,6 +62,7 @@ export default async function DashboardPage() {
         toolsLent,
         activeBorrows,
         skillsOffered,
+        skillsTotal,
         trustScore: user?.trustScore ?? 100,
       }}
       incomingRequests={incomingRequests}

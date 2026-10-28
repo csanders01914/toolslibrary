@@ -49,8 +49,11 @@ export default async function ToolDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Wrap manageLoan to only accept FormData for form actions and return void
+  // Wrap manageLoan to only accept FormData for form actions and return void.
+  // The wrapper MUST be an inline server action: a plain function prop cannot
+  // cross the server→client boundary (React serialization error → 500).
   const manageLoanAction = async (formData: FormData) => {
+    "use server";
     await manageLoan(undefined, formData);
   };
 

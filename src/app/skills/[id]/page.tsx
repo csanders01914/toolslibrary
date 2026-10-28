@@ -43,11 +43,15 @@ export default async function SkillDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  // Wrappers MUST be inline server actions: plain function props cannot cross
+  // the server→client boundary (React serialization error → 500).
   const toggleAvailabilityAction = async (formData: FormData) => {
+    "use server";
     await toggleSkillAvailability(undefined, formData);
   };
 
   const deleteSkillAction = async (formData: FormData) => {
+    "use server";
     await deleteSkill(undefined, formData);
   };
 

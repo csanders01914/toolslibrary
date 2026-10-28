@@ -228,3 +228,77 @@ export async function changePassword(
 
   return { success: true };
 }
+
+const deleteOwnAccountSchema = z.object({
+  password: z.string().min(1, "Current password is required"),
+  acknowledge: z.string().optional(), // "true" when the confirmation box is checked
+});
+
+/**
+ * Self-service account deletion — the zero-PII exit path. Requires the current
+ * password (identity proof) plus an explicit acknowledgment checkbox. Every
+ * record the member owns (RecoveryKey, Tool, Skill, Loan, Message) is purged
+ * via the schema's onDelete: Cascade relations; tools the member currently
+ * holds as a borrower are released back to AVAILABLE inside the same
+ * transaction so no tool stays locked in BORROWED after the loan rows cascade
+ * away. Guardrail: the last administrator cannot self-delete (admin lockout).
+ * The client signs the burned session out after a successful purge.
+ */
+export async function deleteOwnAccount(
+  prevState: { success?: boolean; error?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const parsed = deleteOwnAccountSchema.safeParse({
+    password: formData.get("password"),
+    acknowledge: formData.get("acknowledge"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  if (parsed.data.acknowledge !== "true") {
+    return { success: false, error: "You must acknowledge the permanent deletion notice" };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const isValid = await bcrypt.compare(parsed.data.password, user.passwordHash);
+  if (!isValid) {
+    return { success: false, error: "Current password is incorrect" };
+  }
+
+  if (user.role === "ADMIN") {
+    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (adminCount <= 1) {
+      return {
+        success: false,
+        error: "Cannot delete the last administrator account — promote another member first",
+      };
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const heldLoans = await tx.loan.findMany({
+      where: { borrowerId: user.id, status: { in: ["APPROVED", "ACTIVE"] } },
+      select: { toolId: true },
+    });
+    for (const loan of heldLoans) {
+      await tx.tool.update({
+        where: { id: loan.toolId },
+        data: { status: "AVAILABLE" },
+      });
+    }
+
+    await tx.user.delete({ where: { id: user.id } });
+  });
+
+  return { success: true };
+}

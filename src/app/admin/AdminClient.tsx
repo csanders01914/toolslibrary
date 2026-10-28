@@ -40,6 +40,7 @@ import {
 import {
   resolveHelpRequestAction,
   escalateHelpRequestAction,
+  clearHelpQueueAction,
   type HelpActionState,
 } from "@/lib/actions/help";
 import {
@@ -105,6 +106,71 @@ interface AdminClientProps {
 }
 
 type ActionState = AdminActionState;
+
+// ---- Help queue purge control (destructive, confirmation-gated) ----
+
+function ClearAllQueueControl({
+  total,
+  clearAction,
+  clearPending,
+}: {
+  total: number;
+  clearAction: (formData: FormData) => void;
+  clearPending: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+      >
+        Clear All ({total})
+      </button>
+    );
+  }
+
+  return (
+    <form action={clearAction} className="space-y-2 min-w-[260px]">
+      <input type="hidden" name="scope" value="ALL" />
+      <p className="font-mono text-[10px] text-red-400 leading-relaxed">
+        PERMANENT: purges all {total} ticket(s), open and closed, including triage outcomes and
+        resolutions. Cannot be undone.
+      </p>
+      <label className="flex items-start gap-2 font-mono text-[10px] text-zinc-400 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={acknowledged}
+          onChange={(e) => setAcknowledged(e.target.checked)}
+          className="mt-0.5 w-4 h-4 accent-red-500 cursor-pointer"
+        />
+        <span>I authorize permanent deletion of every help queue ticket.</span>
+      </label>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={!acknowledged || clearPending}
+          className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {clearPending ? "Clearing..." : "Confirm Clear All"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(false);
+            setAcknowledged(false);
+          }}
+          className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-zinc-500 transition-colors cursor-pointer"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
 
 // ---- Member deletion control (destructive, confirmation-gated) ----
 
@@ -196,11 +262,17 @@ export default function AdminClient({
     escalateHelpRequestAction,
     undefined
   );
+  const [clearState, clearAction, clearPending] = useActionState<HelpActionState, FormData>(
+    clearHelpQueueAction,
+    undefined
+  );
 
   // Refresh server data after help queue and member governance actions.
   useEffect(() => {
-    if (resolveState?.success || escalateState?.success || deleteState?.success) router.refresh();
-  }, [resolveState, escalateState, deleteState, router]);
+    if (resolveState?.success || escalateState?.success || clearState?.success || deleteState?.success) {
+      router.refresh();
+    }
+  }, [resolveState, escalateState, clearState, deleteState, router]);
 
   // ---------------- Derived ----------------
 
@@ -373,22 +445,47 @@ export default function AdminClient({
       {/* HELP QUEUE */}
       <section aria-label="Help request queue">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
-          <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-2 mb-1">
-            <LifeBuoy className="w-4 h-4" aria-hidden="true" />
-            HELP QUEUE — TRIAGE OUTCOMES
-          </h2>
-          <p className="font-mono text-[11px] text-zinc-500 mb-4">
-            Requests are triaged automatically and routed here when human judgment is needed.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-1">
+            <div>
+              <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-2 mb-1">
+                <LifeBuoy className="w-4 h-4" aria-hidden="true" />
+                HELP QUEUE — TRIAGE OUTCOMES
+              </h2>
+              <p className="font-mono text-[11px] text-zinc-500">
+                Requests are triaged automatically and routed here when human judgment is needed.
+              </p>
+            </div>
+            {helpRequests.length > 0 && (
+              <div className="flex gap-2 flex-wrap shrink-0">
+                {closedHelp.length > 0 && (
+                  <form action={clearAction}>
+                    <input type="hidden" name="scope" value="CLOSED" />
+                    <button
+                      type="submit"
+                      disabled={clearPending}
+                      className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {clearPending ? "..." : `Clear Closed (${closedHelp.length})`}
+                    </button>
+                  </form>
+                )}
+                <ClearAllQueueControl
+                  total={helpRequests.length}
+                  clearAction={clearAction}
+                  clearPending={clearPending}
+                />
+              </div>
+            )}
+          </div>
 
-          {(resolveState?.error || escalateState?.error) && (
+          {(resolveState?.error || escalateState?.error || clearState?.error) && (
             <p role="status" className="mb-4 px-4 py-3 border border-red-500/50 text-red-400 bg-red-500/5 font-mono text-xs">
-              {resolveState?.error || escalateState?.error}
+              {resolveState?.error || escalateState?.error || clearState?.error}
             </p>
           )}
-          {(resolveState?.success || escalateState?.success) && (
+          {(resolveState?.success || escalateState?.success || clearState?.success) && (
             <p role="status" className="mb-4 px-4 py-3 border border-emerald-500/50 text-emerald-400 bg-emerald-500/5 font-mono text-xs">
-              Help queue updated.
+              {clearState?.detail || "Help queue updated."}
             </p>
           )}
 

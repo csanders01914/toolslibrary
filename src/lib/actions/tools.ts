@@ -32,6 +32,19 @@ const createToolSchema = z.object({
   image: z.instanceof(File).optional().nullable(),
 });
 
+const updateToolSchema = z.object({
+  toolId: z.string().min(1),
+  name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long"),
+  category: z.string().min(1, "Category is required"),
+  image: z.instanceof(File).optional().nullable(),
+  removeImage: z.string().optional(), // "true" when the owner clears the existing photo
+});
+
+const deleteToolSchema = z.object({
+  toolId: z.string().min(1),
+});
+
 const requestLoanSchema = z.object({
   toolId: z.string().min(1),
   startDate: z.string().min(1),
@@ -43,6 +56,44 @@ const manageLoanSchema = z.object({
   decision: z.enum(["APPROVE", "REJECT", "MARK_RETURNED"]),
   returnCondition: z.enum(["GOOD", "DAMAGED"]).optional(),
 });
+
+const UPLOADS_DIR = path.resolve(process.cwd(), "data/uploads");
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
+/**
+ * Validates and persists an uploaded listing photo into data/uploads.
+ * Returns the stored filename, an error string, or null when no file was provided.
+ */
+async function saveUploadedImage(image: File): Promise<{ filename?: string; error?: string }> {
+  if (image.size > 5 * 1024 * 1024) {
+    return { error: "Image must be less than 5MB" };
+  }
+  if (!ALLOWED_IMAGE_TYPES.includes(image.type)) {
+    return { error: "Invalid image type. Use JPEG, PNG, GIF, or WebP" };
+  }
+
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+
+  const ext = path.extname(image.name).toLowerCase();
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+  const filePath = path.join(UPLOADS_DIR, filename);
+
+  const buffer = Buffer.from(await image.arrayBuffer());
+  fs.writeFileSync(filePath, buffer);
+
+  return { filename };
+}
+
+/** Removes a previously stored upload. Filenames are system-generated; anything else is refused. */
+function deleteUploadedImage(filename: string | null | undefined) {
+  if (!filename || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
+  const filePath = path.join(UPLOADS_DIR, filename);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}
 
 export async function createTool(
   prevState: { success?: boolean; error?: string; toolId?: string } | undefined,
@@ -74,28 +125,11 @@ export async function createTool(
   let imageUrl: string | null = null;
 
   if (image && image instanceof File && image.size > 0) {
-    if (image.size > 5 * 1024 * 1024) {
-      return { success: false, error: "Image must be less than 5MB" };
+    const saved = await saveUploadedImage(image);
+    if (saved.error) {
+      return { success: false, error: saved.error };
     }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(image.type)) {
-      return { success: false, error: "Invalid image type. Use JPEG, PNG, GIF, or WebP" };
-    }
-
-    const uploadsDir = path.resolve(process.cwd(), "data/uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const ext = path.extname(image.name).toLowerCase();
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
-
-    const buffer = Buffer.from(await image.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
-
-    imageUrl = filename;
+    imageUrl = saved.filename ?? null;
   }
 
   const tool = await prisma.tool.create({
@@ -109,6 +143,114 @@ export async function createTool(
   });
 
   return { success: true, toolId: tool.id };
+}
+
+/**
+ * Owner (or admin) edit path for an existing listing. Replaces metadata and,
+ * optionally, the photo: a new upload supersedes the old file, an explicit
+ * removeImage flag clears it, and otherwise the current photo is kept.
+ */
+export async function updateTool(
+  prevState: { success?: boolean; error?: string; toolId?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const rawData = {
+    toolId: formData.get("toolId"),
+    name: formData.get("name"),
+    description: formData.get("description"),
+    category: formData.get("category"),
+    image: formData.get("image"),
+    removeImage: formData.get("removeImage"),
+  };
+
+  const parsed = updateToolSchema.safeParse(rawData);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const { toolId, name, description, category, image, removeImage } = parsed.data;
+
+  if (!CATEGORIES.includes(category)) {
+    return { success: false, error: "Invalid category" };
+  }
+
+  const tool = await prisma.tool.findUnique({ where: { id: toolId } });
+  if (!tool) {
+    return { success: false, error: "Tool not found" };
+  }
+
+  if (tool.ownerId !== session.user.id && session.user.role !== "ADMIN") {
+    return { success: false, error: "Not authorized to modify this tool" };
+  }
+
+  let imageUrl = tool.imageUrl;
+
+  if (image && image instanceof File && image.size > 0) {
+    const saved = await saveUploadedImage(image);
+    if (saved.error) {
+      return { success: false, error: saved.error };
+    }
+    if (saved.filename) {
+      deleteUploadedImage(tool.imageUrl);
+      imageUrl = saved.filename;
+    }
+  } else if (removeImage === "true" && tool.imageUrl) {
+    deleteUploadedImage(tool.imageUrl);
+    imageUrl = null;
+  }
+
+  await prisma.tool.update({
+    where: { id: tool.id },
+    data: { name, description, category, imageUrl },
+  });
+
+  return { success: true, toolId: tool.id };
+}
+
+/**
+ * Owner (or admin) removal of a listing. Blocked while the tool is on an
+ * active/approved loan (status BORROWED) so a borrower cannot return a tool
+ * that no longer exists; the loan must be resolved first. Loan rows for
+ * rejected/returned history cascade away with the tool.
+ */
+export async function deleteTool(
+  prevState: { success?: boolean; error?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const parsed = deleteToolSchema.safeParse({
+    toolId: formData.get("toolId"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const tool = await prisma.tool.findUnique({ where: { id: parsed.data.toolId } });
+  if (!tool) {
+    return { success: false, error: "Tool not found" };
+  }
+
+  if (tool.ownerId !== session.user.id && session.user.role !== "ADMIN") {
+    return { success: false, error: "Not authorized to delete this tool" };
+  }
+
+  if (tool.status === "BORROWED") {
+    return { success: false, error: "Tool is on an active loan; resolve the loan first" };
+  }
+
+  await prisma.tool.delete({ where: { id: tool.id } });
+  deleteUploadedImage(tool.imageUrl);
+
+  return { success: true };
 }
 
 export async function requestLoan(

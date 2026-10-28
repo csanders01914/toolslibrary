@@ -20,6 +20,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   Shield,
   Hammer,
@@ -34,12 +36,18 @@ import {
   ArrowLeftRight,
   Wrench,
   AlertTriangle,
+  KeyRound,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { manageLoan } from "@/lib/actions/tools";
 import { updateProfile } from "@/lib/actions/messages";
+import { deleteOwnAccount } from "@/lib/actions/auth";
+import { Modal } from "@/components/ui/Modal";
 
 interface User {
   id: string;
+  username: string;
   alias: string;
   bio: string | null;
   trustScore: number;
@@ -51,6 +59,7 @@ interface Stats {
   toolsLent: number;
   activeBorrows: number;
   skillsOffered: number;
+  skillsTotal: number;
   trustScore: number;
 }
 
@@ -92,16 +101,34 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   const [loanState, loanAction, loanPending] = useActionState<ActionState, FormData>(manageLoan, undefined);
   const [profileState, profileAction, profilePending] = useActionState<ActionState, FormData>(updateProfile, undefined);
+  const [deleteAccountState, deleteAccountAction, deleteAccountPending] = useActionState<ActionState, FormData>(
+    deleteOwnAccount,
+    undefined
+  );
   const [editingProfile, setEditingProfile] = useState(false);
   const [localAlias, setLocalAlias] = useState(user.alias);
   const [localBio, setLocalBio] = useState(user.bio ?? "");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
   const profileFormRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (profileState?.success) {
       setEditingProfile(false);
+      // Re-fetch the server component data so the header reflects the saved
+      // alias/bio immediately instead of showing stale props.
+      router.refresh();
     }
-  }, [profileState]);
+  }, [profileState, router]);
+
+  // The account row is gone after a successful purge — burn the session and
+  // land on the public homepage as a signed-out visitor.
+  useEffect(() => {
+    if (deleteAccountState?.success) {
+      signOut({ callbackUrl: "/" });
+    }
+  }, [deleteAccountState]);
 
   const statCards = [
     {
@@ -281,6 +308,50 @@ export default function DashboardClient({
               </p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Account Settings */}
+      <section aria-label="Account settings">
+        <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
+          <h2 className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
+            ACCOUNT // SETTINGS
+          </h2>
+          <div className="mt-4 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs text-zinc-400">Password</p>
+                <p className="font-mono text-[11px] text-zinc-500 mt-1">
+                  No email recovery — keep your password and recovery codes safe.
+                </p>
+              </div>
+              <Link
+                href="/change-password"
+                className="inline-flex items-center gap-2 self-start border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 sm:self-auto"
+              >
+                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                Change Password
+              </Link>
+            </div>
+            <div className="border-t border-zinc-900 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs text-red-400">Danger Zone</p>
+                <p className="font-mono text-[11px] text-zinc-500 mt-1">
+                  Permanently delete this account, your {stats.toolsLent} tool(s), {stats.skillsTotal}{" "}
+                  skill(s), and all loans and messages. Zero-PII purge — cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="inline-flex items-center gap-2 self-start border border-red-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10 sm:self-auto"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                Delete Account
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -490,6 +561,94 @@ export default function DashboardClient({
           </div>
         )}
       </section>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)} label="Delete account">
+        <form action={deleteAccountAction} className="space-y-4">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-red-400">DELETE ACCOUNT</h3>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              data-autofocus
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-zinc-500 hover:text-white active:text-white transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400">
+            <p className="font-mono text-xs uppercase tracking-widest">THIS ACTION CANNOT BE UNDONE.</p>
+            <p className="text-sm mt-2 text-zinc-400">
+              Your account <span className="font-mono">@{user.username}</span>, your {stats.toolsLent}{" "}
+              tool(s), {stats.skillsTotal} skill(s), and all loans and messages will be permanently
+              purged. Recovery codes become invalid.
+            </p>
+          </div>
+
+          {deleteAccountState?.error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs flex items-center gap-2" role="alert">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+              {deleteAccountState.error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="delete-password" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+              Current Password
+            </label>
+            <input
+              type="password"
+              id="delete-password"
+              name="password"
+              autoComplete="current-password"
+              required
+              className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-base text-zinc-100 placeholder:text-zinc-600 focus:border-red-500 focus:outline-none"
+              placeholder="Confirm your identity"
+            />
+          </div>
+
+          <label className="flex items-start gap-2 font-mono text-[11px] text-zinc-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              name="acknowledge"
+              value="true"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-red-500 cursor-pointer"
+            />
+            <span>I authorize permanent deletion of this account and all its data.</span>
+          </label>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors cursor-pointer"
+            >
+              CANCEL
+            </button>
+            <button
+              type="submit"
+              disabled={!acknowledged || deleteAccountPending}
+              className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {deleteAccountPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  DELETING...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  DELETE PERMANENTLY
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

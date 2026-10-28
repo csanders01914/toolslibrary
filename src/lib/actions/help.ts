@@ -34,6 +34,7 @@ import { AGENT_SYSTEM_PROMPT, runAgentTurn } from "@/lib/agent/run";
 export type HelpActionState = {
   success?: boolean;
   error?: string;
+  detail?: string;
   ticket?: {
     id: string;
     route: string; // public-safe: "AUTO" | "ADMIN"
@@ -200,6 +201,45 @@ export async function resolveHelpRequestAction(
     data: { status: "RESOLVED", resolution: parsed.data.resolution },
   });
   return { success: true };
+}
+
+const clearQueueSchema = z.object({
+  scope: z.enum(["CLOSED", "ALL"]).default("CLOSED"),
+});
+
+/**
+ * Admin queue hygiene: purge closed tickets (RESOLVED/ESCALATED) so the triage
+ * queue stays readable, or wipe the entire queue. The ALL scope is destructive
+ * and is gated in the console behind an explicit acknowledgment checkbox.
+ */
+export async function clearHelpQueueAction(
+  prevState: HelpActionState,
+  formData: FormData
+): Promise<HelpActionState> {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return { success: false, error: "Admin privileges required" };
+  }
+
+  const parsed = clearQueueSchema.safeParse({
+    scope: formData.get("scope") ?? "CLOSED",
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const { scope } = parsed.data;
+  const deleted = await prisma.helpRequest.deleteMany({
+    where: scope === "ALL" ? {} : { status: { in: ["RESOLVED", "ESCALATED"] } },
+  });
+
+  return {
+    success: true,
+    detail:
+      scope === "ALL"
+        ? `Help queue cleared — ${deleted.count} ticket(s) purged.`
+        : `Closed tickets cleared — ${deleted.count} ticket(s) purged.`,
+  };
 }
 
 const escalateSchema = z.object({
