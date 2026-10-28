@@ -28,26 +28,26 @@ const pillars = [
   {
     icon: HeartHandshake,
     accent: "hover:border-cyan-500/50",
-    title: "Mutual Aid Respect",
-    body: "Every member here is a neighbor lending a hand, not a customer or a service worker. Say thank you, return tools clean, communicate when plans change, and remember that the person on the other side of a listing is taking a real risk by trusting the community with their property.",
+    title: "Mutual aid respect",
+    body: "Every member is a neighbor. Say thank you, return tools clean, and communicate when plans change. The person behind a listing is trusting the community with their property, and that deserves care.",
   },
   {
     icon: Ban,
     accent: "hover:border-red-500/50",
-    title: "Zero Tolerance Harassment Policy",
+    title: "Zero tolerance for harassment",
     body: "Harassment, slurs, threats, sexual advances, doxxing, and intimidation are prohibited in all messages, listings, and profiles. One warning may be issued for a minor first offense at moderator discretion; severe violations result in immediate account suspension. We are building a workshop culture where everyone feels safe picking up a wrench.",
   },
   {
     icon: Hammer,
     accent: "hover:border-emerald-500/50",
-    title: "Workshop Culture",
-    body: "Teach, don't gatekeep. If a borrower is unfamiliar with a tool, share knowledge patiently. If you see unsafe practice, speak up kindly. Skill-sharing is half of this platform's purpose — condescension and gatekeeping starve the commons that all of us depend on.",
+    title: "Workshop culture",
+    body: "Teach, don't gatekeep. If a borrower is unfamiliar with a tool, share what you know patiently. If you see an unsafe practice, speak up. Skill-sharing is half of this platform's purpose, and condescension drives people away from it.",
   },
   {
     icon: Scale,
     accent: "hover:border-purple-500/50",
-    title: "Moderation Accountability",
-    body: "Administrators act only against accounts and listings, never against the community's right to know. Every moderation action (listing removal, account suspension) is expected to be explainable to the affected member. If you believe a moderation decision was wrong, raise it in the Matrix chat — decisions are reviewable and reversible.",
+    title: "Moderation accountability",
+    body: "Administrators act against accounts and listings only. Every moderation action (a listing removal or an account suspension) must be explainable to the affected member. If you think a decision was wrong, raise it in the Matrix chat; decisions are reviewable and reversible.",
   },
 ];
 
@@ -55,7 +55,7 @@ const expectations = [
   "Describe tools and skills honestly, including known defects.",
   "Honor loan dates you accept, or renegotiate before the deadline.",
   "Keep messages on-platform and on-topic; no spam or solicitation.",
-  "Respect that aliases may be pseudonymous — do not press for real identities.",
+  "Respect that aliases may be pseudonymous, and do not press for real identities.",
   "Report safety issues with tools immediately to the owner and moderators.",
 ];
 
@@ -73,8 +73,8 @@ export default function CodeOfConductPage() {
           Code of Conduct
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          A lending collective only works when trust is the default. These four pillars define how
-          we treat each other and how power is held accountable.
+          A lending collective works only when members trust each other. These four commitments
+          describe how we treat each other and how moderation is reviewed.
         </p>
       </section>
 
@@ -101,7 +101,7 @@ export default function CodeOfConductPage() {
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <Megaphone className="h-5 w-5 text-cyan-400" aria-hidden="true" />
-          Everyday Expectations
+          Everyday expectations
         </h2>
         <ul className="space-y-3">
           {expectations.map((item) => (
@@ -117,7 +117,7 @@ export default function CodeOfConductPage() {
       <section className="border border-red-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
         <h2 className="mb-4 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <Shield className="h-5 w-5 text-red-400" aria-hidden="true" />
-          Reporting & Enforcement
+          Reporting and enforcement
         </h2>
         <p className="mb-4 text-sm leading-relaxed text-zinc-400">
           To report a violation, message any administrator through the platform's built-in
@@ -139,8 +139,7 @@ export default function CodeOfConductPage() {
           <Link href="/terms" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4">
             Terms of Service
           </Link>
-          . Moderation exists to protect the commons, not to police thought — and it is always
-          subject to community review.
+          , and moderation decisions are always subject to community review.
         </p>
       </section>
     </div>

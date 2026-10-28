@@ -178,8 +178,8 @@ export function Footer() {
               </li>
             ))}
             <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
-              No emails. No phone numbers. No IP logging. No analytics. No third-party trackers.
-              Ever.
+              No emails, no phone numbers, no IP logging, no analytics, and no third-party
+              trackers.
             </li>
           </FooterColumn>
 
@@ -207,15 +207,15 @@ export function Footer() {
             ))}
             <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
               The Project Wiki runs on a self-hosted, standalone BookStack instance at
-              wiki.tools-library.com — no third-party knowledge platforms involved.
+              wiki.tools-library.com. No third-party knowledge platform is involved.
             </li>
           </FooterColumn>
         </div>
 
         <div className="mt-12 border-t border-zinc-900 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-center font-mono text-[11px] text-zinc-500 sm:text-left">
-            © {new Date().getFullYear()} Tool Library Collective — Licensed under GNU AGPLv3.
-            Built for mutual aid, right-to-repair, and local resilience.
+            © {new Date().getFullYear()} Tool Library Collective, licensed under GNU AGPLv3.
+            Built for mutual aid and right to repair.
           </p>
           <p className="font-mono text-[11px] text-zinc-600">
             Self-hosted on Fedora CoreOS · Rootless Podman · Zero telemetry

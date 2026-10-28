@@ -34,7 +34,7 @@ export const metadata = {
 const implementedFeatures = [
   {
     title: "Skip Link (WCAG 2.4.1)",
-    body: "A bypass block is the first focusable element on every page, letting keyboard and screen-reader users jump straight past the navigation to the main content.",
+    body: "A bypass block is the first focusable element on every page. Keyboard and screen-reader users can jump past the navigation straight to the main content.",
   },
   {
     title: "Keyboard Shortcuts (WCAG 2.1.1)",
@@ -42,7 +42,7 @@ const implementedFeatures = [
   },
   {
     title: "High-Contrast Mode (WCAG 1.4.6 AAA)",
-    body: "An optional contrast mode renders pure black backgrounds with white text and yellow highlights, meeting the enhanced 7:1 contrast requirement for all text.",
+    body: "An optional contrast mode renders pure black backgrounds with white text and yellow highlights. All text then meets the enhanced 7:1 contrast requirement.",
   },
   {
     title: "Text Spacing Toggle (WCAG 1.4.12)",
@@ -50,11 +50,11 @@ const implementedFeatures = [
   },
   {
     title: "Dyslexia-Friendly Font Stack",
-    body: "A locally bundled OpenDyslexic font stack can be enabled globally, giving readers with dyslexia a letterform design that reduces mirroring and crowding confusion.",
+    body: "A locally bundled OpenDyslexic font stack can be enabled globally. Its letterforms reduce mirroring and crowding for readers with dyslexia.",
   },
   {
     title: "Font Scaling to 150% (WCAG 1.4.4)",
-    body: "Text can be scaled to 125% and 150% from the accessibility menu without loss of content or functionality; layouts reflow rather than clip or overlap.",
+    body: "Text can be scaled to 125% and 150% from the accessibility menu without loss of content or functionality; layouts reflow instead of clipping or overlapping.",
   },
   {
     title: "Enhanced Focus Indicators (WCAG 2.4.11 / 2.4.13)",
@@ -66,7 +66,7 @@ const implementedFeatures = [
   },
   {
     title: "44px Minimum Targets (WCAG 2.5.8 AAA)",
-    body: "Every control inside the accessibility menu — radios, switches, and buttons — meets the 44 by 44 CSS pixel target-size practice, well beyond the 24px minimum.",
+    body: "Every control inside the accessibility menu (radios, switches, and buttons) meets the 44 by 44 CSS pixel target-size practice, well beyond the 24px minimum.",
   },
   {
     title: "Reduced Motion (WCAG 2.3.3 AAA)",
@@ -74,7 +74,7 @@ const implementedFeatures = [
   },
   {
     title: "Reading Guide",
-    body: "An optional horizontal bar follows the pointer down the page, helping readers with tracking difficulties keep their place across long lines of text.",
+    body: "An optional horizontal bar follows the pointer down the page so readers with tracking difficulties can keep their place in long lines of text.",
   },
   {
     title: "Large High-Contrast Cursor",
@@ -86,11 +86,11 @@ const implementedFeatures = [
   },
   {
     title: "Consistent Help Link (WCAG 3.2.6)",
-    body: "The Request Help link appears in the footer at the same relative position on every page, so help is always findable in the same place.",
+    body: "The Request Help link appears in the footer in the same position on every page.",
   },
   {
     title: "No Drag-Only Interactions (WCAG 2.5.7)",
-    body: "Nothing on this site requires dragging. All actions can be completed with single taps, clicks, or key presses — no multipoint or path-based gestures.",
+    body: "Nothing on this site requires dragging. All actions can be completed with single taps, clicks, or key presses. There are no multipoint or path-based gestures.",
   },
   {
     title: "Accessible Authentication (WCAG 3.3.8 / 3.3.9)",
@@ -105,7 +105,7 @@ const implementedFeatures = [
 const wcag3Adoptions = [
   {
     title: "Focus Appearance Beyond Minimums",
-    body: "Focus indicators are larger, thicker, and higher-contrast than the WCAG 2.2 minimum, moving toward the stronger focus-appearance guidance drafted for WCAG 3.0.",
+    body: "Focus indicators are larger, thicker, and higher-contrast than the WCAG 2.2 minimum. This anticipates the stronger focus-appearance guidance drafted for WCAG 3.0.",
   },
   {
     title: "Operating-System Preference Respect",
@@ -113,11 +113,11 @@ const wcag3Adoptions = [
   },
   {
     title: "Personalization via User Preferences",
-    body: "Contrast, font size, spacing, motion, cursor, and link styling are user-controlled preferences persisted anonymously in a cookie and synced to your account — the personalization model WCAG 3.0 is drafting around.",
+    body: "Contrast, font size, spacing, motion, cursor, and link styling are user-controlled preferences persisted anonymously in a cookie and synced to your account. This matches the personalization model being drafted for WCAG 3.0.",
   },
   {
     title: "Plain-Language Structure",
-    body: "Pages are organized under descriptive headings with consistent navigation and short, direct sentences, following the plain-language drafting direction of WCAG 3.0.",
+    body: "Pages are organized under descriptive headings, with consistent navigation and short, direct sentences. This follows the plain-language direction of the WCAG 3.0 draft.",
   },
   {
     title: "Outcome-Based Scoring Commitment",
@@ -145,10 +145,9 @@ export default function AccessibilityStatementPage() {
           Accessibility Statement
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          Accessibility on this site is an engineering requirement, not an afterthought. Every
-          control, label, and layout decision in the design system is built against the Web
-          Content Accessibility Guidelines, and the tools to adjust the experience are placed
-          directly in your hands.
+          Accessibility is an engineering requirement on this site. The interface is built against
+          the Web Content Accessibility Guidelines, and the controls for adjusting it live in the
+          accessibility menu on every page.
         </p>
         <img
           src="/wcag2.2-aaa.png"
@@ -163,16 +162,15 @@ export default function AccessibilityStatementPage() {
       <section className="border border-emerald-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <BadgeCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-          Conformance Statement
+          Conformance statement
         </h2>
         <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
           <p>
             This site targets <strong className="text-white">Web Content Accessibility Guidelines (WCAG) 2.2 Level AAA</strong>,
-            with WCAG 2.2 Level AA treated as the non-negotiable hard floor beneath every
-            decision. Where a Level AAA criterion is achievable within a terminal-style dark
-            interface, we implement it; where it conflicts with a genuine design constraint, we
-            document the gap honestly in the limitations below rather than claiming conformance
-            we cannot demonstrate.
+            with Level AA treated as the hard floor beneath every decision. Where a Level AAA
+            criterion is achievable within a terminal-style dark interface, we implement it. Where
+            it conflicts with a genuine design constraint, we document the gap in the limitations
+            below instead of claiming conformance we cannot demonstrate.
           </p>
           <p>
             The site was self-assessed against WCAG 2.2 in <strong className="text-white">October 2026</strong> and is
@@ -189,7 +187,7 @@ export default function AccessibilityStatementPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">ACCESSIBILITY // FEATURE INVENTORY</p>
         <h2 className="mb-6 mt-2 flex items-center gap-3 text-2xl font-bold text-white tracking-tight">
           <ListChecks className="h-5 w-5 text-cyan-400" aria-hidden="true" />
-          Implemented Accessibility Features
+          Implemented accessibility features
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {implementedFeatures.map((feature) => (
@@ -208,17 +206,15 @@ export default function AccessibilityStatementPage() {
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <Sparkles className="h-5 w-5 text-purple-400" aria-hidden="true" />
-          WCAG 3.0 (Draft) Adoptions
+          WCAG 3.0 (draft) adoptions
         </h2>
         <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
           <p>
-            WCAG 3.0 is currently a <strong className="text-white">W3C Working Draft</strong>: it is published for
-            review and is explicitly not yet a W3C Standard, and its requirements may change
-            before it reaches Recommendation status. We track the draft because its direction —
-            outcome-based scoring, broader personalization, and grading usability research
-            rather than pass/fail checkpoints — is where web accessibility is heading. Rather
-            than wait for the final publication date, we have adopted the draft practices that
-            are already implementable today:
+            WCAG 3.0 is currently a <strong className="text-white">W3C Working Draft</strong>. It is published for
+            review, it is explicitly not yet a W3C Standard, and its requirements may change
+            before it reaches Recommendation status. We track the draft because it moves toward
+            outcome-based scoring, broader personalization, and graded usability research. We
+            have adopted the draft practices that are already implementable today:
           </p>
         </div>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -234,11 +230,11 @@ export default function AccessibilityStatementPage() {
         </div>
       </section>
 
-      {/* Known limitations */}
+      {/*           Known Limitations */}
       <section className="border border-red-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />
-          Known Limitations
+          Known limitations
         </h2>
         <ul className="space-y-3">
           {knownLimitations.map((item) => (
@@ -254,12 +250,12 @@ export default function AccessibilityStatementPage() {
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <MessageCircle className="h-5 w-5 text-cyan-400" aria-hidden="true" />
-          Feedback & Contact
+          Feedback and contact
         </h2>
         <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
           <p>
             If any part of this site is difficult or impossible for you to use, we want to hear
-            about it — barriers reported by real users are the fastest route to a fix. Use the{" "}
+            about it. Barriers reported by real users are the fastest route to a fix. Use the{" "}
             <Link href="/help" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4">
               Request Help
             </Link>{" "}
@@ -272,9 +268,8 @@ export default function AccessibilityStatementPage() {
             >
               Matrix Chat
             </a>
-            . Both channels are zero-PII by design: we collect no email address, no phone
-            number, and no name, so reporting a barrier never requires surrendering personal
-            data.
+            . Both channels are zero-PII by design: we collect no email address, phone number,
+            or name, so reporting a barrier requires no personal data.
           </p>
           <p>
             We aim to acknowledge accessibility feedback within five business days and to ship a

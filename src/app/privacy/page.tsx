@@ -25,22 +25,22 @@ export const metadata = {
 };
 
 const neverCollected = [
-  "Email addresses — we do not ask for them and there is no field to enter one.",
-  "Phone numbers — never requested, never stored.",
-  "Real names — your public identity is a self-chosen alias, nothing more.",
-  "IP addresses — the server performs zero IP logging at the application layer.",
-  "Analytics & telemetry — there is no analytics script, no beacon, no pixel, no CDN.",
-  "Third-party cookies or trackers — the only cookie is your session and your anonymous accessibility preferences.",
+  "Email addresses: we never ask for them, and the sign-up form has no field to enter one.",
+  "Phone numbers: never requested, never stored.",
+  "Real names: your public identity is a self-chosen alias. We do not ask for your legal name.",
+  "IP addresses: the application performs no IP logging.",
+  "Analytics and telemetry: no analytics script, no beacons, no pixels, and no CDN.",
+  "Third-party cookies or trackers: the only cookies are your session and your anonymous accessibility preferences.",
 ];
 
 const whatIsStored = [
   {
     title: "Login Handle (username)",
-    body: "A 3–24 character handle of letters, numbers, hyphens, and underscores used to log in. It is your account key, not your identity.",
+    body: "A 3–24 character handle of letters, numbers, hyphens, and underscores, used to log in. It identifies your account and nothing else about you.",
   },
   {
     title: "Public Alias",
-    body: "A display name shown to neighbors. Choose anything — a first name, a nickname, or a pseudonym. Change it anytime from your dashboard.",
+    body: "A display name shown to other members. It can be a first name, a nickname, or a pseudonym, and you can change it anytime from your dashboard.",
   },
   {
     title: "Password Hash",
@@ -52,7 +52,7 @@ const whatIsStored = [
   },
   {
     title: "Listing & Loan Data",
-    body: "Tools, skills, loan requests, and messages you create. These are the operational minimum for a functioning lending collective.",
+    body: "Tools, skills, loan requests, and messages you create. A lending library cannot run without these records.",
   },
   {
     title: "Anonymous Accessibility Preferences",
@@ -67,15 +67,15 @@ export default function PrivacyPage() {
       <section className="py-6 text-center">
         <div className="mb-6 inline-flex items-center gap-2 border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          ZERO-PII BY ARCHITECTURE, NOT BY PROMISE
+          ZERO-PII BY ARCHITECTURE
         </div>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // PRIVACY</p>
         <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
           Privacy Policy
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          This service is engineered so that it is structurally incapable of surveilling you. There
-          is no data broker relationship to disclose, because there is no data to broker.
+          This site holds very little about you, and this page lists all of it. There is no data
+          broker relationship to disclose because there is no data to sell.
         </p>
       </section>
 
@@ -83,7 +83,7 @@ export default function PrivacyPage() {
       <section className="border border-red-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <Ban className="h-5 w-5 text-red-400" aria-hidden="true" />
-          What We Never Collect
+          What we never collect
         </h2>
         <ul className="space-y-3">
           {neverCollected.map((item) => (
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // DATA INVENTORY</p>
         <h2 className="mb-6 mt-2 flex items-center gap-3 text-2xl font-bold text-white tracking-tight">
           <Lock className="h-5 w-5 text-cyan-400" aria-hidden="true" />
-          The Complete Inventory of Stored Data
+          What is stored
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {whatIsStored.map((item) => (
@@ -119,7 +119,7 @@ export default function PrivacyPage() {
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <Server className="h-5 w-5 text-purple-400" aria-hidden="true" />
-          Infrastructure & Retention
+          Infrastructure and retention
         </h2>
         <div className="space-y-4 text-sm leading-relaxed text-zinc-400">
           <p className="flex items-start gap-3">
@@ -136,13 +136,13 @@ export default function PrivacyPage() {
               All data lives in a single SQLite database file on the host volume. Deleting your
               account removes your user record, recovery keys, tools, skills, and messages via
               cascading deletes. Uploaded images are stored locally in the data volume and served
-              directly by the application — never by an object-storage provider.
+              directly by the application. No object-storage provider is involved.
             </span>
           </p>
           <p>
-            Because we collect no contact information, we cannot and will not sell, share, or
-            respond to data requests about you: there is nothing to hand over. This is the
-            strongest privacy guarantee that can exist — absence.
+            Because we collect no contact information, there is nothing to sell, share, or hand
+            over in response to a data request about you. The strongest privacy guarantee that can
+            exist is that the data does not exist.
           </p>
         </div>
       </section>

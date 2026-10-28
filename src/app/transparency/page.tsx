@@ -32,12 +32,12 @@ const canaryStatements = [
 ];
 
 const sharingRows = [
-  { party: "Advertising networks", status: "$0 — none exist" },
-  { party: "Analytics providers", status: "$0 — none exist" },
-  { party: "Cloud hosting providers", status: "$0 — self-hosted on local hardware" },
-  { party: "Payment processors", status: "$0 — no payments are processed" },
-  { party: "Email delivery services", status: "$0 — no emails are collected or sent" },
-  { party: "CDNs & font providers", status: "$0 — all assets served locally" },
+  { party: "Advertising networks", status: "None exist" },
+  { party: "Analytics providers", status: "None exist" },
+  { party: "Cloud hosting providers", status: "None, self-hosted on local hardware" },
+  { party: "Payment processors", status: "None, no payments are processed" },
+  { party: "Email delivery services", status: "None, no emails are collected or sent" },
+  { party: "CDNs & font providers", status: "None, all assets are served locally" },
 ];
 
 const serverMetrics = [
@@ -45,7 +45,7 @@ const serverMetrics = [
     icon: Server,
     label: "Hosting",
     value: "Fedora CoreOS, self-hosted",
-    detail: "Single physical machine under operator physical control.",
+    detail: "A single physical machine under the operator's physical control.",
     accent: "cyan",
   },
   {
@@ -84,15 +84,15 @@ export default function TransparencyPage() {
       <section className="py-6 text-center">
         <div className="mb-6 inline-flex items-center gap-2 border border-cyan-500/50 bg-cyan-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-cyan-400">
           <Activity className="h-3.5 w-3.5" aria-hidden="true" />
-          RADICAL TRANSPARENCY, VERIFIED BY ABSENCE
+          WARRANT CANARY AND SERVER FACTS
         </div>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // TRANSPARENCY</p>
         <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
           Transparency Report
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          What we can't collect can't be seized, subpoenaed, or sold. This page is our standing
-          declaration of what has — and has not — happened on this server.
+          We cannot be forced to hand over data we do not have. This page records what has and has
+          not happened on this server.
         </p>
       </section>
 
@@ -101,7 +101,7 @@ export default function TransparencyPage() {
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <h2 className="flex items-center gap-3 text-xl font-bold text-white tracking-tight">
             <ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-            Warrant Canary
+            Warrant canary
           </h2>
           <span className="inline-flex items-center gap-2 border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
             <span className="h-2 w-2 bg-emerald-400" aria-hidden="true" />
@@ -117,15 +117,15 @@ export default function TransparencyPage() {
           ))}
         </ul>
         <p className="mt-6 font-mono text-[11px] leading-relaxed text-zinc-500">
-          If this canary is ever removed, altered, or goes stale without explanation, treat that as
-          a signal to assume compromise and verify independently. Canary last affirmed:{" "}
+          If this canary is ever removed, altered, or left stale without explanation, assume
+          compromise and verify independently. Canary last affirmed:{" "}
           <span className="font-mono text-emerald-400">2026-10-25</span>.
         </p>
       </section>
 
       {/* Third-party sharing */}
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
-        <h2 className="mb-6 text-xl font-bold text-white tracking-tight">Third-Party Data Sharing</h2>
+        <h2 className="mb-6 text-xl font-bold text-white tracking-tight">Third-party data sharing</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -153,7 +153,7 @@ export default function TransparencyPage() {
       {/* Local server metrics */}
       <section>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">LEGAL // SERVER FACTS</p>
-        <h2 className="mb-6 mt-2 text-2xl font-bold text-white tracking-tight">Local Server Facts</h2>
+        <h2 className="mb-6 mt-2 text-2xl font-bold text-white tracking-tight">Local server facts</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {serverMetrics.map((metric) => {
             const Icon = metric.icon;

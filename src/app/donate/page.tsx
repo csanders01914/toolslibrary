@@ -38,14 +38,14 @@ const channels = [
     accent: "hover:border-purple-500/50",
     iconColor: "text-purple-400",
     title: "Liberapay",
-    body: "Recurring donations with zero platform tracking. Liberapay is itself a free-software, self-hostable patronage network — aligned with our values of decentralization and no-surveillance funding.",
+    body: "Recurring donations with zero platform tracking. Liberapay is itself a free-software, self-hostable patronage network, which suits how this project is funded.",
     note: "Coming Soon",
   },
   {
     icon: Wrench,
     accent: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
-    title: "Community Hardware Fund",
+    title: "Community hardware fund",
     body: "Prefer your money to become something you can hold? The hardware fund buys shared equipment the library lacks: a pressure washer, a tile saw, a stud finder set. Funded purchases are added to the public inventory and lent like any other tool.",
     note: "Coordinated in the Matrix room",
   },
@@ -54,14 +54,14 @@ const channels = [
 const nonMonetary = [
   {
     icon: Wrench,
-    title: "Donate a Tool",
-    body: "List a tool you own and keep it in circulation — the most direct donation there is.",
+    title: "Donate a tool",
+    body: "List a tool you own and keep it in circulation. That is the most direct way to give.",
     href: "/tools/new",
   },
   {
     icon: Code2,
-    title: "Donate Code",
-    body: "Pull requests, bug reports, and documentation edits keep the platform free forever.",
+    title: "Donate code",
+    body: "Pull requests, bug reports, and documentation edits keep the platform free.",
     href: "/contribute",
   },
 ];
@@ -73,7 +73,7 @@ export default function DonatePage() {
       <section className="py-6 text-center">
         <div className="mb-6 inline-flex items-center gap-2 border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
           <Heart className="h-3.5 w-3.5" aria-hidden="true" />
-          NO ADS. NO INVESTORS. NO PAYWALLS.
+          COMMUNITY FUNDED, NO ADS OR INVESTORS
         </div>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400">COMMUNITY // DONATE</p>
         <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
@@ -81,7 +81,7 @@ export default function DonatePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
           This platform will never charge users, show ads, or take venture capital. It runs on
-          community money and community labor — here is how to add yours.
+          community money and community labor. Here is how to add yours.
         </p>
       </section>
 
@@ -129,7 +129,7 @@ export default function DonatePage() {
 
       {/* Transparency note */}
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
-        <h2 className="mb-4 text-xl font-bold text-white tracking-tight">Where the Money Goes</h2>
+        <h2 className="mb-4 text-xl font-bold text-white tracking-tight">Where the money goes</h2>
         <p className="text-sm leading-relaxed text-zinc-400">
           Every funded expense falls into one of three buckets: <strong className="text-white">hardware</strong>{" "}
           (the FCOS server, drives, and replacement parts), <strong className="text-white">consumables</strong>{" "}

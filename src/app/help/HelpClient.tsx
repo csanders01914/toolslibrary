@@ -31,13 +31,13 @@ import { HELP_CATEGORIES } from "@/lib/services/triage";
  */
 
 const CATEGORY_LABELS: Record<string, string> = {
-  TOOL_ISSUE: "TOOL_ISSUE — a listing or tool problem",
-  SKILL_ISSUE: "SKILL_ISSUE — a skill listing problem",
-  LOAN_DISPUTE: "LOAN_DISPUTE — disagreement over a loan",
-  ACCOUNT_ACCESS: "ACCOUNT_ACCESS — login or account trouble",
-  SAFETY_INCIDENT: "SAFETY_INCIDENT — injury, danger, or threat",
-  BUG_REPORT: "BUG_REPORT — the site misbehaves",
-  GENERAL: "GENERAL — anything else",
+  TOOL_ISSUE: "TOOL_ISSUE: a listing or tool problem",
+  SKILL_ISSUE: "SKILL_ISSUE: a skill listing problem",
+  LOAN_DISPUTE: "LOAN_DISPUTE: disagreement over a loan",
+  ACCOUNT_ACCESS: "ACCOUNT_ACCESS: login or account trouble",
+  SAFETY_INCIDENT: "SAFETY_INCIDENT: injury, danger, or threat",
+  BUG_REPORT: "BUG_REPORT: the site misbehaves",
+  GENERAL: "GENERAL: anything else",
 };
 
 const ROUTE_COPY: Record<string, { label: string; variant: string; blurb: string }> = {
@@ -84,7 +84,8 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
         </h1>
         <p className="mt-3 text-sm text-zinc-400 max-w-2xl">
           Your request is reviewed and sent to whoever can resolve it. Safety incidents and
-          disputes always reach a person. Zero PII required — an optional alias is enough.
+          disputes always reach a person. No personal data is required; an optional alias is
+          enough.
         </p>
       </section>
 
@@ -120,7 +121,7 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
                   htmlFor="help-alias"
                   className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2"
                 >
-                  Alias (optional — so we can reach you)
+                  Alias (optional, so we can reach you)
                 </label>
                 <input
                   id="help-alias"
@@ -199,7 +200,7 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
 
             {ticket.status === "OPEN" && (
               <p className="font-mono text-[11px] text-zinc-600">
-                Ticket status: OPEN — queued for processing.
+                Ticket status: OPEN, queued for processing.
               </p>
             )}
           </div>

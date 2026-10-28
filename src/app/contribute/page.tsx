@@ -28,29 +28,29 @@ const paths = [
   {
     icon: Code2,
     accent: "cyan" as const,
-    title: "Code Contributions",
-    body: "The entire stack is AGPLv3 free software: Next.js 15 App Router, React 19, TypeScript, Prisma with SQLite, and Tailwind CSS v4. Clone the repository, pick an issue, and open a pull request. Every merged PR is reviewed for the project's privacy invariants — no analytics, no PII, no external CDNs.",
+    title: "Code contributions",
+    body: "The entire stack is AGPLv3 free software: Next.js 15 App Router, React 19, TypeScript, Prisma with SQLite, and Tailwind CSS v4. Clone the repository, pick an issue, and open a pull request. Every merged PR is reviewed against the project's privacy invariants: no analytics, no PII, and no external CDNs.",
     action: { href: "https://github.com/csanders01914/toolslibrary", label: "Open the repository", external: true },
   },
   {
     icon: Bug,
     accent: "rose" as const,
-    title: "Bug Reports & Security Disclosures",
-    body: "Found a bug or a security issue? Open a GitHub issue for bugs. For security vulnerabilities, use a private GitHub security advisory rather than a public issue — we coordinate disclosure and credit reporters in the release notes.",
+    title: "Bug reports & security disclosures",
+    body: "Found a bug or a security issue? Open a GitHub issue for bugs. For security vulnerabilities, use a private GitHub security advisory instead of a public issue. We coordinate disclosure and credit reporters in the release notes.",
     action: { href: "https://github.com/csanders01914/toolslibrary", label: "Report an issue", external: true },
   },
   {
     icon: Wrench,
     accent: "emerald" as const,
-    title: "Tool Donations",
-    body: "Have a working tool you no longer use? List it on the platform and mark it as a permanent loan — that is a donation to the commons. Local drop-off points are coordinated through the Matrix room. Donated tools stay in the community inventory for everyone's benefit.",
+    title: "Tool donations",
+    body: "Have a working tool you no longer use? List it on the platform and mark it as a permanent loan. That is a donation. Local drop-off points are coordinated through the Matrix room, and donated tools stay in the community inventory.",
     action: { href: "/tools/new", label: "List a tool now", external: false },
   },
   {
     icon: BookOpen,
     accent: "purple" as const,
-    title: "Documentation & Wiki",
-    body: "The self-hosted BookStack wiki at wiki.tools-library.com hosts guides: tool maintenance walkthroughs, safety primers, and self-hosting documentation. Good documentation is as valuable as good code — and it never requires an account to read.",
+    title: "Documentation & wiki",
+    body: "The self-hosted BookStack wiki at wiki.tools-library.com hosts guides: tool maintenance walkthroughs, safety primers, and self-hosting documentation. Good documentation is as valuable as good code, and the wiki never requires an account to read.",
     action: { href: "http://wiki.tools-library.com", label: "Visit the wiki", external: true },
   },
 ];
@@ -85,15 +85,15 @@ export default function ContributePage() {
       <section className="py-6 text-center">
         <div className="mb-6 inline-flex items-center gap-2 border border-cyan-500/50 bg-cyan-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-cyan-400">
           <GitPullRequest className="h-3.5 w-3.5" aria-hidden="true" />
-          THE COMMONS IS BUILT BY ITS USERS
+          MAINTAINED BY ITS USERS
         </div>
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400">COMMUNITY // CONTRIBUTE</p>
         <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">
           Contribute / Get Involved
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          Four ways to strengthen the collective: write code, break things responsibly, donate
-          tools, and document what you know.
+          Four ways to help out: write code, report bugs, donate tools, or improve the
+          documentation.
         </p>
       </section>
 
@@ -138,7 +138,7 @@ export default function ContributePage() {
       <section className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 sm:p-8">
         <h2 className="mb-6 flex items-center gap-3 text-xl font-bold text-white tracking-tight">
           <ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
-          Non-Negotiable Development Principles
+          Development principles
         </h2>
         <ul className="space-y-3">
           {[

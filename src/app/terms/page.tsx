@@ -28,32 +28,32 @@ const sections = [
   {
     icon: Users,
     color: "cyan",
-    title: "1. The Spirit of the Agreement",
-    body: "Tool Library is a mutual-aid platform for neighbors to lend tools and exchange skills. By creating an account you agree to participate in good faith: describe your listings honestly, honor the loan commitments you accept, and treat other members with respect. This is a community contract, not a commercial one — no fees are charged and no purchases occur.",
+    title: "1. The spirit of the agreement",
+    body: "Tool Library is a mutual-aid platform for neighbors to lend tools and exchange skills. By creating an account you agree to participate in good faith: describe your listings honestly, honor the loan commitments you accept, and treat other members with respect. This is a community agreement. No fees are charged and nothing is bought or sold.",
   },
   {
     icon: Wrench,
     color: "emerald",
-    title: "2. Tool Safety & Responsibility",
-    body: "Tools are physical objects with real hazards. Borrowers agree to inspect a tool before use, operate it only for its intended purpose, and follow all manufacturer safety guidance. Lenders agree to disclose known defects and to keep listed tools in safe working condition. The platform facilitates introductions; it does not inspect, warrant, or certify any tool. Each member is responsible for their own safety decisions.",
+    title: "2. Tool safety & responsibility",
+    body: "Tools are physical objects with real hazards. Borrowers agree to inspect a tool before use, operate it only for its intended purpose, and follow all manufacturer safety guidance. Lenders agree to disclose known defects and to keep listed tools in safe working condition. The platform introduces members to each other; it does not inspect, warrant, or certify any tool. Each member is responsible for their own safety decisions.",
   },
   {
     icon: ShieldAlert,
     color: "rose",
-    title: "3. Loan Obligations & Trust Consequences",
-    body: "When an owner approves your loan request, you are expected to return the tool on the agreed date and in the condition received. Returning on time in good condition raises your Trust Score by +5. Damaged or overdue returns lower it by −15. Trust Scores are visible to other members and gate the community's willingness to lend to you. Repeated abuse may result in account suspension by an administrator.",
+    title: "3. Loan obligations & trust consequences",
+    body: "When an owner approves your loan request, you are expected to return the tool on the agreed date and in the condition received. Returning on time in good condition raises your Trust Score by +5. Damaged or overdue returns lower it by −15. Other members can see your Trust Score before they approve a loan. Repeated abuse may result in account suspension by an administrator.",
   },
   {
     icon: Scale,
     color: "purple",
-    title: "4. Acceptable Content & Listings",
+    title: "4. Acceptable content & listings",
     body: "Listings, skills, messages, and profile content must be lawful and relevant to the community's purpose. Prohibited: weapons designed to harm people, illegal items, counterfeit goods, harassment, spam, doxxing attempts, and content that would violate the Code of Conduct. Administrators may remove listings and suspend accounts that violate these rules.",
   },
   {
     icon: Gavel,
     color: "cyan",
-    title: "5. Liability, License & Governing Terms",
-    body: "The service is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, the operators and contributors are not liable for injuries, damages, or losses arising from tool use or member interactions. The software itself is licensed under the GNU Affero General Public License v3; these terms govern your use of the running service, while the AGPLv3 governs the source code. Disputes between members are expected to be resolved directly and in good faith — the platform stores no contact information and cannot arbitrate on your behalf.",
+    title: "5. Liability, license & governing terms",
+    body: "The service is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, the operators and contributors are not liable for injuries, damages, or losses arising from tool use or member interactions. The software itself is licensed under the GNU Affero General Public License v3; these terms govern your use of the running service, while the AGPLv3 governs the source code. Disputes between members are expected to be resolved directly and in good faith. The platform stores no contact information and cannot arbitrate on your behalf.",
   },
 ];
 
@@ -94,8 +94,8 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          Short, readable, and honest. Five sections that define how this collective operates and
-          what we expect from every member.
+          The rules are short on purpose. Five sections cover how the collective operates and what
+          we expect from members.
         </p>
       </section>
 
