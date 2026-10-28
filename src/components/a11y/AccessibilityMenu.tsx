@@ -105,9 +105,9 @@ export function AccessibilityMenu() {
         aria-haspopup="dialog"
         aria-controls="a11y-menu-panel"
         aria-label="Accessibility settings (Alt+A)"
-        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center rounded-none border border-zinc-700 bg-black text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white active:border-cyan-500/60 active:text-cyan-400 cursor-pointer"
+        className="fixed bottom-6 right-6 z-[9998] flex h-14 w-14 items-center justify-center transition-transform hover:scale-110 active:scale-95 cursor-pointer"
       >
-        <img src="/web-accessibility-icon.png" alt="" width={28} height={28} className="h-7 w-7" aria-hidden="true" />
+        <img src="/web-accessibility-icon.png" alt="" width={40} height={40} className="h-10 w-10" aria-hidden="true" />
       </button>
 
       {/* Dialog panel */}
