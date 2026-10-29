@@ -154,7 +154,7 @@ export default function PrivacyPage() {
         </Link>{" "}
         or reach the collective via{" "}
         <a
-          href="http://matrix.tools-library.com"
+          href="/chat"
           target="_blank"
           rel="noopener noreferrer"
           className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4"
