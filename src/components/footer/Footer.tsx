@@ -75,15 +75,14 @@ const communityLinks = [
       ]
     : []),
   {
-    href: "/chat",
+    href: "/matrix-chat",
     label: "Matrix Chat",
     icon: MessagesSquare,
   },
   {
-    href: "https://discord.gg/mw37N9DNum",
-    label: "Discord",
+    href: "/discord-chat",
+    label: "Discord Chat",
     icon: MessageCircle,
-    external: true,
   },
 ];
 

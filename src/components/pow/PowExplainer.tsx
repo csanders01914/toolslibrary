@@ -26,7 +26,7 @@ import { X } from "lucide-react";
  * register, chat, and help surfaces. Renders an inline text-link trigger
  * that opens an accessible modal dialog explaining what a proof-of-work
  * hash is, what it is for, and how it is implemented underneath the login
- * (account creation) and Matrix portal.
+ * (account creation) and chat portal.
  *
  * Accessibility: the dialog is announced via role="dialog" + aria-modal,
  * focus moves into it on open and returns to the trigger on close, Escape
@@ -160,7 +160,7 @@ export default function PowExplainerLink() {
 
               <section>
                 <h3 className="font-mono text-xs uppercase tracking-widest text-zinc-200">
-                  How it&apos;s implemented underneath the login and Matrix portal
+                  How it&apos;s implemented underneath the login and chat portal
                 </h3>
                 <p className="mt-1">
                   The server issues a signed challenge (base64url payload +
@@ -171,7 +171,7 @@ export default function PowExplainerLink() {
                   server checks the signature and client binding with
                   constant-time comparisons, then expiry, single use, surface,
                   and the hash — before creating your account, triaging your
-                  help request, or minting a one-time Matrix token.
+                  help request, or minting a one-time chat token.
                 </p>
               </section>
 
