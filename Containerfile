@@ -102,4 +102,4 @@ EXPOSE 3000
 # deploy` never regenerates it. Existing databases created by `db push` must
 # be baselined once: prisma migrate resolve --applied 0_init (see
 # DEPLOYMENT.md).
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma db push --skip-generate && node server.js"]
