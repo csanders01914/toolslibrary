@@ -181,6 +181,9 @@ podman exec tool-library ./node_modules/.bin/prisma migrate status
 8. Check the dashboard's `TRUST // VOUCH YOUR COUNTERPARTS` section as A and
    as B — each side vouches once (+2 to the counterparty's trust score), the
    queues empty afterwards, and a second vouch on the same loan is refused.
+   Also decline one queue entry with the `Decline` button — the row leaves
+   the queue, the counterparty's trust score is unchanged, and the decision
+   is final (vouching afterwards is refused).
 9. As B, exercise `/recover` with one of the recovery codes from step 1 and
    confirm the code is single-use (a second attempt fails).
 

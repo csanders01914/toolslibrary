@@ -25,8 +25,9 @@ import { NextResponse } from "next/server";
  * authenticated GET returning every queue the member may need to act on:
  * unread messages, incoming tool requests, approved loans awaiting the
  * borrower's pickup confirmation, active loans awaiting the owner's return
- * marking, and completed loans awaiting the member's vouch. Counts only —
- * no message content, aliases, or loan rows leave the server.
+ * marking, and completed loans awaiting the member's vouch-or-decline
+ * decision. Counts only — no message content, aliases, or loan rows leave
+ * the server.
  */
 export async function GET() {
   const session = await auth();

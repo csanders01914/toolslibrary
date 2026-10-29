@@ -29,11 +29,13 @@ import { VOUCH_DELTA } from "@/lib/constants";
  *
  * The platform is zero-PII: members are known only by their alias, so lending
  * expensive tools to a stranger requires a transparent, peer-verified trust
- * metric. Participants of a RETURNED loan may vouch for their counterparty —
- * exactly one vouch per loan per direction (unique on loanId+voucherId),
- * each applying the fixed bounded VOUCH_DELTA to the counterparty's
- * trustScore. Self-vouching is impossible by construction (the vouchee is
- * always the counterparty) and re-checked as a belt-and-braces guard.
+ * metric. Participants of a RETURNED loan make exactly one decision per loan
+ * per direction (unique on loanId+voucherId): vouch for their counterparty —
+ * applying the fixed bounded VOUCH_DELTA to the counterparty's trustScore —
+ * or decline to vouch, which records a delta-0 declined row so the queue
+ * stops asking without touching anyone's trust score. Self-vouching is
+ * impossible by construction (the vouchee is always the counterparty) and
+ * re-checked as a belt-and-braces guard.
  */
 
 const vouchSchema = z.object({
@@ -45,6 +47,63 @@ export interface VouchState {
   error?: string;
 }
 
+/**
+ * Shared guard logic for both vouch decisions (vouch / decline): resolves the
+ * authenticated participant's counterparty on a RETURNED loan, or returns an
+ * error message.
+ */
+async function resolveVouchContext(
+  formData: FormData
+): Promise<{ error: string } | { loanId: string; toolId: string; voucheeId: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Authentication required" };
+  }
+
+  const parsed = vouchSchema.safeParse({ loanId: formData.get("loanId") });
+  if (!parsed.success) {
+    return { error: "Loan id is required" };
+  }
+
+  const loan = await prisma.loan.findUnique({
+    where: { id: parsed.data.loanId },
+    include: { tool: { select: { id: true, ownerId: true } } },
+  });
+  if (!loan) {
+    return { error: "Loan not found" };
+  }
+
+  // Only the two loan participants may decide, and only once the loan is
+  // physically complete (RETURNED).
+  const isBorrower = loan.borrowerId === session.user.id;
+  const isOwner = loan.tool.ownerId === session.user.id;
+  if (!isBorrower && !isOwner) {
+    return { error: "Only the loan participants can vouch" };
+  }
+  if (loan.status !== "RETURNED") {
+    return { error: "Vouching opens after the tool is returned" };
+  }
+
+  // The counterparty is always the other participant of the loan.
+  const voucheeId = isBorrower ? loan.tool.ownerId : loan.borrowerId;
+  if (voucheeId === session.user.id) {
+    return { error: "You cannot vouch for yourself" };
+  }
+
+  return { loanId: loan.id, toolId: loan.toolId, voucheeId };
+}
+
+/**
+ * Returns the participant's recorded decision for this loan, if any.
+ */
+async function getExistingDecision(loanId: string, voucherId: string) {
+  return prisma.vouch.findUnique({
+    where: {
+      loanId_voucherId: { loanId, voucherId },
+    },
+  });
+}
+
 export async function vouchForUser(
   prevState: VouchState | undefined,
   formData: FormData
@@ -54,67 +113,95 @@ export async function vouchForUser(
     return { success: false, error: "Authentication required" };
   }
 
-  const parsed = vouchSchema.safeParse({ loanId: formData.get("loanId") });
-  if (!parsed.success) {
-    return { success: false, error: "Loan id is required" };
+  const context = await resolveVouchContext(formData);
+  if ("error" in context) {
+    return { success: false, error: context.error };
   }
 
-  const loan = await prisma.loan.findUnique({
-    where: { id: parsed.data.loanId },
-    include: { tool: { select: { id: true, ownerId: true } } },
-  });
-  if (!loan) {
-    return { success: false, error: "Loan not found" };
-  }
-
-  // Only the two loan participants may vouch, and only once the loan is
-  // physically complete (RETURNED).
-  const isBorrower = loan.borrowerId === session.user.id;
-  const isOwner = loan.tool.ownerId === session.user.id;
-  if (!isBorrower && !isOwner) {
-    return { success: false, error: "Only the loan participants can vouch" };
-  }
-  if (loan.status !== "RETURNED") {
-    return { success: false, error: "Vouching opens after the tool is returned" };
-  }
-
-  // The vouchee is always the counterparty of the voucher.
-  const voucheeId = isBorrower ? loan.tool.ownerId : loan.borrowerId;
-  if (voucheeId === session.user.id) {
-    return { success: false, error: "You cannot vouch for yourself" };
-  }
-
-  const existing = await prisma.vouch.findUnique({
-    where: {
-      loanId_voucherId: { loanId: loan.id, voucherId: session.user.id },
-    },
-  });
+  const existing = await getExistingDecision(context.loanId, session.user.id);
   if (existing) {
-    return { success: false, error: "You already vouched for this loan" };
+    return {
+      success: false,
+      error: existing.declined
+        ? "You already declined to vouch for this loan"
+        : "You already vouched for this loan",
+    };
   }
 
   try {
     await prisma.$transaction([
       prisma.vouch.create({
         data: {
-          loanId: loan.id,
+          loanId: context.loanId,
           voucherId: session.user.id,
-          voucheeId,
+          voucheeId: context.voucheeId,
           delta: VOUCH_DELTA,
         },
       }),
       prisma.user.update({
-        where: { id: voucheeId },
+        where: { id: context.voucheeId },
         data: { trustScore: { increment: VOUCH_DELTA } },
       }),
     ]);
   } catch {
-    // Unique-constraint race (double submit): treat as already vouched.
+    // Unique-constraint race (double submit): treat as already decided.
     return { success: false, error: "You already vouched for this loan" };
   }
 
   revalidatePath("/dashboard");
-  revalidatePath(`/tools/${loan.toolId}`);
+  revalidatePath(`/tools/${context.toolId}`);
+  return { success: true };
+}
+
+/**
+ * Decline to vouch: dismisses the loan from the participant's "vouch your
+ * counterparts" queue without adjusting any trust score. The decision is
+ * final for the loan (one decision per loan per direction) and is recorded
+ * as a delta-0 declined Vouch row, reusing the loanId+voucherId uniqueness
+ * so a decline and a vouch can never both exist for the same direction.
+ */
+export async function declineVouch(
+  prevState: VouchState | undefined,
+  formData: FormData
+): Promise<VouchState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const context = await resolveVouchContext(formData);
+  if ("error" in context) {
+    return { success: false, error: context.error };
+  }
+
+  const existing = await getExistingDecision(context.loanId, session.user.id);
+  if (existing) {
+    return {
+      success: false,
+      error: existing.declined
+        ? "You already declined to vouch for this loan"
+        : "You already vouched for this loan",
+    };
+  }
+
+  try {
+    // No trustScore write: a decline is a neutral, private non-endorsement.
+    await prisma.vouch.create({
+      data: {
+        loanId: context.loanId,
+        voucherId: session.user.id,
+        voucheeId: context.voucheeId,
+        delta: 0,
+        declined: true,
+      },
+    });
+  } catch {
+    // Unique-constraint race (double submit): treat as already decided.
+    return { success: false, error: "You already declined to vouch for this loan" };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/tools/${context.toolId}`);
   return { success: true };
 }
 
@@ -126,9 +213,11 @@ export interface VouchableLoan {
 }
 
 /**
- * Completed (RETURNED) loans where `userId` participated and has not vouched
- * yet — the dashboard's "vouch your counterparts" queue. Newest returns
- * first, capped to keep the section light.
+ * Completed (RETURNED) loans where `userId` participated and has not recorded
+ * a decision (vouch or decline) yet — the dashboard's "vouch your
+ * counterparts" queue. A declined loan carries a delta-0 Vouch row for the
+ * voucher, so the existing `vouches: { none }` filter dismisses it too.
+ * Newest returns first, capped to keep the section light.
  */
 export async function getVouchableLoans(userId: string): Promise<VouchableLoan[]> {
   const loans = await prisma.loan.findMany({
