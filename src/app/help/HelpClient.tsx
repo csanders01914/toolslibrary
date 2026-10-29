@@ -18,9 +18,11 @@
 
 "use client";
 
-import { useActionState } from "react";
+import { useEffect, useRef, useState, useActionState } from "react";
 import { LifeBuoy, Send } from "lucide-react";
 import { submitHelpRequest, type HelpActionState } from "@/lib/actions/help";
+import PowExplainerLink from "@/components/pow/PowExplainer";
+import { extractNonce, fetchChallenge, solveProofOfWork } from "@/lib/powClient";
 
 /**
  * Request Help — public intake form.
@@ -57,6 +59,64 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
     submitHelpRequest,
     undefined
   );
+  // Hidden proof-of-work: solved silently on submit — no progress UI, the
+  // button just shows its normal pending state while the browser solves.
+  const [isSolving, setIsSolving] = useState(false);
+  const [powError, setPowError] = useState("");
+  const powSubmitGuardRef = useRef(false);
+
+  // Release the submit lock once the server action result arrives.
+  useEffect(() => {
+    setIsSolving(false);
+    powSubmitGuardRef.current = false;
+  }, [state]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (powSubmitGuardRef.current) return;
+    powSubmitGuardRef.current = true;
+    // Capture the form synchronously — React nulls currentTarget after the
+    // handler yields, and the solve below awaits.
+    const form = e.currentTarget;
+    setPowError("");
+    setIsSolving(true);
+    try {
+      const challenge = await fetchChallenge("help");
+      const nonce = extractNonce(challenge.challenge);
+      if (!nonce) throw new Error("invalid challenge");
+      // No onProgress callback: the solve runs silently. The wall-clock cap
+      // stops just before the challenge would expire server-side.
+      const deadline = Date.now() + challenge.expiresInSeconds * 1000 - 5_000;
+      const solve = await solveProofOfWork(nonce, challenge.difficulty, () => true, deadline);
+      if (!solve.ok) {
+        if (solve.reason === "timeout") {
+          setIsSolving(false);
+          powSubmitGuardRef.current = false;
+          setPowError("The proof-of-work check timed out. Please try again.");
+        }
+        return;
+      }
+      const fd = new FormData(form);
+      fd.set("powChallenge", challenge.challenge);
+      fd.set("powCounter", String(solve.counter));
+      // The dispatch is fire-and-forget; if the action itself throws
+      // (network/5xx) its state never updates, so release the submit lock
+      // when the dispatch settles. The button stays disabled via `pending`
+      // while the action runs.
+      void Promise.resolve(action(fd))
+        .catch(() => undefined)
+        .finally(() => {
+          setIsSolving(false);
+          powSubmitGuardRef.current = false;
+        });
+    } catch {
+      setIsSolving(false);
+      powSubmitGuardRef.current = false;
+      setPowError(
+        "This form is protected by a proof-of-work check that could not be completed. Please try again."
+      );
+    }
+  };
 
   const ticket = state?.ticket;
   const routeInfo = ticket ? ROUTE_COPY[ticket.route] : null;
@@ -82,7 +142,7 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
       {/* Intake form */}
       <section aria-label="Help request form">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
-          <form action={action} className="space-y-5">
+          <form action={action} onSubmit={handleSubmit} className="space-y-5">
             {!authenticatedAlias && (
               <div>
                 <label
@@ -121,20 +181,24 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
               />
             </div>
 
-            {state?.error && (
+            {(powError || state?.error) && (
               <p role="alert" className="px-4 py-3 border border-red-500/50 text-red-400 bg-red-500/5 font-mono text-xs">
-                {state.error}
+                {powError || state?.error}
               </p>
             )}
 
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || isSolving}
               className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Send className="w-3.5 h-3.5" aria-hidden="true" />
-              {pending ? "Submitting..." : "Submit Request"}
+              {pending || isSolving ? "Submitting..." : "Submit Request"}
             </button>
+
+            <p className="font-mono text-[11px] text-zinc-600">
+              Submissions are protected by an anonymous proof-of-work check. <PowExplainerLink />
+            </p>
           </form>
         </div>
       </section>

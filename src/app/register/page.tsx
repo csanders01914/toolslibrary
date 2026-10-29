@@ -18,17 +18,70 @@
 
 "use client";
 
-import { useState, useActionState } from "react";
+import { useEffect, useRef, useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerUser } from "@/lib/actions/auth";
+import PowExplainerLink from "@/components/pow/PowExplainer";
+import { extractNonce, fetchChallenge, solveProofOfWork } from "@/lib/powClient";
 import { AlertCircle, CheckCircle, Copy, Download, Shield, Loader2, Key } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [state, formAction] = useActionState(registerUser, undefined);
+  const [state, formAction, isPending] = useActionState(registerUser, undefined);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [keysConfirmed, setKeysConfirmed] = useState(false);
+  const [powStatus, setPowStatus] = useState("");
+  const [powError, setPowError] = useState("");
+  // Guards against double-submits while the proof of work is being solved.
+  const powSubmitGuardRef = useRef(false);
+
+  // Clear the PoW status line once the server action result arrives.
+  useEffect(() => {
+    setPowStatus("");
+  }, [state]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (powSubmitGuardRef.current) return;
+    powSubmitGuardRef.current = true;
+    // Capture the form synchronously — React nulls currentTarget after the
+    // handler yields, and the solve below awaits.
+    const form = e.currentTarget;
+    setPowError("");
+    setPowStatus("Computing proof of work…");
+    try {
+      const challenge = await fetchChallenge("register");
+      const nonce = extractNonce(challenge.challenge);
+      if (!nonce) throw new Error("invalid challenge");
+      // Wall-clock cap: stop just before the challenge would expire
+      // server-side instead of burning CPU on an already-doomed solve.
+      const deadline = Date.now() + challenge.expiresInSeconds * 1000 - 5_000;
+      const solve = await solveProofOfWork(
+        nonce,
+        challenge.difficulty,
+        () => true,
+        deadline,
+        (n) => setPowStatus(`Computing proof of work… ${n} hashes`)
+      );
+      if (!solve.ok) {
+        if (solve.reason === "timeout") {
+          setPowStatus("");
+          setPowError("The proof-of-work challenge expired before it could be solved. Please try again.");
+        }
+        return;
+      }
+      const fd = new FormData(form);
+      fd.set("powChallenge", challenge.challenge);
+      fd.set("powCounter", String(solve.counter));
+      formAction(fd);
+    } catch {
+      setPowError("The proof-of-work check could not be completed. Please try again.");
+      setPowStatus("");
+    } finally {
+      powSubmitGuardRef.current = false;
+    }
+  };
 
   const handleCopyAll = () => {
     const codes = state?.recoveryCodes?.join("\n") || "";
@@ -213,7 +266,7 @@ export default function RegisterPage() {
           )}
 
           {/* Registration Form */}
-          <form action={formAction} className="space-y-5" noValidate>
+          <form action={formAction} onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <label htmlFor="username" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
                 Username
@@ -276,9 +329,36 @@ export default function RegisterPage() {
               <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 10 characters. Use a passphrase for best security.</p>
             </div>
 
+            {/* Proof-of-work status + explainer */}
+            <div className="space-y-3">
+              <div
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-zinc-500"
+                role="status"
+                aria-live="polite"
+              >
+                {powStatus ? (
+                  <span className="inline-flex items-center gap-2 text-cyan-400">
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                    {powStatus}
+                  </span>
+                ) : (
+                  <span>Protected by an anonymous proof-of-work check. <PowExplainerLink /></span>
+                )}
+              </div>
+              {powError && (
+                <div
+                  className="flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400"
+                  role="alert"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <p>{powError}</p>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
-              disabled={state?.success}
+              disabled={isPending || state?.success}
               className="flex w-full cursor-pointer items-center justify-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {state?.success ? (
@@ -286,9 +366,14 @@ export default function RegisterPage() {
                   <CheckCircle className="h-4 w-4" aria-hidden="true" />
                   Account Created
                 </>
-              ) : (
+              ) : isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Working…
+                </>
+              ) : (
+                <>
+                  <Key className="h-4 w-4" aria-hidden="true" />
                   Create Account
                 </>
               )}

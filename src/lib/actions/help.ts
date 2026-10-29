@@ -22,6 +22,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
 import { resolveSupportMessage } from "@/lib/supportChannel";
+import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 
 /**
@@ -84,6 +85,27 @@ export async function submitHelpRequest(
   const limit = await enforceRateLimit("help");
   if (!limit.ok) {
     return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
+  // Hidden proof-of-work gate: the browser solved a challenge silently on
+  // submit. Missing or malformed fields take the same failure path as a
+  // wrong solution.
+  const powCounterValue = formData.get("powCounter");
+  const powCounter = powCounterValue === null ? Number.NaN : Number(powCounterValue);
+  const clientHash = await getRequestClientHash();
+  const pow = verifySolution(
+    "help",
+    formData.get("powChallenge"),
+    Number.isInteger(powCounter) ? powCounter : undefined,
+    clientHash
+  );
+  if (!pow.ok) {
+    recordFailure("help", clientHash);
+    return {
+      success: false,
+      error:
+        "This form is protected by a proof-of-work check. Please retry — the check failed or expired.",
+    };
   }
 
   const parsed = submitSchema.safeParse({
