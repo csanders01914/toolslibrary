@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, useActionState } from "react";
+import { startTransition, useEffect, useRef, useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerUser } from "@/lib/actions/auth";
@@ -74,7 +74,12 @@ export default function RegisterPage() {
       const fd = new FormData(form);
       fd.set("powChallenge", challenge.challenge);
       fd.set("powCounter", String(solve.counter));
-      formAction(fd);
+      // Dispatch inside a transition: the async handler runs outside React's
+      // transition tracking, and an unwrapped dispatch would leave isPending
+      // stuck (React logs a warning otherwise).
+      startTransition(() => {
+        formAction(fd);
+      });
     } catch {
       setPowError("The proof-of-work check could not be completed. Please try again.");
       setPowStatus("");

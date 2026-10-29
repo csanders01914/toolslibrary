@@ -76,7 +76,22 @@ interface TokenBucketState {
   updatedAt: number;
 }
 
-const buckets = new Map<string, TokenBucketState>();
+// Shared per-process state on globalThis: Next.js compiles each route and
+// server action as a separate bundle in dev (and can split bundles in
+// standalone output), so plain module-level state would be duplicated per
+// bundle — different salts per route would silently break anything that
+// compares client hashes across two entry points. The globalThis singleton
+// (same pattern as the Prisma client in src/lib/db.ts) guarantees one
+// instance per process in every environment.
+interface RateLimitGlobal {
+  __rateLimitSalt?: Buffer;
+  __rateLimitBuckets?: Map<string, TokenBucketState>;
+}
+const rateLimitGlobal = globalThis as unknown as RateLimitGlobal;
+const SALT = rateLimitGlobal.__rateLimitSalt ?? (rateLimitGlobal.__rateLimitSalt = crypto.randomBytes(32));
+const buckets =
+  rateLimitGlobal.__rateLimitBuckets ??
+  (rateLimitGlobal.__rateLimitBuckets = new Map<string, TokenBucketState>());
 
 // Memory hygiene: idle buckets are evicted so a flood of unique spoofed
 // identifiers cannot grow the Map without bound.
@@ -95,7 +110,7 @@ function sweep(now: number): void {
 }
 
 // Random per-process salt: hashed identifiers are unlinkable across restarts.
-const SALT = crypto.randomBytes(32);
+// (The salt itself lives on globalThis — see the shared-state note above.)
 
 /** SHA-256 of (process salt ‖ client identifier) — hex. Never logged. */
 export function hashClient(clientIdentifier: string): string {
