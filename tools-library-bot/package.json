@@ -1,0 +1,28 @@
+{
+  "name": "tools-library-bot",
+  "version": "1.0.0",
+  "description": "Standalone deterministic helpdesk assistant for The ToolsLibrary community Matrix server. Pure TypeScript, RegEx, and scripted responses — no text generation, no external services beyond the Operator's own homeserver.",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "node --import tsx --test tests",
+    "prisma:generate": "prisma generate --schema ../prisma/schema.prisma"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "matrix-bot-sdk": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
