@@ -34,6 +34,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
+import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
 
 type ActionState = { success?: boolean; error?: string } | undefined;
 
@@ -71,6 +72,9 @@ export default function HandoffClient({ tool, loan, viewerRole }: HandoffClientP
 
   useEffect(() => {
     if (manageState?.success || handoffState?.success) {
+      // Ping the navbar indicator: this transition just emptied a pending
+      // queue (request decision, pickup confirmation, or return marking).
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       router.refresh();
     }
   }, [manageState, handoffState, router]);

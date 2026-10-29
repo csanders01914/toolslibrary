@@ -47,6 +47,7 @@ import { updateProfile } from "@/lib/actions/messages";
 import { deleteOwnAccount } from "@/lib/actions/auth";
 import { VOUCH_DELTA } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
+import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
 
 interface User {
   id: string;
@@ -137,26 +138,32 @@ export default function DashboardClient({
   }, [profileState, router]);
 
   // A confirmed handoff activates the loan (APPROVED → ACTIVE) — re-fetch so
-  // the borrow queue reflects the new lifecycle state.
+  // the borrow queue reflects the new lifecycle state, and ping the navbar
+  // indicator so its pending counts update without waiting for the next poll.
   useEffect(() => {
     if (handoffState?.success) {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       router.refresh();
     }
   }, [handoffState, router]);
 
   // Approve/reject/return move rows between the loan queues — re-fetch the
   // server component data so the queues reflect the new lifecycle state
-  // immediately (same pattern as the profile editor above).
+  // immediately (same pattern as the profile editor above), and ping the
+  // navbar indicator for the same reason.
   useEffect(() => {
     if (loanState?.success) {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       router.refresh();
     }
   }, [loanState, router]);
 
   // A vouch removes the loan from the vouch queue and bumps the
-  // counterparty's trust score — re-fetch so both reflect it.
+  // counterparty's trust score — re-fetch so both reflect it, and ping the
+  // navbar indicator so the "vouches waiting" count drops at once.
   useEffect(() => {
     if (vouchState?.success) {
+      window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       router.refresh();
     }
   }, [vouchState, router]);

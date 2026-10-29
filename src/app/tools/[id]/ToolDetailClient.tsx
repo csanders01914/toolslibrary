@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { Truck, RotateCcw, Calendar, X, AlertTriangle, MessageSquare, Loader2, QrCode, Check } from "lucide-react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
+import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
 
 interface Tool {
   id: string;
@@ -77,6 +78,18 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
   const isAdmin = session?.user?.role === "ADMIN";
   const activeLoan = tool.loans.find((l) => l.status === "ACTIVE" || l.status === "APPROVED");
   const pendingLoan = tool.loans.find((l) => l.status === "REQUESTED");
+
+  // Every loan mutation on this page moves a pending queue (requests, pickup
+  // confirmations, returns) — ping the navbar indicator when the action
+  // completes so its counts update without waiting for the next poll.
+  const runManageLoan = async (formData: FormData) => {
+    await manageLoan(formData);
+    window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
+  };
+  const runConfirmHandoff = async (formData: FormData) => {
+    await confirmHandoff(formData);
+    window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
+  };
 
   const handleLoanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,7 +227,7 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                   {format(new Date(activeLoan.startDate), "MMM d")} – {format(new Date(activeLoan.endDate), "MMM d, yyyy")}
                 </p>
                 {session?.user?.id === activeLoan.borrower.id && activeLoan.status === "APPROVED" && (
-                  <form action={confirmHandoff} className="mt-3">
+                  <form action={runConfirmHandoff} className="mt-3">
                     <input type="hidden" name="loanId" value={activeLoan.id} />
                     <button
                       type="submit"
@@ -226,7 +239,7 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                   </form>
                 )}
                 {isOwner && activeLoan.status === "ACTIVE" && (
-                  <form action={manageLoan} className="mt-3 flex flex-wrap items-center gap-3">
+                  <form action={runManageLoan} className="mt-3 flex flex-wrap items-center gap-3">
                     <input type="hidden" name="loanId" value={activeLoan.id} />
                     <input type="hidden" name="decision" value="MARK_RETURNED" />
                     <select
@@ -268,7 +281,7 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                 </p>
                 {isOwner && (
                   <div className="flex flex-wrap gap-3 mt-3">
-                    <form action={manageLoan}>
+                    <form action={runManageLoan}>
                       <input type="hidden" name="loanId" value={pendingLoan.id} />
                       <input type="hidden" name="decision" value="APPROVE" />
                       <button
@@ -278,7 +291,7 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                         APPROVE
                       </button>
                     </form>
-                    <form action={manageLoan}>
+                    <form action={runManageLoan}>
                       <input type="hidden" name="loanId" value={pendingLoan.id} />
                       <input type="hidden" name="decision" value="REJECT" />
                       <button

@@ -21,6 +21,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Send, Shield, User, ChevronLeft, MoreVertical, Bell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
 
 interface Conversation {
   partnerId: string;
@@ -113,6 +114,8 @@ export default function MessagesClient({ initialConversations, currentUserId, un
           prev.map((c) => (c.partnerId === conversation.partnerId ? { ...c, unreadCount: 0 } : c))
         );
         setUnreadCount((prev) => Math.max(0, prev - conversation.unreadCount));
+        // Ping the navbar indicator so the unread badge drops immediately.
+        window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       } catch (error) {
         console.error("Failed to mark as read:", error);
       }
