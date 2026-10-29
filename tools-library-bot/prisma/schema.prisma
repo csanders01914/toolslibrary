@@ -1,0 +1,170 @@
+// ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+// Copyright (C) 2026  Chris Sanders
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  username           String        @unique
+  alias              String
+  passwordHash       String
+  role               String        @default("USER") // "USER" | "ADMIN"
+  mustChangePassword Boolean       @default(false) // Stock seeded credentials force a change on first login
+  banned             Boolean       @default(false) // Set by an admin from the console
+  bio                String?
+  trustScore         Int           @default(100)
+  a11yPrefs          String?       // Anonymous JSON string for synced accessibility prefs
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  recoveryKeys RecoveryKey[]
+  tools        Tool[]        @relation("OwnerTools")
+  loans        Loan[]        @relation("BorrowerLoans")
+  skills       Skill[]       @relation("OwnerSkills")
+  sentMsgs     Message[]     @relation("SentMessages")
+  receivedMsgs Message[]     @relation("ReceivedMessages")
+  vouchesGiven    Vouch[]    @relation("VouchesGiven")
+  vouchesReceived Vouch[]    @relation("VouchesReceived")
+
+  @@index([username])
+}
+
+model RecoveryKey {
+  id        String    @id @default(cuid())
+  keyHash   String    @unique
+  usedAt    DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  status      String   @default("AVAILABLE") // "AVAILABLE" | "BORROWED" | "MAINTENANCE"
+  imageUrl    String?
+  ownerId     String
+  owner       User     @relation("OwnerTools", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  loans       Loan[]
+
+  @@index([status, category])
+  @@index([ownerId])
+}
+
+model Loan {
+  id              String    @id @default(cuid())
+  toolId          String
+  tool            Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  borrowerId      String
+  borrower        User      @relation("BorrowerLoans", fields: [borrowerId], references: [id], onDelete: Cascade)
+  status          String    @default("REQUESTED") // "REQUESTED" | "APPROVED" | "ACTIVE" | "RETURNED" | "REJECTED"
+  startDate       DateTime
+  endDate         DateTime
+  returnedAt      DateTime?
+  returnCondition String?   // "GOOD" | "DAMAGED"
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  vouches Vouch[]
+
+  @@index([toolId])
+  @@index([borrowerId])
+}
+
+// Peer trust vouches (PHASE_25_TRUST_VOUCHING): the two participants of a
+// RETURNED loan can vouch for their counterparty — one vouch per loan per
+// direction (unique on loanId+voucherId), each adjusting the counterparty's
+// trustScore by VOUCH_DELTA (src/lib/constants.ts). Zero PII: aliases only.
+model Vouch {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  voucherId String
+  voucher   User     @relation("VouchesGiven", fields: [voucherId], references: [id], onDelete: Cascade)
+  voucheeId String
+  vouchee   User     @relation("VouchesReceived", fields: [voucheeId], references: [id], onDelete: Cascade)
+  delta     Int
+  createdAt DateTime @default(now())
+
+  @@unique([loanId, voucherId])
+  @@index([voucheeId])
+}
+
+model Skill {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  available   Boolean  @default(true)
+  ownerId     String
+  owner       User     @relation("OwnerSkills", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, available])
+  @@index([ownerId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  fromId    String
+  toId      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  sender    User     @relation("SentMessages", fields: [fromId], references: [id], onDelete: Cascade)
+  receiver  User     @relation("ReceivedMessages", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId, toId])
+  @@index([toId, read])
+}
+
+// User-submitted help requests, triaged by the deterministic intent router
+// (src/lib/intentRouter.ts) into either an instant pre-written reply or the
+// admin intervention queue.
+model HelpRequest {
+  id           String   @id @default(cuid())
+  userId       String?  // Set when an authenticated user files the request
+  alias        String?  // Optional self-declared handle for guests (zero-PII)
+  category     String // Detected intent key from src/lib/intentRouter.ts (e.g. "password_reset")
+  message      String
+  urgency      String // Escalation-derived: "LOW" (answered instantly) | "HIGH" (admin review)
+  route        String // Routing result: "AUTO" | "ADMIN"
+  triageReason String
+  confidence   Float // Deterministic match confidence (always 1)
+  status       String   @default("OPEN") // "OPEN" | "RESOLVED"
+  resolution   String?  // Pre-written automated reply or admin resolution note
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status, route])
+}
