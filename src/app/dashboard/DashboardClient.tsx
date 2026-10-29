@@ -42,7 +42,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
-import { vouchForUser } from "@/lib/actions/vouch";
+import { vouchForUser, declineVouch } from "@/lib/actions/vouch";
 import { updateProfile } from "@/lib/actions/messages";
 import { deleteOwnAccount } from "@/lib/actions/auth";
 import { VOUCH_DELTA } from "@/lib/constants";
@@ -115,6 +115,7 @@ export default function DashboardClient({
   const [loanState, loanAction, loanPending] = useActionState<ActionState, FormData>(manageLoan, undefined);
   const [handoffState, handoffAction, handoffPending] = useActionState<ActionState, FormData>(confirmHandoff, undefined);
   const [vouchState, vouchAction, vouchPending] = useActionState<ActionState, FormData>(vouchForUser, undefined);
+  const [declineState, declineAction, declinePending] = useActionState<ActionState, FormData>(declineVouch, undefined);
   const [profileState, profileAction, profilePending] = useActionState<ActionState, FormData>(updateProfile, undefined);
   const [deleteAccountState, deleteAccountAction, deleteAccountPending] = useActionState<ActionState, FormData>(
     deleteOwnAccount,
@@ -158,15 +159,16 @@ export default function DashboardClient({
     }
   }, [loanState, router]);
 
-  // A vouch removes the loan from the vouch queue and bumps the
-  // counterparty's trust score — re-fetch so both reflect it, and ping the
-  // navbar indicator so the "vouches waiting" count drops at once.
+  // A vouch bumps the counterparty's trust score; a decline records a neutral
+  // non-endorsement. Either decision removes the loan from the vouch queue —
+  // re-fetch so both reflect it, and ping the navbar indicator so the
+  // "vouches waiting" count drops at once.
   useEffect(() => {
-    if (vouchState?.success) {
+    if (vouchState?.success || declineState?.success) {
       window.dispatchEvent(new CustomEvent(NOTIFICATION_REFRESH_EVENT));
       router.refresh();
     }
-  }, [vouchState, router]);
+  }, [vouchState, declineState, router]);
 
   // The account row is gone after a successful purge — burn the session and
   // land on the public homepage as a signed-out visitor.
@@ -255,16 +257,16 @@ export default function DashboardClient({
       </section>
 
       {/* Action feedback */}
-      {(loanState?.error || handoffState?.error || vouchState?.error || profileState?.error || profileState?.success) && (
+      {(loanState?.error || handoffState?.error || vouchState?.error || declineState?.error || profileState?.error || profileState?.success) && (
         <div
           role="status"
           className={`rounded-none border p-4 font-mono text-xs ${
-            loanState?.error || handoffState?.error || vouchState?.error || profileState?.error
+            loanState?.error || handoffState?.error || vouchState?.error || declineState?.error || profileState?.error
               ? "border-red-500/50 bg-red-500/5 text-red-400"
               : "border-emerald-500/50 bg-emerald-500/5 text-emerald-400"
           }`}
         >
-          {loanState?.error || handoffState?.error || vouchState?.error || profileState?.error || "Profile updated successfully."}
+          {loanState?.error || handoffState?.error || vouchState?.error || declineState?.error || profileState?.error || "Profile updated successfully."}
         </div>
       )}
 
@@ -686,24 +688,42 @@ export default function DashboardClient({
                         )}
                       </p>
                       <p className="mt-1 font-mono text-[11px] text-zinc-500">
-                        One vouch per loan per direction — adds +{VOUCH_DELTA} to their trust score.
+                        One decision per loan per direction — vouching adds +{VOUCH_DELTA} to their
+                        trust score; declining is final and changes nothing.
                       </p>
                     </div>
-                    <form action={vouchAction} className="flex-shrink-0">
-                      <input type="hidden" name="loanId" value={loan.id} />
-                      <button
-                        type="submit"
-                        disabled={vouchPending}
-                        className="flex cursor-pointer items-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {vouchPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                        )}
-                        Vouch +{VOUCH_DELTA}
-                      </button>
-                    </form>
+                    <div className="flex gap-3 flex-shrink-0">
+                      <form action={vouchAction}>
+                        <input type="hidden" name="loanId" value={loan.id} />
+                        <button
+                          type="submit"
+                          disabled={vouchPending || declinePending}
+                          className="flex cursor-pointer items-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {vouchPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                          )}
+                          Vouch +{VOUCH_DELTA}
+                        </button>
+                      </form>
+                      <form action={declineAction}>
+                        <input type="hidden" name="loanId" value={loan.id} />
+                        <button
+                          type="submit"
+                          disabled={vouchPending || declinePending}
+                          className="flex cursor-pointer items-center gap-2 border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {declinePending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <X className="h-4 w-4" aria-hidden="true" />
+                          )}
+                          Decline
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 </div>
               );

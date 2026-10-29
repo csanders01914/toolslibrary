@@ -100,9 +100,11 @@ model Loan {
 }
 
 // Peer trust vouches (PHASE_25_TRUST_VOUCHING): the two participants of a
-// RETURNED loan can vouch for their counterparty — one vouch per loan per
-// direction (unique on loanId+voucherId), each adjusting the counterparty's
-// trustScore by VOUCH_DELTA (src/lib/constants.ts). Zero PII: aliases only.
+// RETURNED loan can vouch for their counterparty — one decision per loan per
+// direction (unique on loanId+voucherId), either a vouch adjusting the
+// counterparty's trustScore by VOUCH_DELTA (src/lib/constants.ts) or a final
+// decline to vouch (declined=true, delta=0, no trust change). Zero PII:
+// aliases only.
 model Vouch {
   id        String   @id @default(cuid())
   loanId    String
@@ -112,6 +114,7 @@ model Vouch {
   voucheeId String
   vouchee   User     @relation("VouchesReceived", fields: [voucheeId], references: [id], onDelete: Cascade)
   delta     Int
+  declined  Boolean  @default(false) // true = voucher chose not to vouch; recorded so the queue stops asking
   createdAt DateTime @default(now())
 
   @@unique([loanId, voucherId])
