@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 // Post-logout landing target: the canonical public site. The absolute URL is
 // honored server-side by the redirect callback allowlist in auth.config.ts,
@@ -136,6 +137,7 @@ export function Navbar() {
                   {formatCountdown(secondsLeft)}
                 </span>
               )}
+              <NotificationBell />
               {session.user.role === "ADMIN" && (
                 <Link
                   href="/admin"
@@ -223,6 +225,9 @@ export function Navbar() {
                   SESSION: {formatCountdown(secondsLeft)}
                 </p>
               )}
+              <div className="py-1">
+                <NotificationBell />
+              </div>
               {session.user.role === "ADMIN" && (
                 <Link
                   href="/admin"
