@@ -71,9 +71,25 @@ export function isPowSurface(value: unknown): value is PowSurface {
   );
 }
 
+// Shared per-process state on globalThis: Next.js compiles each route and
+// server action as a separate bundle in dev (and can split bundles in
+// standalone output), so plain module-level state would be duplicated per
+// bundle — a challenge signed by one bundle's HMAC key could never be
+// verified by another's, and client hashes would differ between the
+// challenge endpoint and the verifying action. The globalThis singleton
+// (same pattern as the Prisma client in src/lib/db.ts) guarantees ONE key
+// and ONE state store per process in every environment.
+interface PowGlobal {
+  __powHmacKey?: Buffer;
+  __powUsedJtis?: Map<string, number>;
+  __powSuspicion?: Map<string, SuspicionState>;
+}
+const powGlobal = globalThis as unknown as PowGlobal;
+
 // Random per-process HMAC key: signed challenges are unlinkable across
 // restarts and unverifiable by any other process.
-const HMAC_KEY = crypto.randomBytes(32);
+const HMAC_KEY =
+  powGlobal.__powHmacKey ?? (powGlobal.__powHmacKey = crypto.randomBytes(32));
 
 interface ChallengePayload {
   v: number;
@@ -192,7 +208,8 @@ function isChallengePayload(value: unknown): value is ChallengePayload {
 // Consumed challenge ids: in-memory only, keyed by jti with the challenge
 // expiry so entries can be pruned once they can no longer be replayed (an
 // expired challenge is rejected before the replay check ever runs).
-const usedJtis = new Map<string, number>();
+const usedJtis =
+  powGlobal.__powUsedJtis ?? (powGlobal.__powUsedJtis = new Map<string, number>());
 const JTI_SWEEP_INTERVAL_MS = 60 * 1000;
 let lastJtiSweep = Date.now();
 
@@ -305,7 +322,8 @@ interface SuspicionState {
 // Keyed by `${surface}:${hashedClient}` — suspicion is scored per surface so
 // heavy traffic on one gate does not harden every other gate for that client.
 // Entries live in process memory only and are swept when idle.
-const suspicion = new Map<string, SuspicionState>();
+const suspicion =
+  powGlobal.__powSuspicion ?? (powGlobal.__powSuspicion = new Map<string, SuspicionState>());
 const SUSPICION_WINDOW_MS = 15 * 60 * 1000;
 const SUSPICION_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
 // Hard global cap: if the proxy header is ever spoofable (direct exposure

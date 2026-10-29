@@ -32,7 +32,8 @@ import { evaluateMessage, type MessageSource } from "@/lib/triageEngine";
  * never a hardcoded localhost. In the multi-container Podman deployment this
  * is the bot container's DNS name on a shared user-defined network, e.g.
  * BOT_WEBHOOK_URL=http://helpbot:3005 (see DEPLOYMENT.md). A missing
- * configuration fails loudly instead of silently degrading.
+ * configuration is logged loudly and degrades to the built-in engine rather
+ * than failing the help form.
  */
 
 const WEBHOOK_TIMEOUT_MS = 5000;
@@ -56,12 +57,17 @@ export async function resolveSupportMessage(
   source: MessageSource,
   userIdentifier: string
 ): Promise<SupportVerdict> {
-  // Strict guardrail: the bot URL must be provided by the environment — a
-  // missing configuration throws instead of silently falling back to a
-  // hardcoded localhost URL.
+  // Strict guardrail: the bot URL must come from the environment — never a
+  // hardcoded localhost URL. A missing configuration is logged loudly and
+  // falls back to the built-in engine below, so the help form never breaks
+  // (the module contract at the top of this file); the log makes the
+  // degradation visible instead of silent.
   const botUrl = process.env.BOT_WEBHOOK_URL;
   if (!botUrl) {
-    throw new Error("BOT_WEBHOOK_URL is not configured.");
+    console.error(
+      "[support-channel] BOT_WEBHOOK_URL is not configured; using the built-in engine"
+    );
+    return evaluateMessage(message, source, userIdentifier);
   }
 
   const webhookSecret = process.env.HELPDESK_WEBHOOK_SECRET;

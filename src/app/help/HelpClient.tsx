@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, useActionState } from "react";
+import { startTransition, useEffect, useRef, useState, useActionState } from "react";
 import { LifeBuoy, Send } from "lucide-react";
 import { submitHelpRequest, type HelpActionState } from "@/lib/actions/help";
 import PowExplainerLink from "@/components/pow/PowExplainer";
@@ -99,11 +99,16 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
       const fd = new FormData(form);
       fd.set("powChallenge", challenge.challenge);
       fd.set("powCounter", String(solve.counter));
-      // The dispatch is fire-and-forget; if the action itself throws
-      // (network/5xx) its state never updates, so release the submit lock
-      // when the dispatch settles. The button stays disabled via `pending`
-      // while the action runs.
-      void Promise.resolve(action(fd))
+      // Dispatch inside a transition: the async handler runs outside React's
+      // transition tracking, and an unwrapped dispatch would leave `pending`
+      // stuck (React logs a warning otherwise). The dispatch is
+      // fire-and-forget; if the action itself throws (network/5xx) its state
+      // never updates, so release the submit lock when the dispatch settles.
+      startTransition(() => {
+        action(fd);
+      });
+      void Promise.resolve()
+        .then(() => undefined)
         .catch(() => undefined)
         .finally(() => {
           setIsSolving(false);
