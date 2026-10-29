@@ -53,6 +53,10 @@ export interface RateLimitConfig {
  * - recover: 5 burst / 2 per minute ≈ 2,880 code guesses/day against a
  *   16^8 keyspace of 8 single-use codes.
  * - help: 5 burst / 2 per minute caps webhook and Matrix admin-room flooding.
+ * - powChallenge: 20 burst / 8 per minute caps proof-of-work challenge
+ *   issuance across all three protected surfaces (chat, register, help).
+ * - chatToken: 5 burst / 2 per minute caps one-time token minting attempts
+ *   against the Synapse login endpoint.
  */
 export const RATE_LIMITS = {
   login: { capacity: 10, refillPerMinute: 5 },
@@ -61,6 +65,8 @@ export const RATE_LIMITS = {
   changePassword: { capacity: 10, refillPerMinute: 5 },
   deleteAccount: { capacity: 10, refillPerMinute: 5 },
   help: { capacity: 5, refillPerMinute: 2 },
+  powChallenge: { capacity: 20, refillPerMinute: 8 },
+  chatToken: { capacity: 5, refillPerMinute: 2 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

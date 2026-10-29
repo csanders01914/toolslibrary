@@ -75,9 +75,14 @@ const communityLinks = [
       ]
     : []),
   {
-    href: "http://matrix.tools-library.com",
+    href: "/chat",
     label: "Matrix Chat",
     icon: MessagesSquare,
+  },
+  {
+    href: "https://discord.gg/mw37N9DNum",
+    label: "Discord",
+    icon: MessageCircle,
     external: true,
   },
 ];
@@ -203,12 +208,6 @@ export function Footer() {
                 <FooterLink {...link} />
               </li>
             ))}
-            <li>
-              <span className="inline-flex items-center gap-2 border border-purple-500/50 bg-purple-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-purple-400">
-                <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                Discord (Coming Soon)
-              </span>
-            </li>
           </FooterColumn>
 
           {/* Column 4: Navigation & Knowledge */}

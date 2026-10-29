@@ -23,6 +23,7 @@ import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { generateRecoveryCodes, hashRecoveryCode } from "@/lib/crypto";
+import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
@@ -50,6 +51,29 @@ export async function registerUser(
   const limit = await enforceRateLimit("register");
   if (!limit.ok) {
     return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
+  // Proof-of-work gate: the browser must have solved a challenge issued for
+  // the register surface before any account is created. Missing or malformed
+  // fields take the same failure path as a wrong solution.
+  const powCounterValue = formData.get("powCounter");
+  const powCounter = powCounterValue === null ? Number.NaN : Number(powCounterValue);
+  const clientHash = await getRequestClientHash();
+  const pow = verifySolution(
+    "register",
+    formData.get("powChallenge"),
+    Number.isInteger(powCounter) ? powCounter : undefined,
+    clientHash
+  );
+  if (!pow.ok) {
+    recordFailure("register", clientHash);
+    return {
+      success: false,
+      error:
+        pow.reason === "expired" || pow.reason === "replayed"
+          ? "Your proof-of-work challenge expired or was already used. Please try again."
+          : "Proof-of-work verification failed. Please try again.",
+    };
   }
 
   const rawData = {
