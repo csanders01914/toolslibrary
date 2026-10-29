@@ -1,0 +1,22 @@
+# Tool Library — user-level systemd service that runs backup.sh against the
+# bind-mounted data volume. Install together with tool-library-backup.timer
+# (steps in DEPLOYMENT.md):
+#
+#   cp deploy/systemd/tool-library-backup.* ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now tool-library-backup.timer
+#   loginctl enable-linger
+#
+# The unit runs as the invoking user (rootless host), which is the same user
+# that owns the data volume thanks to --userns=keep-id — no privilege
+# escalation anywhere in the backup path.
+
+[Unit]
+Description=Tool Library: WAL-safe SQLite online backup (sqlite3 .backup)
+
+[Service]
+Type=oneshot
+ExecStart=%h/srv/tool-library/backup.sh
+
+# A failed backup must be loud: check `systemctl --user --failed` or
+# journalctl --user -u tool-library-backup.service after any alert.

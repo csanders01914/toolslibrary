@@ -16,12 +16,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // Pin workspace tracing to this repository so a stray lockfile in a parent
+  // directory cannot pull build traces from outside the project.
+  outputFileTracingRoot: path.join(__dirname),
 };
 
 export default nextConfig;

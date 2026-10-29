@@ -21,7 +21,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Truck, RotateCcw, Calendar, X, AlertTriangle, MessageSquare, Loader2 } from "lucide-react";
+import { Truck, RotateCcw, Calendar, X, AlertTriangle, MessageSquare, Loader2, QrCode, Check } from "lucide-react";
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 
@@ -56,6 +56,7 @@ interface ManageLoanAction {
 interface ToolDetailClientProps {
   tool: Tool;
   manageLoan: ManageLoanAction;
+  confirmHandoff: ManageLoanAction;
 }
 
 const formatVouch = (trustScore: number) => {
@@ -63,7 +64,7 @@ const formatVouch = (trustScore: number) => {
   return vouch >= 0 ? `+${vouch}` : `${vouch}`;
 };
 
-export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientProps) {
+export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: ToolDetailClientProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showLoanModal, setShowLoanModal] = useState(false);
@@ -193,15 +194,18 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
             <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 mb-4">LOAN STATUS</h2>
 
             {activeLoan && (
-              <div className="space-y-3 p-4 bg-red-500/10 border border-red-500/50">
+              <div className={`space-y-3 p-4 ${activeLoan.status === "APPROVED" ? "bg-amber-500/10 border border-amber-500/50" : "bg-red-500/10 border border-red-500/50"}`}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-mono text-xs uppercase tracking-widest text-red-400">ACTIVE LOAN</p>
+                    <p className={`font-mono text-xs uppercase tracking-widest ${activeLoan.status === "APPROVED" ? "text-amber-400" : "text-red-400"}`}>
+                      {activeLoan.status === "APPROVED" ? "RESERVED — AWAITING PICKUP" : "ACTIVE LOAN"}
+                    </p>
                     <p className="text-sm text-zinc-400 mt-1">
-                      Borrowed by <span className="text-zinc-200">{activeLoan.borrower.alias}</span>
+                      {activeLoan.status === "APPROVED" ? "Reserved for" : "Borrowed by"}{" "}
+                      <span className="text-zinc-200">{activeLoan.borrower.alias}</span>
                     </p>
                   </div>
-                  <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-red-500/50 text-red-400">
+                  <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border ${activeLoan.status === "APPROVED" ? "border-amber-500/50 text-amber-400" : "border-red-500/50 text-red-400"}`}>
                     {activeLoan.status}
                   </span>
                 </div>
@@ -209,6 +213,18 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                   <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
                   {format(new Date(activeLoan.startDate), "MMM d")} – {format(new Date(activeLoan.endDate), "MMM d, yyyy")}
                 </p>
+                {session?.user?.id === activeLoan.borrower.id && activeLoan.status === "APPROVED" && (
+                  <form action={confirmHandoff} className="mt-3">
+                    <input type="hidden" name="loanId" value={activeLoan.id} />
+                    <button
+                      type="submit"
+                      className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer inline-flex items-center gap-2"
+                    >
+                      <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                      CONFIRM PICKUP
+                    </button>
+                  </form>
+                )}
                 {isOwner && activeLoan.status === "ACTIVE" && (
                   <form action={manageLoan} className="mt-3 flex flex-wrap items-center gap-3">
                     <input type="hidden" name="loanId" value={activeLoan.id} />
@@ -364,6 +380,15 @@ export default function ToolDetailClient({ tool, manageLoan }: ToolDetailClientP
                 >
                   <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
                   MESSAGE OWNER
+                </a>
+              )}
+              {isOwner && (
+                <a
+                  href={`/tools/${tool.id}/label`}
+                  className="w-full font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <QrCode className="w-3.5 h-3.5" aria-hidden="true" />
+                  QR HANDOFF LABEL
                 </a>
               )}
               {isOwner && (

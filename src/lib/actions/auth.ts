@@ -23,6 +23,7 @@ import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { generateRecoveryCodes, hashRecoveryCode } from "@/lib/crypto";
+import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 
 const registerSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_-]{3,24}$/, "Username must be 3-24 characters, alphanumeric, underscore, or hyphen"),
@@ -45,6 +46,12 @@ export async function registerUser(
   prevState: { success?: boolean; error?: string; recoveryCodes?: string[] } | undefined,
   formData: FormData
 ) {
+  // Account-creation spam gate (PHASE_23_RATE_LIMITING).
+  const limit = await enforceRateLimit("register");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
   const rawData = {
     username: formData.get("username"),
     alias: formData.get("alias"),
@@ -103,6 +110,14 @@ export async function recoverAccount(
   prevState: { success?: boolean; error?: string } | undefined,
   formData: FormData
 ) {
+  // Recovery-key brute-force gate (PHASE_23_RATE_LIMITING): without email
+  // verification these 8 single-use codes are the only recovery path, so
+  // guessing must be rate-limited before the database lookup.
+  const limit = await enforceRateLimit("recover");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
   const rawData = {
     username: formData.get("username"),
     recoveryCode: formData.get("recoveryCode"),
@@ -163,7 +178,7 @@ export async function authenticate(
     return { success: false, error: parsed.error.errors[0].message };
   }
 
-  // The actual authentication is handled by NextAuth's credentials provider
+  // The actual authentication is handled by NextAuth's credentials sign-in flow
   // This action is just for form validation before calling signIn
   return { success: true };
 }
@@ -186,6 +201,13 @@ export async function changePassword(
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: "Authentication required" };
+  }
+
+  // Current-password verification is a brute-force surface even when
+  // authenticated (PHASE_23_RATE_LIMITING).
+  const limit = await enforceRateLimit("changePassword");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
   }
 
   const rawData = {
@@ -253,9 +275,18 @@ export async function deleteOwnAccount(
     return { success: false, error: "Authentication required" };
   }
 
+  // Destructive + password-verified: throttle repeat attempts
+  // (PHASE_23_RATE_LIMITING).
+  const limit = await enforceRateLimit("deleteAccount");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
   const parsed = deleteOwnAccountSchema.safeParse({
     password: formData.get("password"),
-    acknowledge: formData.get("acknowledge"),
+    // FormData.get() yields null for an unchecked/absent checkbox; zod
+    // .optional() rejects null — normalize to undefined.
+    acknowledge: formData.get("acknowledge") ?? undefined,
   });
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0].message };

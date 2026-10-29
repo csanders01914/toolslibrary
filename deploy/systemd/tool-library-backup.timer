@@ -1,0 +1,14 @@
+# Tool Library — schedule for the WAL-safe SQLite online backup.
+# Persistent=true catches up after host downtime; the randomized delay keeps
+# a fleet of self-hosted instances from syncing to the same second.
+
+[Unit]
+Description=Tool Library: nightly SQLite backup schedule
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

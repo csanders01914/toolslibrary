@@ -26,8 +26,8 @@ const credentialsSchema = z.object({
 });
 
 // Full config with Prisma for API route handlers (Node.js runtime)
-// NOTE: The credentials provider is REPLACED (not appended) so there is exactly
-// one provider with id "credentials" — a duplicate id would shadow authorize.
+// NOTE: The credentials entry is REPLACED (not appended) so there is exactly
+// one sign-in method with id "credentials" — a duplicate id would shadow authorize.
 export const { handlers, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
@@ -37,9 +37,21 @@ export const { handlers, signIn, signOut } = NextAuth({
         // Dynamic import to avoid bundling Prisma in edge runtime
         const { prisma } = await import("@/lib/db");
         const bcrypt = (await import("bcryptjs")).default;
+        const { enforceRateLimit } = await import("@/lib/rateLimit");
 
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        // Brute-force gate (PHASE_23_RATE_LIMITING): throttle BEFORE any
+        // database or bcrypt work so exhausted clients cannot burn CPU on
+        // cost-12 hashes. A throttled attempt is indistinguishable from bad
+        // credentials (null) — no account-existence oracle — and the hashed
+        // client key is never logged.
+        const limit = await enforceRateLimit("login");
+        if (!limit.ok) {
+          console.error("[rate-limit] login throttled; credential check rejected");
+          return null;
+        }
 
         const { username, password } = parsed.data;
         const user = await prisma.user.findUnique({

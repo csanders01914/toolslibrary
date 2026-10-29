@@ -31,7 +31,7 @@ model User {
   passwordHash       String
   role               String        @default("USER") // "USER" | "ADMIN"
   mustChangePassword Boolean       @default(false) // Stock seeded credentials force a change on first login
-  banned             Boolean       @default(false) // Set by admin (or via human-approved automated ban action)
+  banned             Boolean       @default(false) // Set by an admin from the console
   bio                String?
   trustScore         Int           @default(100)
   a11yPrefs          String?       // Anonymous JSON string for synced accessibility prefs
@@ -44,6 +44,8 @@ model User {
   skills       Skill[]       @relation("OwnerSkills")
   sentMsgs     Message[]     @relation("SentMessages")
   receivedMsgs Message[]     @relation("ReceivedMessages")
+  vouchesGiven    Vouch[]    @relation("VouchesGiven")
+  vouchesReceived Vouch[]    @relation("VouchesReceived")
 
   @@index([username])
 }
@@ -91,8 +93,29 @@ model Loan {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  vouches Vouch[]
+
   @@index([toolId])
   @@index([borrowerId])
+}
+
+// Peer trust vouches (PHASE_25_TRUST_VOUCHING): the two participants of a
+// RETURNED loan can vouch for their counterparty — one vouch per loan per
+// direction (unique on loanId+voucherId), each adjusting the counterparty's
+// trustScore by VOUCH_DELTA (src/lib/constants.ts). Zero PII: aliases only.
+model Vouch {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  voucherId String
+  voucher   User     @relation("VouchesGiven", fields: [voucherId], references: [id], onDelete: Cascade)
+  voucheeId String
+  vouchee   User     @relation("VouchesReceived", fields: [voucheeId], references: [id], onDelete: Cascade)
+  delta     Int
+  createdAt DateTime @default(now())
+
+  @@unique([loanId, voucherId])
+  @@index([voucheeId])
 }
 
 model Skill {
@@ -125,52 +148,23 @@ model Message {
   @@index([toId, read])
 }
 
-// Automation provider configuration. Single-row table (upserted). The API key is
-// stored AES-256-GCM encrypted (see src/lib/crypto.ts) and is NEVER returned
-// to the client — only a masked hint (last 4 chars) is ever exposed.
-model LlmConfig {
-  id        String   @id @default(cuid())
-  provider  String // "OPENROUTER" | "OPENAI" | "DEEPSEEK" | "ZAI" | "OLLAMA_LOCAL" | "CUSTOM"
-  model     String // Free-form model id, e.g. "z-ai/glm-5.3", "deepseek-chat"
-  baseUrl   String?  // Required only for CUSTOM providers
-  apiKeyEnc String?  // AES-256-GCM ciphertext (iv:tag:ciphertext hex); null = keyless endpoint
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// User-submitted help requests, triaged in src/lib/services/triage.ts into
-// either the automated pipeline or the admin intervention queue.
+// User-submitted help requests, triaged by the deterministic intent router
+// (src/lib/intentRouter.ts) into either an instant pre-written reply or the
+// admin intervention queue.
 model HelpRequest {
   id           String   @id @default(cuid())
   userId       String?  // Set when an authenticated user files the request
   alias        String?  // Optional self-declared handle for guests (zero-PII)
-  category     String // "TOOL_ISSUE" | "SKILL_ISSUE" | "LOAN_DISPUTE" | "ACCOUNT_ACCESS" | "SAFETY_INCIDENT" | "BUG_REPORT" | "GENERAL"
+  category     String // Detected intent key from src/lib/intentRouter.ts (e.g. "password_reset")
   message      String
-  urgency      String // Classifier feature output: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
-  route        String // Routing result: "LLM_AGENT" | "HUMAN_ADMIN"
+  urgency      String // Escalation-derived: "LOW" (answered instantly) | "HIGH" (admin review)
+  route        String // Routing result: "AUTO" | "ADMIN"
   triageReason String
-  confidence   Float // Agreement fraction for the winning route (0..1)
-  status       String   @default("OPEN") // "OPEN" | "AGENT_DISPATCHED" | "RESOLVED"
-  resolution   String?  // Automated reply draft or admin resolution note
+  confidence   Float // Deterministic match confidence (always 1)
+  status       String   @default("OPEN") // "OPEN" | "RESOLVED"
+  resolution   String?  // Pre-written automated reply or admin resolution note
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([status, route])
-}
-
-// Audit trail + human-in-the-loop confirmation gate for automated tool calls.
-// Destructive calls are ALWAYS created as status=PENDING and are never
-// executed until an admin approves them (see src/lib/agent/tools.ts).
-model AgentAction {
-  id          String    @id @default(cuid())
-  toolName    String
-  argsJson    String
-  destructive Boolean
-  status      String    @default("PENDING") // "PENDING" | "AUTO_EXECUTED" | "EXECUTED" | "REJECTED" | "FAILED"
-  resultJson  String?
-  error       String?
-  createdAt   DateTime  @default(now())
-  decidedAt   DateTime?
-
-  @@index([status])
 }

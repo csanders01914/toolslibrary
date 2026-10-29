@@ -33,11 +33,11 @@ const canaryStatements = [
 
 const sharingRows = [
   { party: "Advertising networks", status: "None exist" },
-  { party: "Analytics providers", status: "None exist" },
-  { party: "Cloud hosting providers", status: "None, self-hosted on local hardware" },
+  { party: "Analytics services", status: "None exist" },
+  { party: "Cloud hosting services", status: "None, self-hosted on local hardware" },
   { party: "Payment processors", status: "None, no payments are processed" },
   { party: "Email delivery services", status: "None, no emails are collected or sent" },
-  { party: "CDNs & font providers", status: "None, all assets are served locally" },
+  { party: "CDNs & font services", status: "None, all assets are served locally" },
 ];
 
 const serverMetrics = [

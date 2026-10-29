@@ -61,6 +61,19 @@ const communityLinks = [
   { href: "/code-of-conduct", label: "Code of Conduct", icon: HeartHandshake },
   { href: "/contribute", label: "Contribute / Get Involved", icon: Code2 },
   { href: "/donate", label: "Donate / Support Us", icon: Heart },
+  // Operator's Liberapay page (PHASE_27_SUSTAINABILITY_DOCS): rendered only
+  // when LIBERAPAY_URL is configured at build/deploy time — never a fake or
+  // placeholder URL.
+  ...(process.env.LIBERAPAY_URL?.trim()
+    ? [
+        {
+          href: process.env.LIBERAPAY_URL.trim(),
+          label: "Support on Liberapay",
+          icon: Heart,
+          external: true,
+        },
+      ]
+    : []),
   {
     href: "http://matrix.tools-library.com",
     label: "Matrix Chat",

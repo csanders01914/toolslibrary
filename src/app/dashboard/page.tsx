@@ -19,6 +19,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import DashboardClient from "./DashboardClient";
+import { getVouchableLoans } from "@/lib/actions/vouch";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [user, toolsLent, activeBorrows, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower] = await Promise.all([
+  const [user, toolsLent, activeBorrows, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower, vouchableLoans] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, username: true, alias: true, bio: true, trustScore: true, role: true, createdAt: true },
@@ -53,6 +54,7 @@ export default async function DashboardPage() {
       include: { tool: { include: { owner: { select: { id: true, alias: true } } } } },
       orderBy: { endDate: "asc" },
     }),
+    getVouchableLoans(session.user.id),
   ]);
 
   return (
@@ -68,6 +70,7 @@ export default async function DashboardPage() {
       incomingRequests={incomingRequests}
       activeLoansAsOwner={activeLoansAsOwner}
       activeLoansAsBorrower={activeLoansAsBorrower}
+      vouchableLoans={vouchableLoans}
     />
   );
 }

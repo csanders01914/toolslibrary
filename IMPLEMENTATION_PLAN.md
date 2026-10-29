@@ -477,8 +477,8 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 ### 2. Skills Directory & Detail Pages (`src/app/skills/page.tsx`, `src/app/skills/new/page.tsx`, `src/app/skills/[id]/page.tsx`)
 - Styled with the **Neon Purple & Fuchsia** semantic theme (`from-purple-400 via-fuchsia-400 to-cyan-400` headers, `hover:border-purple-500/50 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.25)]` cards).
-- Unauthenticated browsing with category filter pills and keyword search (redacting provider `alias` to `"Community Member"` for guests).
-- `/skills/[id]` displays skill summary, provider `alias`, `trustScore` badge, and a glowing purple **"Message Neighbor to Coordinate"** button linking to `/messages?to=<ownerId>`.
+- Unauthenticated browsing with category filter pills and keyword search (redacting owner `alias` to `"Community Member"` for guests).
+- `/skills/[id]` displays skill summary, owner `alias`, `trustScore` badge, and a glowing purple **"Message Neighbor to Coordinate"** button linking to `/messages?to=<ownerId>`.
 
 ### Phase 5 Gate
 1. Run `npx tsc --noEmit && npm run build`
@@ -568,32 +568,21 @@ Define root `html[data-*]` rules with zero external network calls:
 
 ### Phase 8 Gate
 1. Run `npx tsc --noEmit && npm run build`
-2. Run `node scripts/record-handoff.mjs PHASE_08_A11Y_SUITE "Execute PHASE_09_ADMIN_AI_PODMAN"`
+2. Run `node scripts/record-handoff.mjs PHASE_08_A11Y_SUITE "Execute PHASE_09_ADMIN_PODMAN"`
 
 ---
 
-## PHASE_09_ADMIN_AI_PODMAN: Admin Console, Qwen 2.5 7B Helper & FCOS Containerfile
-**Files Created/Modified:** `src/lib/services/admin-ai.ts`, `src/app/admin/page.tsx`, `Containerfile`, `DEPLOYMENT.md`.
+## PHASE_09_ADMIN_PODMAN: Admin Console & FCOS Containerfile
+**Files Created/Modified:** `src/app/admin/page.tsx`, `Containerfile`, `DEPLOYMENT.md`.
 
-### 1. Qwen 2.5 7B Admin Helper Service (`src/lib/services/admin-ai.ts`)
+### 1. Sleek Cypherpunk Admin Console (`src/app/admin/page.tsx`)
 - Strictly gated to `session?.user?.role === 'ADMIN'`.
-- Connects to `process.env.AI_INFERENCE_URL || '[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)'` using model `process.env.AI_MODEL_NAME || 'qwen/qwen-2.5-7b-instruct'`.
-- Evaluates tool/skill listings or admin prompts and validates output with Zod:
-  ```typescript
-  const AdminAuditSchema = z.object({
-    decision: z.enum(['APPROVE', 'FLAG', 'NEEDS_REVIEW', 'NO_ACTION']),
-    confidenceScore: z.number().min(0).max(1),
-    suggestedCategory: z.string().optional(),
-    auditSummary: z.string(),
-  });
-  ```
-
-### 2. Sleek Cypherpunk Admin Console (`src/app/admin/page.tsx`)
 - High-contrast telemetry Bento grid (Total Members, Active Tool Inventory, Active Loans, Skills Exchange Count) with cyan, purple, emerald, and rose neon accents.
-- AI Audit Queue: Lists tools and skills with a glowing **"Run Qwen AI Audit"** button (invoking `admin-ai.ts` with explicit human confirmation before applying status changes) and moderation controls.
+- Listing moderation queues: tools (AVAILABLE/MAINTENANCE) and skills (OFFERED/PAUSED) with one-click status controls.
+- Help request queue: deterministic triage tickets with AUTO/ADMIN routing, resolve-with-note, and confirmation-gated queue clearing.
 - User role & trust score management table.
 
-### 3. Rootless Podman `Containerfile` & `DEPLOYMENT.md`
+### 2. Rootless Podman `Containerfile` & `DEPLOYMENT.md`
 Create `Containerfile` at the repository root:
 ```dockerfile
 FROM node:20-alpine AS base
@@ -646,16 +635,17 @@ podman run -d \
   -e DATABASE_URL="file:/app/data/tool_library.db" \
   -e AUTH_SECRET="$(openssl rand -hex 32)" \
   -e AUTH_TRUST_HOST="true" \
-  -e AI_INFERENCE_URL="https://openrouter.ai/api/v1/chat/completions" \
-  -e AI_INFERENCE_KEY="your-api-key" \
-  -e AI_MODEL_NAME="qwen/qwen-2.5-7b-instruct" \
+  -e MATRIX_HOMESERVER_URL="https://matrix.tools-library.com" \
+  -e MATRIX_BOT_USER_ID="@helpbot:matrix.tools-library.com" \
+  -e MATRIX_BOT_ACCESS_TOKEN="syt_your_bot_token_here" \
+  -e MATRIX_ADMIN_ROOM_ID="!yourAdminRoomId:matrix.tools-library.com" \
   -v /var/home/core/srv/tool-library/data:/app/data:Z \
   localhost/tool-library:latest
 ```
 
 ### Phase 9 Gate
 1. Run `npx tsc --noEmit && npm run build`
-2. Run `node scripts/record-handoff.mjs PHASE_09_ADMIN_AI_PODMAN "ALL_PHASES_COMPLETED"`
+2. Run `node scripts/record-handoff.mjs PHASE_09_ADMIN_PODMAN "ALL_PHASES_COMPLETED"`
 
 ---
 
@@ -711,3 +701,99 @@ podman run -d \
 1. Run `npx tsc --noEmit && npm run build`
 2. Run the Verification Matrix above and record results
 3. Run `node scripts/record-handoff.mjs PHASE_10_MOBILE_RESPONSIVE "ALL_PHASES_COMPLETED — mobile hardening verified; redeploy container: podman build -t localhost/tool-library:latest -f Containerfile . then deploy.sh"`
+
+---
+
+# POST-LAUNCH ROADMAP (PHASE_22+): Production Hardening & Community Growth
+
+Registered from the post-launch operations review (2026-10-29). Phases 11–21
+(account self-service, session countdown, deterministic triage, standalone
+Matrix bot, webhook hardening, mock-data removal, support scrub) are recorded
+in `.handoff/`. The phases below continue the same discipline: strictly one
+phase per session, deterministic build gate, checksum handoff.
+
+Priority order (from the operations review): data safety first (the review
+flags `prisma db push` at container boot as the single biggest architectural
+risk), then abuse resistance, then community growth, then quality
+infrastructure, then sustainability docs.
+
+## PHASE_22_DATA_SAFETY: WAL-Safe Backup Automation + Prisma Migrate Adoption
+**Goal:** Eliminate both production data-loss vectors: (1) `prisma db push`
+running at container boot — a prototyping tool that force-syncs the schema and
+can silently truncate or drop columns on drift — and (2) the absence of any
+backup strategy for the WAL-mode SQLite volume bind-mounted at `/app/data`.
+
+### 1. Baseline migration (`prisma/migrations/0_init/`)
+- Generate `migration.sql` with `npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` (deterministic DDL; touches no database).
+- Add `prisma/migrations/migration_lock.toml` (`provider = "sqlite"`).
+- Sanity-check the snapshot equals the live schema: `npx prisma migrate diff --from-url <DATABASE_URL> --to-schema-datamodel prisma/schema.prisma --script` must produce no DDL statements.
+- Baseline existing databases: `npx prisma migrate resolve --applied 0_init` (records the migration as applied without executing it; additive `_prisma_migrations` row only).
+- Verify the new boot path end-to-end: `npx prisma migrate deploy` must report no pending migrations.
+
+### 2. Containerfile boot switch
+- `CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]` — applies version-controlled `.sql` migrations sequentially; drift fails loudly instead of force-syncing. `migrate deploy` never generates the client and never destroys data (no `--accept-data-loss` semantics exist for it).
+
+### 3. Host backup tooling (`backup.sh`, `deploy/systemd/`)
+- `backup.sh` (repo root, beside `deploy.sh`): FCOS host script using the native `sqlite3` CLI `.backup` command (SQLite Online Backup API — consistent snapshot while the Next.js server keeps running; never copies the live `-wal`/`-shm` sidecar files). Falls back to a throwaway `alpine` container when the FCOS host lacks the sqlite3 CLI. Writes timestamped snapshots plus `.sha256` manifests to `BACKUP_DIR`, runs `PRAGMA integrity_check` on every snapshot (deletes the snapshot and exits non-zero on failure), and prunes snapshots older than `RETENTION_DAYS` (default 14).
+- `deploy/systemd/tool-library-backup.service` + `tool-library-backup.timer`: user-level systemd units (daily `OnCalendar` + `RandomizedDelaySec`, `Persistent=true`) with `loginctl enable-linger` so backups run while the operator is logged out.
+
+### 4. Documentation (`DEPLOYMENT.md`)
+- Replace the unsafe "stop writes, then copy the whole data/ directory" guidance with: timer installation steps, restore procedure, the migration workflow (`migrate dev` locally → commit → `migrate deploy` on boot), and the one-time `migrate resolve` baseline required for existing deployments before switching images.
+
+### Phase 22 Gate
+1. `npx prisma migrate deploy` (no-op against the baselined DB) and `npx tsc --noEmit && npm run build`
+2. `bash -n backup.sh` plus a functional backup run against a scratch copy of the database (never the live file)
+3. `node scripts/record-handoff.mjs PHASE_22_DATA_SAFETY "Execute PHASE_23_RATE_LIMITING"`
+
+## PHASE_23_RATE_LIMITING: Zero-Dependency Token-Bucket Throttle
+**Goal:** Brute-force and spam resistance for unauthenticated write surfaces.
+- Lightweight, zero-dependency token-bucket rate limiter applied in Next.js middleware (or shared action guard) to: login, account recovery (`RecoveryKey` consumption), registration, change-password, and the help/webhook submission routes.
+- Keyed by client IP hashed in memory only (SHA-256, never persisted, never logged — zero-PII invariant) or session id where available; buckets discarded on process restart.
+- Return `429` with a retry hint; keep limits generous enough for shared NATs (document chosen budgets).
+- Gate: `npx tsc --noEmit && npm run build`, manual throttle verification, `node scripts/record-handoff.mjs PHASE_23_RATE_LIMITING "Execute PHASE_24_QR_LOAN_LIFECYCLE"`.
+
+## PHASE_24_QR_LOAN_LIFECYCLE: QR Handoff Enforcement (pending)
+**Goal:** Programmatic loan state transitions on physical handoff.
+- Wire the UI so scanning the loan QR steps `Loan.status` through `REQUESTED → APPROVED → ACTIVE → RETURNED` via authenticated Server Actions with ownership guards (owner approves/returns; borrower confirms handoff).
+- Keep the existing dashboard approve/reject/return actions working; QR is an additional entry point, not a replacement.
+- Gate: build + manual lifecycle walkthrough, `node scripts/record-handoff.mjs PHASE_24_QR_LOAN_LIFECYCLE "Execute PHASE_25_TRUST_VOUCHING"`.
+
+## PHASE_25_TRUST_VOUCHING: Peer Trust Web (pending)
+**Goal:** Transparent, peer-verified trust for anonymous aliases.
+- `vouchForUser` Server Action: participants of a completed loan (`RETURNED`) can adjust the counterparty `trustScore` (bounded delta, one vouch per loan per direction, self-vouch forbidden).
+- Front-end components to display and manipulate `User.trustScore` on profiles/tool detail; reuse the emerald/rose semantic palette.
+- Gate: build + manual vouch flow verification, `node scripts/record-handoff.mjs PHASE_25_TRUST_VOUCHING "Execute PHASE_26_E2E_PLAYWRIGHT"`.
+
+## PHASE_26_E2E_PLAYWRIGHT: CANCELLED (operator directive) → replaced by production verification
+**Status:** Cancelled as originally specified. The operator rejected the
+fake-seed approach outright: "No fake alias accounts, no fake anything, no dev
+server. This needs to be production only. It will be tested on my production
+FCOS server."
+**Replacement:** The post-deploy verification checklist in DEPLOYMENT.md
+section 4 — read-only smoke checks plus a manual loan-lifecycle walkthrough
+performed on the live FCOS deployment with real member accounts. No Playwright
+dependency, no seed script, and no dev server exist in the repository; the
+loan state machine was already verified end to end during
+PHASE_25_TRUST_VOUCHING on an isolated scratch database (see that phase's
+handoff record).
+
+## PHASE_27_SUSTAINABILITY_DOCS: DEPLOY.md + Funding Surface (pending)
+**Goal:** Replicable self-hosting and visible funding.
+- `docs/DEPLOY.md`: Fedora CoreOS environment setup, rootless Podman `--userns=keep-id` volume permissions, SELinux `:Z` labeling, Cloudflare Tunnel integration, backup/restore cross-links.
+- Surface the Liberapay donation link persistently in the UI footer (alongside the existing `/donate` route).
+- Gate: build, `node scripts/record-handoff.mjs PHASE_27_SUSTAINABILITY_DOCS "ALL_ROADMAP_PHASES_COMPLETED"`.
+
+## PHASE_28_WEBHOOK_PROD_URL: Environment-Driven helpbot Webhook (operator request)
+**Goal:** Production-ready multi-container wiring — no hardcoded localhost
+webhook URLs anywhere; the website reaches the bot via Podman's internal DNS.
+
+- Bot (`tools-library-bot/src/config.ts`): `const PORT = process.env.PORT || 3005;` — default 3005 so the webhook never collides with Next.js (3000) in a shared container namespace; `POST /api/web-support` remains the explicitly defined endpoint.
+- Website (`src/lib/supportChannel.ts`): the bot URL comes strictly from `process.env.BOT_WEBHOOK_URL`; a missing value throws `"BOT_WEBHOOK_URL is not configured."` (fail-loud on misconfiguration). A configured-but-unreachable bot still falls back to the built-in deterministic engine at runtime. `HELPDESK_WEBHOOK_SECRET` (shared with the bot's `WEBHOOK_SECRET`) is unchanged.
+- `deploy.sh` forwards `BOT_WEBHOOK_URL` and `HELPDESK_WEBHOOK_SECRET` into the website container when exported.
+- `DEPLOYMENT.md` gains the "helpbot webhook integration (multi-container Podman)" section: exact commented `.env` snippet for both containers, `BOT_WEBHOOK_URL=http://helpbot:3005` via Podman internal DNS on a shared user-defined network (never localhost), and the network requirement for container-name resolution.
+
+### Phase 28 Gate
+1. Bot: `npm --prefix tools-library-bot run typecheck` + `npm --prefix tools-library-bot test` (17/17)
+2. Root: `npx tsc --noEmit && npm run build`
+3. `grep HELPDESK_WEBHOOK_URL` returns zero references; no hardcoded webhook localhost remains
+4. `node scripts/record-handoff.mjs PHASE_28_WEBHOOK_PROD_URL "Execute PHASE_25_TRUST_VOUCHING"`

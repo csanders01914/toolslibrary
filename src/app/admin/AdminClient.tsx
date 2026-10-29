@@ -23,7 +23,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Shield,
-  Bot,
   Save,
   Minus,
   Plus,
@@ -53,10 +52,8 @@ import {
 
 // ================================================================
 // Admin Command Console — terminal aesthetic.
-// Sections: telemetry, LLM CONTROL link, moderation queues, HELP
-// QUEUE (triage outcomes), member governance. All LLM/automation
-// functionality (configuration, operations chat, guardrail queue,
-// AI audits) lives on the dedicated /admin/llm console.
+// Sections: telemetry, HELP QUEUE (triage outcomes), moderation
+// queues, member governance.
 // ================================================================
 
 interface UserRow {
@@ -285,7 +282,7 @@ export default function AdminClient({
     !moderationError;
   const moderationDetail = deleteState?.detail;
 
-  const openHelp = helpRequests.filter((r) => r.status === "OPEN" || r.status === "AGENT_DISPATCHED");
+  const openHelp = helpRequests.filter((r) => r.status === "OPEN");
   const closedHelp = helpRequests.filter((r) => r.status === "RESOLVED");
 
   const renderToolCard = (tool: ToolRow) => {
@@ -345,7 +342,7 @@ export default function AdminClient({
               {skill.name}
             </Link>
             <p className="font-mono text-[11px] text-zinc-500 mt-1">
-              {skill.category} · PROVIDER: <span className="text-zinc-300">{skill.owner.alias}</span> · TRUST:{" "}
+              {skill.category} · OWNER: <span className="text-zinc-300">{skill.owner.alias}</span> · TRUST:{" "}
               {skill.owner.trustScore}
             </p>
           </div>
@@ -371,30 +368,6 @@ export default function AdminClient({
           <Shield className="w-3.5 h-3.5 inline mr-1.5" aria-hidden="true" />
           ADMIN
         </span>
-      </section>
-
-      {/* LLM CONTROL link */}
-      <section aria-label="LLM control console link">
-        <Link
-          href="/admin/llm"
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-[#0a0a0a] border border-zinc-800 p-6 transition-colors hover:border-cyan-500/60 group"
-        >
-          <div className="flex items-start gap-4">
-            <Bot className="w-6 h-6 text-cyan-400 mt-0.5 shrink-0" aria-hidden="true" />
-            <div>
-              <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">
-                LLM CONTROL
-              </h2>
-              <p className="font-mono text-[11px] text-zinc-500">
-                Automation configuration, operations console, guardrail queue, and listing
-                audits live on a dedicated console.
-              </p>
-            </div>
-          </div>
-          <span className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 group-hover:bg-cyan-500/10 transition-colors self-start sm:self-center">
-            Open LLM Console
-          </span>
-        </Link>
       </section>
 
       {/* Telemetry */}
@@ -447,7 +420,7 @@ export default function AdminClient({
                 HELP QUEUE — TRIAGE OUTCOMES
               </h2>
               <p className="font-mono text-[11px] text-zinc-500">
-                Requests are triaged automatically and routed here when human judgment is needed.
+                Requests are triaged automatically and routed here when a person needs to review them.
               </p>
             </div>
             {helpRequests.length > 0 && (

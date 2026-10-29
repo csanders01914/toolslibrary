@@ -42,6 +42,13 @@ COPY . .
 # runtime volume mounted at /app/data (never copied into the image).
 ENV DATABASE_URL="file:/app/data/tool_library.db"
 ENV NEXT_TELEMETRY_DISABLED=1
+# Optional funding surface (PHASE_27_SUSTAINABILITY_DOCS): the operator's
+# Liberapay page URL, surfaced in the site footer. Prerendered pages bake the
+# build-time value; dynamic pages read the runtime ENV below. Empty by
+# default — the footer link simply does not render until the operator sets
+# their real Liberapay URL (no placeholder URLs ship in the UI).
+ARG LIBERAPAY_URL=""
+ENV LIBERAPAY_URL=${LIBERAPAY_URL}
 # `npm run build` == `prisma generate && next build` (see package.json),
 # which compiles TypeScript and emits .next/standalone.
 RUN npm run build
@@ -54,6 +61,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/tool_library.db"
+# Runtime half of the builder-stage LIBERAPAY_URL (dynamic pages read it at
+# request time; see the builder stage comment).
+ARG LIBERAPAY_URL=""
+ENV LIBERAPAY_URL=${LIBERAPAY_URL}
 
 # The Prisma CLI is a devDependency, so it is NOT part of the standalone
 # bundle. Install it BEFORE the standalone COPY below: the traced
@@ -82,6 +93,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -q --spider "http://127.0.0.1:${PORT:-3000}/" || exit 1
 
 EXPOSE 3000
-# Idempotent schema sync (WAL-mode SQLite on the mounted volume), then boot
-# the standalone server. No --accept-data-loss: schema drift must fail loudly.
-CMD ["sh", "-c", "./node_modules/.bin/prisma db push --skip-generate && node server.js"]
+# Apply version-controlled SQL migrations (prisma/migrations/*.sql) to the
+# WAL-mode SQLite volume, then boot the standalone server. `migrate deploy`
+# applies pending migrations sequentially and never destroys data; schema
+# drift fails loudly instead of being force-synced (unlike `db push`, a
+# prototyping command that can silently truncate or drop columns). The
+# Prisma client is generated at build time in the builder stage; `migrate
+# deploy` never regenerates it. Existing databases created by `db push` must
+# be baselined once: prisma migrate resolve --applied 0_init (see
+# DEPLOYMENT.md).
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]

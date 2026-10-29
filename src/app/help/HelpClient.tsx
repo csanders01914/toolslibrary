@@ -21,37 +21,27 @@
 import { useActionState } from "react";
 import { LifeBuoy, Send } from "lucide-react";
 import { submitHelpRequest, type HelpActionState } from "@/lib/actions/help";
-import { HELP_CATEGORIES } from "@/lib/services/triage";
 
 /**
  * Request Help — public intake form.
- * Submissions are classified (src/lib/services/triage.ts) and routed to either
- * the support pipeline or the admin review queue. The verdict is rendered
- * immediately.
+ * Submissions are classified by the deterministic intent router
+ * (src/lib/intentRouter.ts) and answered instantly with a pre-written
+ * response, or queued for the admin review queue when someone needs to
+ * step in. The verdict is rendered immediately.
  */
-
-const CATEGORY_LABELS: Record<string, string> = {
-  TOOL_ISSUE: "TOOL_ISSUE: a listing or tool problem",
-  SKILL_ISSUE: "SKILL_ISSUE: a skill listing problem",
-  LOAN_DISPUTE: "LOAN_DISPUTE: disagreement over a loan",
-  ACCOUNT_ACCESS: "ACCOUNT_ACCESS: login or account trouble",
-  SAFETY_INCIDENT: "SAFETY_INCIDENT: injury, danger, or threat",
-  BUG_REPORT: "BUG_REPORT: the site misbehaves",
-  GENERAL: "GENERAL: anything else",
-};
 
 const ROUTE_COPY: Record<string, { label: string; variant: string; blurb: string }> = {
   AUTO: {
-    label: "IN REVIEW",
+    label: "ANSWERED",
     variant: "border-cyan-500/60 text-cyan-400",
     blurb:
-      "Your request has been received and is being handled. The response will appear here.",
+      "Your request was answered automatically. The reply appears below.",
   },
   ADMIN: {
     label: "QUEUED FOR ADMIN REVIEW",
     variant: "border-red-500/60 text-red-400",
     blurb:
-      "This request needs human judgment. An administrator will pick it up from the review queue.",
+      "This request needs a person's judgment. An administrator will pick it up from the review queue.",
   },
 };
 
@@ -93,28 +83,6 @@ export default function HelpClient({ authenticatedAlias }: { authenticatedAlias:
       <section aria-label="Help request form">
         <div className="bg-[#0a0a0a] border border-zinc-800 p-6">
           <form action={action} className="space-y-5">
-            <div>
-              <label
-                htmlFor="help-category"
-                className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2"
-              >
-                Category
-              </label>
-              <select
-                id="help-category"
-                name="category"
-                required
-                defaultValue="GENERAL"
-                className="w-full bg-black border border-zinc-800 px-3 py-2 font-mono text-sm text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
-              >
-                {HELP_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {CATEGORY_LABELS[category] ?? category}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {!authenticatedAlias && (
               <div>
                 <label

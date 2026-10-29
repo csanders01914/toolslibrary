@@ -37,3 +37,9 @@ export const SKILL_CATEGORIES = [
   "Software & Linux",
   "Fabrication",
 ];
+
+// Peer trust vouching (PHASE_25_TRUST_VOUCHING): fixed, bounded delta applied
+// to the counterparty's trustScore per vouch. One vouch per loan per
+// direction, only after the loan is RETURNED — small enough that colluding
+// aliases cannot farm meaningful trust quickly.
+export const VOUCH_DELTA = 2;

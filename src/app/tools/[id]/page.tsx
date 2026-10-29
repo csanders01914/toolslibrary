@@ -19,7 +19,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import ToolDetailClient from "./ToolDetailClient";
-import { manageLoan } from "@/lib/actions/tools";
+import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +49,18 @@ export default async function ToolDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Wrap manageLoan to only accept FormData for form actions and return void.
-  // The wrapper MUST be an inline server action: a plain function prop cannot
-  // cross the server→client boundary (React serialization error → 500).
+  // Wrap the loan actions to only accept FormData for form actions and return
+  // void. The wrappers MUST be inline server actions: a plain function prop
+  // cannot cross the server→client boundary (React serialization error → 500).
   const manageLoanAction = async (formData: FormData) => {
     "use server";
     await manageLoan(undefined, formData);
   };
 
-  return <ToolDetailClient tool={tool} manageLoan={manageLoanAction} />;
+  const confirmHandoffAction = async (formData: FormData) => {
+    "use server";
+    await confirmHandoff(undefined, formData);
+  };
+
+  return <ToolDetailClient tool={tool} manageLoan={manageLoanAction} confirmHandoff={confirmHandoffAction} />;
 }

@@ -126,7 +126,7 @@ export default function PrivacyPage() {
             <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
             <span>
               The application runs on a self-hosted Fedora CoreOS server inside a rootless Podman
-              container. There is no cloud provider account, no managed database service, and no
+              container. There is no cloud hosting account, no managed database service, and no
               third-party log aggregation.
             </span>
           </p>
@@ -136,7 +136,7 @@ export default function PrivacyPage() {
               All data lives in a single SQLite database file on the host volume. Deleting your
               account removes your user record, recovery keys, tools, skills, and messages via
               cascading deletes. Uploaded images are stored locally in the data volume and served
-              directly by the application. No object-storage provider is involved.
+              directly by the application. No object-storage service is involved.
             </span>
           </p>
           <p>

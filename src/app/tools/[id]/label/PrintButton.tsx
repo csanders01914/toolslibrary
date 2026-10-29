@@ -1,0 +1,34 @@
+/*
+ * ToolsLibrary - A self-hostable, zero-PII tool library and skill-sharing platform built for local communities.
+ * Copyright (C) 2026  Chris Sanders
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+"use client";
+
+import { Printer } from "lucide-react";
+
+export default function PrintButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.print()}
+      className="flex w-full cursor-pointer items-center justify-center gap-2 border border-cyan-500/60 px-4 py-3 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10"
+    >
+      <Printer className="h-4 w-4" aria-hidden="true" />
+      Print label
+    </button>
+  );
+}

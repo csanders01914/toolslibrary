@@ -21,6 +21,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import fs from "node:fs";
 import path from "node:path";
 import { CATEGORIES } from "@/lib/constants";
@@ -165,7 +166,9 @@ export async function updateTool(
     description: formData.get("description"),
     category: formData.get("category"),
     image: formData.get("image"),
-    removeImage: formData.get("removeImage"),
+    // Null (absent field) must normalize to undefined for the optional zod
+    // schema — see manageLoan above.
+    removeImage: formData.get("removeImage") ?? undefined,
   };
 
   const parsed = updateToolSchema.safeParse(rawData);
@@ -340,7 +343,10 @@ export async function manageLoan(
   const rawData = {
     loanId: formData.get("loanId"),
     decision: formData.get("decision"),
-    returnCondition: formData.get("returnCondition"),
+    // FormData.get() yields null (not undefined) for absent fields, and zod
+    // .optional() rejects null — normalize so approve/reject forms that omit
+    // the return-condition select parse correctly.
+    returnCondition: formData.get("returnCondition") ?? undefined,
   };
 
   const parsed = manageLoanSchema.safeParse(rawData);
@@ -368,18 +374,17 @@ export async function manageLoan(
       return { success: false, error: "Can only approve requested loans" };
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.loan.update({
-        where: { id: loanId },
-        data: { status: "ACTIVE" },
-      });
-
-      await tx.tool.update({
-        where: { id: loan.toolId },
-        data: { status: "BORROWED" },
-      });
+    // APPROVED = the owner agreed to lend; the tool is still physically with
+    // the owner, so it stays AVAILABLE. The loan becomes ACTIVE (and the tool
+    // BORROWED) only when the borrower confirms the physical handoff — by
+    // scanning the tool's QR label or via the dashboard
+    // (PHASE_24_QR_LOAN_LIFECYCLE: REQUESTED → APPROVED → ACTIVE → RETURNED).
+    await prisma.loan.update({
+      where: { id: loanId },
+      data: { status: "APPROVED" },
     });
 
+    revalidateLoanViews(loan.toolId);
     return { success: true };
   }
 
@@ -393,6 +398,7 @@ export async function manageLoan(
       data: { status: "REJECTED" },
     });
 
+    revalidateLoanViews(loan.toolId);
     return { success: true };
   }
 
@@ -432,10 +438,141 @@ export async function manageLoan(
       });
     });
 
+    revalidateLoanViews(loan.toolId);
     return { success: true };
   }
 
   return { success: false, error: "Invalid decision" };
+}
+
+const confirmHandoffSchema = z.object({
+  loanId: z.string().min(1),
+});
+
+/**
+ * Borrower-side handoff confirmation (PHASE_24_QR_LOAN_LIFECYCLE): stepping an
+ * APPROVED loan to ACTIVE when the borrower physically receives the tool.
+ * Reached by scanning the tool's printed QR label (/tools/<id>/handoff) or
+ * from the dashboard borrow queue. Borrower-only by design — the owner's
+ * counterpart actions are approve/reject/mark-returned — and guarded to the
+ * APPROVED state so the tool flips to BORROWED exactly once per loan.
+ */
+export async function confirmHandoff(
+  prevState: { success?: boolean; error?: string } | undefined,
+  formData: FormData
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+
+  const parsed = confirmHandoffSchema.safeParse({
+    loanId: formData.get("loanId"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: "Loan id is required" };
+  }
+
+  const loan = await prisma.loan.findUnique({
+    where: { id: parsed.data.loanId },
+    include: { tool: true },
+  });
+  if (!loan) {
+    return { success: false, error: "Loan not found" };
+  }
+
+  if (loan.borrowerId !== session.user.id) {
+    return { success: false, error: "Only the borrower can confirm the handoff" };
+  }
+
+  if (loan.status !== "APPROVED") {
+    return { success: false, error: "Can only confirm handoff for approved loans" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.loan.update({
+      where: { id: loan.id },
+      data: { status: "ACTIVE" },
+    });
+
+    await tx.tool.update({
+      where: { id: loan.toolId },
+      data: { status: "BORROWED" },
+    });
+  });
+
+  revalidateLoanViews(loan.toolId);
+  return { success: true };
+}
+
+/**
+ * Revalidate every surface that renders loan state after a lifecycle
+ * transition: the dashboard queues, the tool listing, and the QR handoff
+ * page — so a scan or dashboard action is reflected immediately.
+ */
+function revalidateLoanViews(toolId: string): void {
+  revalidatePath("/dashboard");
+  revalidatePath(`/tools/${toolId}`);
+  revalidatePath(`/tools/${toolId}/handoff`);
+}
+
+export interface HandoffContext {
+  tool: {
+    id: string;
+    name: string;
+    status: string;
+    imageUrl: string | null;
+  };
+  loan: {
+    id: string;
+    status: string;
+    startDate: Date;
+    endDate: Date;
+    borrower: { id: string; alias: string };
+    owner: { id: string; alias: string };
+  } | null;
+}
+
+/**
+ * Data for the QR handoff page (/tools/<id>/handoff): the tool plus its
+ * current live loan (REQUESTED, APPROVED, or ACTIVE) with only public-safe
+ * identity fields (aliases, ids). Null when the tool does not exist.
+ */
+export async function getHandoffContext(toolId: string): Promise<HandoffContext | null> {
+  const tool = await prisma.tool.findUnique({
+    where: { id: toolId },
+    include: {
+      owner: { select: { id: true, alias: true } },
+      loans: {
+        where: { status: { in: ["REQUESTED", "APPROVED", "ACTIVE"] } },
+        include: { borrower: { select: { id: true, alias: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!tool) return null;
+
+  const loan = tool.loans[0] ?? null;
+  return {
+    tool: {
+      id: tool.id,
+      name: tool.name,
+      status: tool.status,
+      imageUrl: tool.imageUrl,
+    },
+    loan: loan
+      ? {
+          id: loan.id,
+          status: loan.status,
+          startDate: loan.startDate,
+          endDate: loan.endDate,
+          borrower: loan.borrower,
+          owner: tool.owner,
+        }
+      : null,
+  };
 }
 
 export async function getTools(filters?: { category?: string; status?: string; search?: string }) {

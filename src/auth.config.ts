@@ -82,9 +82,12 @@ export const authConfig = {
     },
     authorized({ auth, request: { nextUrl } }) {
       const { pathname } = nextUrl;
+      // QR handoff scan target and printable label are member-only surfaces.
+      const isToolSubpage = /^\/tools\/[^/]+\/(handoff|label)$/.test(pathname);
       const isProtected =
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/tools/new") ||
+        isToolSubpage ||
         pathname.startsWith("/skills/new") ||
         pathname.startsWith("/messages") ||
         pathname.startsWith("/admin");

@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Shield,
+  ShieldCheck,
   Hammer,
   Package,
   Users,
@@ -40,9 +41,11 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
-import { manageLoan } from "@/lib/actions/tools";
+import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
+import { vouchForUser } from "@/lib/actions/vouch";
 import { updateProfile } from "@/lib/actions/messages";
 import { deleteOwnAccount } from "@/lib/actions/auth";
+import { VOUCH_DELTA } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
 
 interface User {
@@ -74,12 +77,20 @@ interface LoanRow {
   toolOwner?: { id: string; alias: string };
 }
 
+interface VouchableLoanRow {
+  id: string;
+  returnedAt: Date | string | null;
+  tool: { id: string; name: string; owner: { id: string; alias: string } };
+  borrower: { id: string; alias: string };
+}
+
 interface DashboardClientProps {
   user: User;
   stats: Stats;
   incomingRequests: LoanRow[];
   activeLoansAsOwner: LoanRow[];
   activeLoansAsBorrower: LoanRow[];
+  vouchableLoans: VouchableLoanRow[];
 }
 
 type ActionState = { success?: boolean; error?: string } | undefined;
@@ -98,8 +109,11 @@ export default function DashboardClient({
   incomingRequests,
   activeLoansAsOwner,
   activeLoansAsBorrower,
+  vouchableLoans,
 }: DashboardClientProps) {
   const [loanState, loanAction, loanPending] = useActionState<ActionState, FormData>(manageLoan, undefined);
+  const [handoffState, handoffAction, handoffPending] = useActionState<ActionState, FormData>(confirmHandoff, undefined);
+  const [vouchState, vouchAction, vouchPending] = useActionState<ActionState, FormData>(vouchForUser, undefined);
   const [profileState, profileAction, profilePending] = useActionState<ActionState, FormData>(updateProfile, undefined);
   const [deleteAccountState, deleteAccountAction, deleteAccountPending] = useActionState<ActionState, FormData>(
     deleteOwnAccount,
@@ -121,6 +135,31 @@ export default function DashboardClient({
       router.refresh();
     }
   }, [profileState, router]);
+
+  // A confirmed handoff activates the loan (APPROVED → ACTIVE) — re-fetch so
+  // the borrow queue reflects the new lifecycle state.
+  useEffect(() => {
+    if (handoffState?.success) {
+      router.refresh();
+    }
+  }, [handoffState, router]);
+
+  // Approve/reject/return move rows between the loan queues — re-fetch the
+  // server component data so the queues reflect the new lifecycle state
+  // immediately (same pattern as the profile editor above).
+  useEffect(() => {
+    if (loanState?.success) {
+      router.refresh();
+    }
+  }, [loanState, router]);
+
+  // A vouch removes the loan from the vouch queue and bumps the
+  // counterparty's trust score — re-fetch so both reflect it.
+  useEffect(() => {
+    if (vouchState?.success) {
+      router.refresh();
+    }
+  }, [vouchState, router]);
 
   // The account row is gone after a successful purge — burn the session and
   // land on the public homepage as a signed-out visitor.
@@ -209,16 +248,16 @@ export default function DashboardClient({
       </section>
 
       {/* Action feedback */}
-      {(loanState?.error || profileState?.error || profileState?.success) && (
+      {(loanState?.error || handoffState?.error || vouchState?.error || profileState?.error || profileState?.success) && (
         <div
           role="status"
           className={`rounded-none border p-4 font-mono text-xs ${
-            loanState?.error || profileState?.error
+            loanState?.error || handoffState?.error || vouchState?.error || profileState?.error
               ? "border-red-500/50 bg-red-500/5 text-red-400"
               : "border-emerald-500/50 bg-emerald-500/5 text-emerald-400"
           }`}
         >
-          {loanState?.error || profileState?.error || "Profile updated successfully."}
+          {loanState?.error || handoffState?.error || vouchState?.error || profileState?.error || "Profile updated successfully."}
         </div>
       )}
 
@@ -440,6 +479,7 @@ export default function DashboardClient({
           <div className="space-y-4">
             {activeLoansAsOwner.map((loan) => {
               const overdue = new Date(loan.endDate) < new Date();
+              const awaitingPickup = loan.status === "APPROVED";
               return (
                 <div
                   key={loan.id}
@@ -451,6 +491,11 @@ export default function DashboardClient({
                         <Link href={`/tools/${loan.tool.id}`} className="font-semibold text-white transition-colors hover:text-cyan-400">
                           {loan.tool.name}
                         </Link>
+                        {awaitingPickup && (
+                          <span className="border border-amber-500/50 bg-amber-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-400">
+                            Awaiting Pickup
+                          </span>
+                        )}
                         {overdue && (
                           <span className="flex items-center gap-1 border border-red-500/50 bg-red-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-red-400">
                             <AlertTriangle className="h-3 w-3" aria-hidden="true" />
@@ -459,39 +504,49 @@ export default function DashboardClient({
                         )}
                       </div>
                       <p className="mt-1 font-mono text-xs text-zinc-300">
-                        Borrowed by <span className="text-cyan-400">{loan.borrower?.alias}</span>
+                        {awaitingPickup ? "Reserved for" : "Borrowed by"}{" "}
+                        <span className="text-cyan-400">{loan.borrower?.alias}</span>
                       </p>
                       <p className="mt-1 font-mono text-[11px] text-zinc-500">
                         Due {formatDate(loan.endDate)}
                       </p>
                     </div>
-                    <div className="flex gap-3 flex-shrink-0">
-                      <form action={loanAction}>
-                        <input type="hidden" name="loanId" value={loan.id} />
-                        <input type="hidden" name="decision" value="MARK_RETURNED" />
-                        <input type="hidden" name="returnCondition" value="GOOD" />
-                        <button
-                          type="submit"
-                          disabled={loanPending}
-                          className="flex cursor-pointer items-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                          Mark Returned (Good)
-                        </button>
-                      </form>
-                      <form action={loanAction}>
-                        <input type="hidden" name="loanId" value={loan.id} />
-                        <input type="hidden" name="decision" value="MARK_RETURNED" />
-                        <input type="hidden" name="returnCondition" value="DAMAGED" />
-                        <button
-                          type="submit"
-                          disabled={loanPending}
-                          className="flex cursor-pointer items-center gap-2 border border-red-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                          Returned Damaged
-                        </button>
-                      </form>
+                    <div className="flex gap-3 flex-shrink-0 items-center">
+                      {awaitingPickup ? (
+                        <p className="font-mono text-[11px] text-zinc-500">
+                          Approved — the borrower confirms pickup by scanning the tool&apos;s QR
+                          label or from their dashboard.
+                        </p>
+                      ) : (
+                        <>
+                          <form action={loanAction}>
+                            <input type="hidden" name="loanId" value={loan.id} />
+                            <input type="hidden" name="decision" value="MARK_RETURNED" />
+                            <input type="hidden" name="returnCondition" value="GOOD" />
+                            <button
+                              type="submit"
+                              disabled={loanPending}
+                              className="flex cursor-pointer items-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                              Mark Returned (Good)
+                            </button>
+                          </form>
+                          <form action={loanAction}>
+                            <input type="hidden" name="loanId" value={loan.id} />
+                            <input type="hidden" name="decision" value="MARK_RETURNED" />
+                            <input type="hidden" name="returnCondition" value="DAMAGED" />
+                            <button
+                              type="submit"
+                              disabled={loanPending}
+                              className="flex cursor-pointer items-center gap-2 border border-red-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                              Returned Damaged
+                            </button>
+                          </form>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -549,15 +604,103 @@ export default function DashboardClient({
                       {formatDate(loan.startDate)} → {formatDate(loan.endDate)}
                     </p>
                   </div>
-                  <Link
-                    href="/messages"
-                    className="flex items-center gap-2 self-start border border-purple-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-purple-400 transition-colors hover:bg-purple-500/10 sm:self-auto flex-shrink-0"
-                  >
-                    Message Owner
-                  </Link>
+                  <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+                    {loan.status === "APPROVED" && (
+                      <form action={handoffAction}>
+                        <input type="hidden" name="loanId" value={loan.id} />
+                        <button
+                          type="submit"
+                          disabled={handoffPending}
+                          className="flex w-full cursor-pointer items-center justify-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                        >
+                          {handoffPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Check className="h-4 w-4" aria-hidden="true" />
+                          )}
+                          Confirm Pickup
+                        </button>
+                      </form>
+                    )}
+                    <Link
+                      href="/messages"
+                      className="flex items-center gap-2 self-start border border-purple-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-purple-400 transition-colors hover:bg-purple-500/10 sm:self-auto"
+                    >
+                      Message Owner
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Trust // Vouch counterparts */}
+      <section aria-label="Vouch your counterparts">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">TRUST // VOUCH YOUR COUNTERPARTS</p>
+        <h2 className="mb-6 mt-2 text-2xl font-bold text-white tracking-tight">
+          Completed Loans Awaiting Your Vouch ({vouchableLoans.length})
+        </h2>
+        {vouchableLoans.length === 0 ? (
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none py-10 text-center">
+            <ShieldCheck className="mx-auto mb-3 h-10 w-10 text-zinc-600" aria-hidden="true" />
+            <p className="font-mono text-xs text-zinc-500">
+              No completed loans are waiting for your vouch.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {vouchableLoans.map((loan) => {
+              const counterparty =
+                loan.tool.owner.id === user.id ? loan.borrower : loan.tool.owner;
+              return (
+                <div
+                  key={loan.id}
+                  className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 transition-colors hover:border-zinc-600"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/tools/${loan.tool.id}`} className="font-semibold text-white transition-colors hover:text-cyan-400">
+                          {loan.tool.name}
+                        </Link>
+                        <span className="border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
+                          RETURNED
+                        </span>
+                      </div>
+                      <p className="mt-1 font-mono text-xs text-zinc-300">
+                        Vouch for <span className="text-cyan-400">{counterparty.alias}</span>
+                        {loan.returnedAt && (
+                          <>
+                            <span className="mx-2 text-zinc-600">•</span>
+                            Returned {formatDate(loan.returnedAt)}
+                          </>
+                        )}
+                      </p>
+                      <p className="mt-1 font-mono text-[11px] text-zinc-500">
+                        One vouch per loan per direction — adds +{VOUCH_DELTA} to their trust score.
+                      </p>
+                    </div>
+                    <form action={vouchAction} className="flex-shrink-0">
+                      <input type="hidden" name="loanId" value={loan.id} />
+                      <button
+                        type="submit"
+                        disabled={vouchPending}
+                        className="flex cursor-pointer items-center gap-2 border border-emerald-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {vouchPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        Vouch +{VOUCH_DELTA}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

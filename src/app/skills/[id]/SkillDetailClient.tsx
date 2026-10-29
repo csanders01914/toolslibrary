@@ -135,7 +135,7 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
         </div>
         <div className="font-mono text-xs space-y-1 pt-3 border-t border-zinc-900">
           <p>
-            <span className="text-zinc-500">PROVIDER: </span>
+            <span className="text-zinc-500">OWNER: </span>
             <span className="text-zinc-300">{skill.owner.alias}</span>
           </p>
           <p>
@@ -199,9 +199,9 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
             </div>
           )}
 
-          {/* Provider Info */}
+          {/* Owner Info */}
           <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6">
-            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">PROVIDER</h2>
+            <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-purple-400 mb-4">OWNER</h2>
             <div className="font-mono text-xs space-y-1">
               <p>
                 <span className="text-zinc-500">ALIAS: </span>
@@ -243,7 +243,7 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
                   className="w-full font-mono text-xs uppercase tracking-widest px-4 py-2 border border-purple-500/60 text-purple-400 hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
-                  MESSAGE PROVIDER
+                  MESSAGE OWNER
                 </a>
               )}
               {(isOwner || isAdmin) && (
@@ -288,7 +288,7 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
 
           {/* Trust */}
           <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">PROVIDER TRUST SCORE</p>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">OWNER TRUST SCORE</p>
             <p className="font-mono text-3xl font-bold text-white">{skill.owner.trustScore}</p>
             <p className="font-mono text-[11px] text-zinc-500 mt-2">BASED ON COMMUNITY INTERACTIONS</p>
           </div>

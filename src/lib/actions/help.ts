@@ -14,21 +14,21 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 "use server";
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
-import { resolveLlm } from "@/lib/services/llm";
-import { triageHelpRequest, HELP_CATEGORIES } from "@/lib/services/triage";
-import { AGENT_SYSTEM_PROMPT, runAgentTurn } from "@/lib/agent/run";
+import { resolveSupportMessage } from "@/lib/supportChannel";
+import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 
 /**
- * Help request pipeline: public submission → triage →
- * either automated dispatch (safe tools only; destructive calls
- * are guardrail-intercepted) or the admin intervention queue.
+ * Help request pipeline: public submission → deterministic intent routing →
+ * either an instant pre-written reply or the admin intervention queue.
+ * Classification is pure Regular Expressions (src/lib/intentRouter.ts);
+ * no external services are involved at any step.
  */
 
 export type HelpActionState = {
@@ -39,33 +39,32 @@ export type HelpActionState = {
     id: string;
     route: string; // public-safe: "AUTO" | "ADMIN"
     urgency: string;
-    status: string; // public-safe: "OPEN" | "HANDLED" | "RESOLVED"
+    status: string; // public-safe: "OPEN" | "RESOLVED"
     resolution: string | null;
   };
 } | undefined;
 
 /**
- * Public-safe ticket view: internal route/status enum values and classifier
- * internals (confidence, triage reason) never leave the server.
+ * Public-safe ticket view: internal routing values never leave the server
+ * in anything other than the two public-safe route labels.
  */
 function publicTicket(t: {
+  id: string;
   route: string;
   urgency: string;
   status: string;
   resolution: string | null;
-  id: string;
 }) {
   return {
     id: t.id,
-    route: t.route === "LLM_AGENT" ? "AUTO" : "ADMIN",
+    route: t.route === "ADMIN" ? "ADMIN" : "AUTO",
     urgency: t.urgency,
-    status: t.status === "AGENT_DISPATCHED" ? "HANDLED" : t.status,
+    status: t.status,
     resolution: t.resolution,
   };
 }
 
 const submitSchema = z.object({
-  category: z.enum(HELP_CATEGORIES),
   message: z.string().min(10).max(2000),
   alias: z
     .string()
@@ -80,8 +79,14 @@ export async function submitHelpRequest(
   prevState: HelpActionState,
   formData: FormData
 ): Promise<HelpActionState> {
+  // Public, unauthenticated write surface: throttle ticket spam before any
+  // database or webhook work (PHASE_23_RATE_LIMITING).
+  const limit = await enforceRateLimit("help");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
   const parsed = submitSchema.safeParse({
-    category: formData.get("category"),
     message: formData.get("message"),
     alias: formData.get("alias") ?? "",
   });
@@ -91,76 +96,25 @@ export async function submitHelpRequest(
 
   const session = await auth();
   const userId = session?.user?.id ?? null;
-  const alias = session?.user?.alias ?? (parsed.data.alias || null);
+  const alias = session?.user?.alias ?? (parsed.data.alias || "Guest");
 
-  const { category, message } = parsed.data;
-  const verdict = triageHelpRequest(category, message, Boolean(userId));
-
-  let route = verdict.route;
-  let triageReason = verdict.reason;
-
-  // Fail-safe: if triage routed to automated handling but no endpoint is
-  // configured, fall back to the admin queue.
-  const resolved = route === "LLM_AGENT" ? await resolveLlm() : null;
-  if (route === "LLM_AGENT" && !resolved) {
-    route = "HUMAN_ADMIN";
-    triageReason += "; automated dispatch unavailable — queued for admin review";
-  }
+  const { message } = parsed.data;
+  const verdict = await resolveSupportMessage(message, "website", alias);
 
   const created = await prisma.helpRequest.create({
     data: {
       userId,
       alias,
-      category,
+      category: verdict.intent,
       message,
-      urgency: verdict.urgency,
-      route,
-      triageReason,
-      confidence: verdict.confidence,
-      status: "OPEN",
+      urgency: verdict.needsAdmin ? "HIGH" : "LOW",
+      route: verdict.needsAdmin ? "ADMIN" : "AUTO",
+      triageReason: `deterministic intent match: ${verdict.intent}`,
+      confidence: 1,
+      status: verdict.needsAdmin ? "OPEN" : "RESOLVED",
+      resolution: verdict.needsAdmin ? null : verdict.replyText,
     },
   });
-
-  // Automated resolution attempt for auto-routed tickets.
-  if (route === "LLM_AGENT" && resolved) {
-    try {
-      const turn = await runAgentTurn(resolved, [
-        { role: "system", content: AGENT_SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            `HELP REQUEST TICKET ${created.id}`,
-            `Category: ${category}`,
-            `Triage urgency: ${verdict.urgency} (confidence ${verdict.confidence})`,
-            `Submitted by: ${userId ? "authenticated member" : "guest"}${alias ? ` (${alias})` : ""}`,
-            "",
-            "Message:",
-            message,
-            "",
-            "Handle this request with your tools if appropriate (query the database first, act only with safe tools, resolve the ticket when done). Destructive tools will be guardrail-intercepted and require human approval — if the request needs one, do not act; explain what needs human attention in your reply and leave the ticket for admin review.",
-          ].join("\n"),
-        },
-      ]);
-
-      if (turn.ok) {
-        const updated = await prisma.helpRequest.update({
-          where: { id: created.id },
-          data: { status: "AGENT_DISPATCHED", resolution: turn.reply },
-        });
-        return { success: true, ticket: publicTicket(updated) };
-      }
-      // Automated turn failed — leave OPEN for the admin queue.
-      const updated = await prisma.helpRequest.update({
-        where: { id: created.id },
-        data: {
-          triageReason: `${triageReason}; automated dispatch failed (${turn.error})`,
-        },
-      });
-      return { success: true, ticket: publicTicket(updated) };
-    } catch {
-      return { success: true, ticket: publicTicket(created) };
-    }
-  }
 
   return { success: true, ticket: publicTicket(created) };
 }

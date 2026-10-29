@@ -38,10 +38,19 @@
 #   IMAGE      (default: localhost/tool-library:latest)
 #   DATA_DIR   (default: /var/home/core/srv/tool-library/data)
 #   APP_PORT   (default: 3000)
-#   AI_INFERENCE_URL / AI_MODEL_NAME / AI_INFERENCE_KEY
-#              (legacy fallback; primary config lives in the Admin Console,
-#              encrypted at rest with AES-256-GCM)
-#   LLM_ENCRYPTION_KEY (optional dedicated master secret for API-key encryption)
+#   MATRIX_HOMESERVER_URL / MATRIX_BOT_USER_ID / MATRIX_BOT_ACCESS_TOKEN /
+#   MATRIX_ADMIN_ROOM_ID
+#              (self-hosted Matrix server used by the deterministic support
+#              and triage system; the listener stays dormant until these are
+#              set)
+#   BOT_WEBHOOK_URL / HELPDESK_WEBHOOK_SECRET
+#              (helpbot webhook integration: the bot's container DNS URL on a
+#              shared Podman network, e.g. http://helpbot:3005 — never a
+#              hardcoded localhost; the secret must match the bot's
+#              WEBHOOK_SECRET. The help form requires BOT_WEBHOOK_URL.)
+#   LIBERAPAY_URL
+#              (optional funding surface: the operator's Liberapay page URL,
+#              passed as a build arg and surfaced in the site footer)
 #
 # Notes:
 #   - AUTH_SECRET is regenerated on every deploy; existing login sessions are
@@ -68,7 +77,7 @@ echo "==> Preparing persistent data volume at $DATA_DIR"
 mkdir -p "$DATA_DIR/uploads"
 
 echo "==> Building $IMAGE"
-podman build -t "$IMAGE" -f "$CONTAINERFILE" "$SCRIPT_DIR"
+podman build --build-arg "LIBERAPAY_URL=${LIBERAPAY_URL:-}" -t "$IMAGE" -f "$CONTAINERFILE" "$SCRIPT_DIR"
 
 echo "==> Removing previous container (if any)"
 podman rm -f "$APP_NAME" 2>/dev/null || true
@@ -90,10 +99,12 @@ if [ -n "${AUTH_SECRET:-}" ]; then
 else
   RUN_ARGS+=(-e "AUTH_SECRET=$(openssl rand -hex 32)")
 fi
-if [ -n "${AI_INFERENCE_URL:-}" ];  then RUN_ARGS+=(-e "AI_INFERENCE_URL=$AI_INFERENCE_URL");    fi
-if [ -n "${AI_MODEL_NAME:-}" ];     then RUN_ARGS+=(-e "AI_MODEL_NAME=$AI_MODEL_NAME");          fi
-if [ -n "${AI_INFERENCE_KEY:-}" ];  then RUN_ARGS+=(-e "AI_INFERENCE_KEY=$AI_INFERENCE_KEY");    fi
-if [ -n "${LLM_ENCRYPTION_KEY:-}" ]; then RUN_ARGS+=(-e "LLM_ENCRYPTION_KEY=$LLM_ENCRYPTION_KEY"); fi
+if [ -n "${MATRIX_HOMESERVER_URL:-}" ]; then RUN_ARGS+=(-e "MATRIX_HOMESERVER_URL=$MATRIX_HOMESERVER_URL"); fi
+if [ -n "${MATRIX_BOT_USER_ID:-}" ];    then RUN_ARGS+=(-e "MATRIX_BOT_USER_ID=$MATRIX_BOT_USER_ID");         fi
+if [ -n "${MATRIX_BOT_ACCESS_TOKEN:-}" ]; then RUN_ARGS+=(-e "MATRIX_BOT_ACCESS_TOKEN=$MATRIX_BOT_ACCESS_TOKEN"); fi
+if [ -n "${MATRIX_ADMIN_ROOM_ID:-}" ];  then RUN_ARGS+=(-e "MATRIX_ADMIN_ROOM_ID=$MATRIX_ADMIN_ROOM_ID");     fi
+if [ -n "${BOT_WEBHOOK_URL:-}" ];       then RUN_ARGS+=(-e "BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL");               fi
+if [ -n "${HELPDESK_WEBHOOK_SECRET:-}" ]; then RUN_ARGS+=(-e "HELPDESK_WEBHOOK_SECRET=$HELPDESK_WEBHOOK_SECRET"); fi
 
 podman run "${RUN_ARGS[@]}" "$IMAGE"
 

@@ -158,7 +158,7 @@ export default function SkillsClient({ initialSkills, totalCount }: SkillsClient
               <p className="text-sm text-zinc-400 line-clamp-2 mt-2">{skill.description}</p>
               <div className="font-mono text-xs space-y-1 pt-3 mt-3 border-t border-zinc-900">
                 <p>
-                  <span className="text-zinc-500">PROVIDER: </span>
+                  <span className="text-zinc-500">OWNER: </span>
                   <span className="text-zinc-300">{skill.owner.alias}</span>
                 </p>
                 <p>

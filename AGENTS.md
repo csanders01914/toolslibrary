@@ -94,8 +94,16 @@ Your final output message for the session must conform strictly to this JSON str
         "PHASE_06_MESSAGING_TRUST",
         "PHASE_07_LEGAL_FOOTER",
         "PHASE_08_A11Y_SUITE",
-        "PHASE_09_ADMIN_AI_PODMAN",
-        "PHASE_10_MOBILE_RESPONSIVE"
+        "PHASE_09_ADMIN_PODMAN",
+        "PHASE_10_MOBILE_RESPONSIVE",
+        "PHASE_21_SUPPORT_SCRUB_VERIFICATION",
+        "PHASE_22_DATA_SAFETY",
+        "PHASE_23_RATE_LIMITING",
+        "PHASE_24_QR_LOAN_LIFECYCLE",
+        "PHASE_25_TRUST_VOUCHING",
+        "PHASE_26_E2E_PLAYWRIGHT",
+        "PHASE_27_SUSTAINABILITY_DOCS",
+        "PHASE_28_WEBHOOK_PROD_URL"
       ]
     },
     "status": {

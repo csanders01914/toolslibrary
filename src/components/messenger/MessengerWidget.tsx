@@ -119,7 +119,7 @@ export function MessengerWidget() {
           <p className="font-mono text-[11px] text-red-400 p-4">FAILED TO LOAD THREADS. TRY AGAIN.</p>
         ) : threads.length === 0 ? (
           <p className="font-mono text-[11px] text-zinc-500 leading-relaxed p-4">
-            NO ACTIVE THREADS. Request a tool, book a skill session, or message a provider to open a
+            NO ACTIVE THREADS. Request a tool, book a skill session, or message a neighbor to open a
             channel. Conversations linked to a loan are purged the moment the tool is returned.
           </p>
         ) : (

@@ -20,8 +20,7 @@
 
 // ================================================================
 // Shared admin console primitives — terminal aesthetic building
-// blocks used by both the Command Console (/admin) and the LLM
-// Control console (/admin/llm).
+// blocks used by the Command Console (/admin).
 // ================================================================
 
 export interface OwnerRef {
@@ -68,30 +67,18 @@ export const STATUS_CHIP: Record<string, string> = {
   BORROWED: "red",
   PAUSED: "red",
   MAINTENANCE: "amber",
-  PENDING: "red",
-  AUTO_EXECUTED: "green",
-  EXECUTED: "green",
-  REJECTED: "zinc",
-  FAILED: "amber",
   OPEN: "cyan",
-  AGENT_DISPATCHED: "cyan",
+  AUTO: "cyan",
+  ADMIN: "red",
   RESOLVED: "green",
-  LLM_AGENT: "cyan",
-  HUMAN_ADMIN: "red",
   CRITICAL: "red",
   HIGH: "amber",
   MEDIUM: "cyan",
   LOW: "zinc",
 };
 
-// Public-safe chip labels for internal enum values.
-export const CHIP_LABEL: Record<string, string> = {
-  LLM_AGENT: "AUTOMATED",
-  AGENT_DISPATCHED: "DISPATCHED",
-};
-
 export function StatusChip({ value }: { value: string }) {
-  return <span className={chip(STATUS_CHIP[value] ?? "zinc")}>{CHIP_LABEL[value] ?? value}</span>;
+  return <span className={chip(STATUS_CHIP[value] ?? "zinc")}>{value}</span>;
 }
 
 export function formatDate(date: Date | string) {
