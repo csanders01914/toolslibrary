@@ -217,7 +217,7 @@ export function Footer() {
               </li>
             ))}
             <li className="pt-2 font-mono text-[11px] leading-relaxed text-zinc-500">
-              The Project Wiki runs on a self-hosted, standalone BookStack instance at
+              The Project Wiki runs on a self-hosted, standalone LeafWiki instance at
               wiki.tools-library.com. No third-party knowledge platform is involved.
             </li>
           </FooterColumn>
