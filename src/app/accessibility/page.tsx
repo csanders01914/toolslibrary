@@ -260,14 +260,12 @@ export default function AccessibilityStatementPage() {
               Request Help
             </Link>{" "}
             link in the footer of every page, or reach the collective in the{" "}
-            <a
-              href="http://matrix.tools-library.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/matrix-chat"
               className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4"
             >
               Matrix Chat
-            </a>
+            </Link>
             . Both channels are zero-PII by design: we collect no email address, phone number,
             or name, so reporting a barrier requires no personal data.
           </p>

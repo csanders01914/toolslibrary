@@ -122,14 +122,12 @@ export default function CodeOfConductPage() {
         <p className="mb-4 text-sm leading-relaxed text-zinc-400">
           To report a violation, message any administrator through the platform's built-in
           messenger, or post in the public{" "}
-          <a
-            href="http://matrix.tools-library.com"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/matrix-chat"
             className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4"
           >
             Matrix room
-          </a>
+          </Link>
           . Include what happened and, if relevant, the involved alias. Reports are reviewed by at
           least one administrator; because the platform stores no contact information, all
           follow-up happens on-platform or in Matrix.

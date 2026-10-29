@@ -153,14 +153,9 @@ export default function PrivacyPage() {
           Transparency Report
         </Link>{" "}
         or reach the collective via{" "}
-        <a
-          href="/chat"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4"
-        >
+        <Link href="/matrix-chat" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-4">
           Matrix Chat
-        </a>
+        </Link>
         .
       </p>
     </div>

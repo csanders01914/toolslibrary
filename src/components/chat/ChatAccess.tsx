@@ -65,7 +65,7 @@ interface TokenResponse {
 
 export default function ChatAccess() {
   const [view, setView] = useState<View>("options");
-  const [alias, setAlias] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,7 +83,7 @@ export default function ChatAccess() {
   const resetAll = () => {
     runIdRef.current += 1;
     setView("options");
-    setAlias("");
+    setUsername("");
     setPassword("");
     setShowPassword(false);
     setIsSubmitting(false);
@@ -167,7 +167,7 @@ export default function ChatAccess() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          alias,
+          alias: username,
           password,
           challenge: challengeData.challenge,
           counter: solve.counter,
@@ -183,7 +183,7 @@ export default function ChatAccess() {
         return;
       }
 
-      setAlias("");
+      setUsername("");
       setLoginToken(data.token);
       setCopied(false);
       setCopyFailed(false);
@@ -278,8 +278,8 @@ export default function ChatAccess() {
               Create an Access Token
             </h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Enter your chat alias and password. A short proof-of-work puzzle
-              runs in your browser before the token is minted.{" "}
+              Enter your chat username and password. A short proof-of-work
+              puzzle runs in your browser before the token is minted.{" "}
               <PowExplainerLink />
             </p>
           </div>
@@ -310,20 +310,20 @@ export default function ChatAccess() {
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
-              <label htmlFor="chat-alias" className={labelClasses}>
-                Alias
+              <label htmlFor="chat-username" className={labelClasses}>
+                Username
               </label>
               <input
                 type="text"
-                id="chat-alias"
-                name="alias"
+                id="chat-username"
+                name="username"
                 autoComplete="off"
-                value={alias}
-                onChange={(e) => setAlias(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isSubmitting}
                 className={inputClasses}
-                placeholder="Your chat alias"
+                placeholder="Your chat username"
               />
             </div>
 
