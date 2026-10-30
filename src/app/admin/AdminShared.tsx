@@ -81,20 +81,7 @@ export function StatusChip({ value }: { value: string }) {
   return <span className={chip(STATUS_CHIP[value] ?? "zinc")}>{value}</span>;
 }
 
-export function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-export function formatTime(date: Date | string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// formatDate/formatTime moved to src/lib/format.ts (PHASE_30 hotfix): they
+// are plain utilities also needed by SERVER components (/transparency), and
+// exporting them from this "use client" module made them client references —
+// invoking one from the server throws. Import them from "@/lib/format".

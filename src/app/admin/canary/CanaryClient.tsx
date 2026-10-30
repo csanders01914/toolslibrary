@@ -46,7 +46,10 @@ import {
   type CanaryState,
   type CanaryStatus,
 } from "@/lib/canaryShared";
-import { formatDate, formatTime } from "../AdminShared";
+// Date utilities live in the server-safe "@/lib/format" module (see its
+// header) — AdminShared is a "use client" module and must not export plain
+// functions that server components also need.
+import { formatDate, formatTime } from "@/lib/format";
 
 // ================================================================
 // Warrant Canary Console (PHASE_30_CANARY_SIGNING) — terminal

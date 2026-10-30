@@ -34,7 +34,8 @@ import {
 // Client-safe contract module (see src/lib/canaryShared.ts header): the
 // server module "@/lib/canary" must never enter the client bundle.
 import type { CanaryPendingPublic } from "@/lib/canaryShared";
-import { formatTime } from "../../../AdminShared";
+// Server-safe utility module (see src/lib/format.ts header).
+import { formatTime } from "@/lib/format";
 
 // ================================================================
 // Canary approval confirmation (PHASE_30_CANARY_SIGNING). The final
