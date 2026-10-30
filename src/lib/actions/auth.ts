@@ -25,6 +25,7 @@ import { z } from "zod";
 import { generateRecoveryCodes, hashRecoveryCode } from "@/lib/crypto";
 import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
+import { notifyAdmins } from "@/lib/email";
 
 const registerSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_-]{3,24}$/, "Username must be 3-24 characters, alphanumeric, underscore, or hyphen"),
@@ -126,6 +127,11 @@ export async function registerUser(
       })),
     });
   });
+
+  // PHASE_29: informational operator alert after the account write commits —
+  // fire-and-forget so the notification can never block or fail registration
+  // (notifyAdmins never throws).
+  void notifyAdmins({ type: "registration", username, alias });
 
   return { success: true, recoveryCodes };
 }

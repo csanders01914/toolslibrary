@@ -24,6 +24,7 @@ import { z } from "zod";
 import { resolveSupportMessage } from "@/lib/supportChannel";
 import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
+import { notifyAdmins } from "@/lib/email";
 
 /**
  * Help request pipeline: public submission → deterministic intent routing →
@@ -137,6 +138,19 @@ export async function submitHelpRequest(
       resolution: verdict.needsAdmin ? null : verdict.replyText,
     },
   });
+
+  // PHASE_29: alert the operator by email when a ticket lands in the admin
+  // queue — fire-and-forget so the alert can never block or fail the ticket
+  // write (notifyAdmins never throws).
+  if (verdict.needsAdmin) {
+    void notifyAdmins({
+      type: "help_escalation",
+      ticketId: created.id,
+      alias,
+      category: verdict.intent,
+      excerpt: message.slice(0, 200),
+    });
+  }
 
   return { success: true, ticket: publicTicket(created) };
 }

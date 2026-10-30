@@ -7,8 +7,10 @@ root) is the deep-dive companion covering backups, migrations, rate limiting,
 and the helpbot webhook integration in full detail.
 
 The stack is fully self-contained: SQLite in WAL mode on a single bind-mounted
-volume, zero external CDNs, zero analytics, zero IP logging, zero email
-collection.
+volume, zero external CDNs, zero analytics, zero IP logging, zero member email
+collection. (The operator's ADMIN account may store one notification email as
+the destination for operational alert emails — PHASE_29; member accounts never
+store email.)
 
 ## 1. Architecture overview
 
@@ -108,6 +110,9 @@ database becomes the `ADMIN`.
 | `PORT` | helpbot | Webhook listen port (default **3005**, no collision with Next.js :3000) |
 | `WEBHOOK_SECRET` | helpbot | Shared secret; must equal `HELPDESK_WEBHOOK_SECRET` |
 | `LIBERAPAY_URL` | build (deploy.sh) | Your Liberapay page URL, surfaced in the site footer when set |
+| `SMTP_HOST` | website | Local Postfix relay host (default `localhost`; with `--network host` this is the FCOS host's loopback listener) |
+| `SMTP_PORT` | website | Local Postfix relay port (default `25`) |
+| `SMTP_FROM` | website | Sender identity for admin alert emails, e.g. "ToolsLibrary \<alerts@tools-library.com\>"; alerts are skipped when unset |
 
 ## 6. Cloudflare Tunnel integration
 

@@ -26,6 +26,7 @@ declare module "next-auth" {
       alias: string;
       role: string;
       mustChangePassword: boolean;
+      needsAdminEmail: boolean;
     } & DefaultSession["user"];
   }
 
@@ -34,5 +35,6 @@ declare module "next-auth" {
     alias: string;
     role: string;
     mustChangePassword: boolean;
+    needsAdminEmail: boolean;
   }
 }

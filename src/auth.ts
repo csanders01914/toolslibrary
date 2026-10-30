@@ -71,10 +71,37 @@ export const { handlers, signIn, signOut } = NextAuth({
           alias: user.alias,
           role: user.role,
           mustChangePassword: user.mustChangePassword,
+          // PHASE_29: forced notification-email setup — ADMIN accounts without
+          // a notification email on record are locked to /admin-email by the
+          // middleware until one is stored.
+          needsAdminEmail: user.role === "ADMIN" && !user.notificationEmail,
         };
       },
     },
   ],
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt(params) {
+      // Shared sign-in logic first (pure, edge-safe).
+      const token = await authConfig.callbacks!.jwt!(params);
+      if (params.trigger === "update" && token) {
+        // PHASE_29: session.update() payloads are client-supplied and never
+        // trusted — re-derive the forced-email flag from database truth.
+        // (A hijacked session must not be able to flip the gate off by
+        // calling useSession().update({ needsAdminEmail: false }).)
+        const { prisma } = await import("@/lib/db");
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, notificationEmail: true },
+        });
+        if (dbUser) {
+          token.needsAdminEmail =
+            dbUser.role === "ADMIN" && !dbUser.notificationEmail;
+        }
+      }
+      return token;
+    },
+  },
 });
 
 // Re-export auth from auth.config for middleware

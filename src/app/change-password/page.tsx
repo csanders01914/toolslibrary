@@ -88,6 +88,13 @@ function ChangePasswordForm() {
             <p className="mt-3 text-sm text-zinc-400">
               Your new password is active. If your browser offers to save it, accept the prompt — there is no email recovery.
             </p>
+            {/* PHASE_29: the forced-email flag is computed at sign-in, so this
+                heads-up is precise for the stock-credential first-login flow. */}
+            {session?.user?.needsAdminEmail === true && (
+              <p className="mt-3 font-mono text-[11px] text-cyan-400" role="status">
+                Admin setup: after signing back in you will be asked to add a notification email address.
+              </p>
+            )}
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/login?changed=1" })}

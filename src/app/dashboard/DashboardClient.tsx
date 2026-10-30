@@ -21,7 +21,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   Shield,
   ShieldCheck,
@@ -38,6 +38,7 @@ import {
   Wrench,
   AlertTriangle,
   KeyRound,
+  Mail,
   Trash2,
   Loader2,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
 import { vouchForUser, declineVouch } from "@/lib/actions/vouch";
 import { updateProfile } from "@/lib/actions/messages";
 import { deleteOwnAccount } from "@/lib/actions/auth";
+import { setAdminEmail } from "@/lib/actions/admin";
 import { VOUCH_DELTA } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
 import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
@@ -56,6 +58,7 @@ interface User {
   bio: string | null;
   trustScore: number;
   role: string;
+  notificationEmail: string | null;
   createdAt: Date;
 }
 
@@ -96,6 +99,9 @@ interface DashboardClientProps {
 
 type ActionState = { success?: boolean; error?: string } | undefined;
 
+// PHASE_29: mirrors the setAdminEmail server action's return shape.
+type AdminEmailActionState = { success?: boolean; error?: string; email?: string } | undefined;
+
 function formatDate(date: Date | string) {
   return new Date(date).toLocaleDateString(undefined, {
     month: "short",
@@ -121,9 +127,13 @@ export default function DashboardClient({
     deleteOwnAccount,
     undefined
   );
+  const [emailState, emailAction, emailPending] = useActionState<AdminEmailActionState, FormData>(setAdminEmail, undefined);
+  const { data: session, update } = useSession();
   const [editingProfile, setEditingProfile] = useState(false);
   const [localAlias, setLocalAlias] = useState(user.alias);
   const [localBio, setLocalBio] = useState(user.bio ?? "");
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [localEmail, setLocalEmail] = useState(user.notificationEmail ?? "");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const profileFormRef = useRef<HTMLFormElement>(null);
@@ -177,6 +187,23 @@ export default function DashboardClient({
       signOut({ callbackUrl: "/" });
     }
   }, [deleteAccountState]);
+
+  // PHASE_29: a saved notification email closes the forced /admin-email gate —
+  // re-fetch the server data so the settings row reflects the new address, and
+  // if the session still carries the stale forced-setup flag, ask the server
+  // to re-derive it from the database (client payloads are never trusted). If
+  // that refresh fails, the middleware keeps gating /dashboard and the
+  // /admin-email page's Continue path clears the flag instead.
+  useEffect(() => {
+    if (!emailState?.success) return;
+    setEditingEmail(false);
+    router.refresh();
+    if (session?.user?.needsAdminEmail === true) {
+      update({ needsAdminEmail: false }).catch(() => {
+        // Middleware still gates; the /admin-email page's Continue path clears it.
+      });
+    }
+  }, [emailState?.success, session, router, update]);
 
   const statCards = [
     {
@@ -382,6 +409,115 @@ export default function DashboardClient({
                 Change Password
               </Link>
             </div>
+            {/* PHASE_29: admin-only notification email — the single deliberate
+                PII exception, stored on the operator account only. Changing an
+                existing address re-prompts for the current password (server
+                enforced); first-time setup does not. */}
+            {user.role === "ADMIN" && (
+              <div className="border-t border-zinc-900 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-mono text-xs text-zinc-400">Notification Email (Admin)</p>
+                  <p className="font-mono text-[11px] text-zinc-500 mt-1">
+                    Destination for operational alert emails (support escalations, new registrations)
+                    sent via the self-hosted local SMTP relay. The only email stored on this platform — operator account only.
+                  </p>
+                  {!editingEmail &&
+                    (user.notificationEmail ? (
+                      <p className="font-mono text-xs text-cyan-400 mt-2 break-all">{user.notificationEmail}</p>
+                    ) : (
+                      <p className="font-mono text-xs text-red-400 mt-2" role="status">
+                        Not set — admin alert emails are disabled.
+                      </p>
+                    ))}
+                </div>
+                {editingEmail ? (
+                  <form action={emailAction} noValidate className="w-full sm:w-auto sm:min-w-[320px] space-y-3">
+                    <div>
+                      <label htmlFor="notification-email" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+                        Notification Email
+                      </label>
+                      <input
+                        type="email"
+                        id="notification-email"
+                        name="email"
+                        autoComplete="email"
+                        value={localEmail}
+                        onChange={(e) => setLocalEmail(e.target.value)}
+                        required
+                        maxLength={254}
+                        disabled={emailPending}
+                        className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    {user.notificationEmail && (
+                      <div>
+                        <label htmlFor="notification-email-password" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          id="notification-email-password"
+                          name="currentPassword"
+                          autoComplete="current-password"
+                          required
+                          disabled={emailPending}
+                          className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
+                          placeholder="Confirm your identity"
+                        />
+                      </div>
+                    )}
+                    {emailState?.error && (
+                      <div
+                        className="flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400"
+                        role="alert"
+                      >
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        <p>{emailState.error}</p>
+                      </div>
+                    )}
+                    <div className="flex gap-3">
+                      <button
+                        type="submit"
+                        disabled={emailPending}
+                        className="flex cursor-pointer items-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {emailPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" aria-hidden="true" />
+                            Save Email
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingEmail(false)}
+                        className="cursor-pointer border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingEmail(true);
+                      setLocalEmail(user.notificationEmail ?? "");
+                    }}
+                    className="inline-flex items-center gap-2 self-start border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 sm:self-auto"
+                  >
+                    <Mail className="h-4 w-4" aria-hidden="true" />
+                    {user.notificationEmail ? "Change Email" : "Add Email"}
+                  </button>
+                )}
+              </div>
+            )}
             <div className="border-t border-zinc-900 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <p className="font-mono text-xs text-red-400">Danger Zone</p>
