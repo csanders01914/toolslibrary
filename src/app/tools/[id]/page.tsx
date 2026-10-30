@@ -17,7 +17,9 @@
 */
 
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import { notFound } from "next/navigation";
+import { redactText } from "@/lib/redact";
 import ToolDetailClient from "./ToolDetailClient";
 import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
 
@@ -30,24 +32,43 @@ interface PageProps {
 export default async function ToolDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const tool = await prisma.tool.findUnique({
-    where: { id },
-    include: {
-      owner: {
-        select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+  const [session, tool] = await Promise.all([
+    auth(),
+    prisma.tool.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+        },
+        loans: {
+          where: { status: { in: ["ACTIVE", "APPROVED", "REQUESTED"] } },
+          include: { borrower: { select: { id: true, alias: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
       },
-      loans: {
-        where: { status: { in: ["ACTIVE", "APPROVED", "REQUESTED"] } },
-        include: { borrower: { select: { id: true, alias: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      },
-    },
-  });
+    }),
+  ]);
 
   if (!tool) {
     notFound();
   }
+
+  // Guest browsing (GUEST_ALIAS_REDACTION): owner and borrower aliases are
+  // stripped from the payload before it crosses to the client, so the real
+  // strings never reach a guest's browser. Availability status stays in the
+  // payload and is censored at render time inside ToolDetailClient.
+  const isGuest = !session?.user;
+  const safeTool = isGuest
+    ? {
+        ...tool,
+        owner: { ...tool.owner, alias: redactText(tool.owner.alias) },
+        loans: tool.loans.map((loan) => ({
+          ...loan,
+          borrower: { ...loan.borrower, alias: redactText(loan.borrower.alias) },
+        })),
+      }
+    : tool;
 
   // Wrap the loan actions to only accept FormData for form actions and return
   // void. The wrappers MUST be inline server actions: a plain function prop
@@ -62,5 +83,12 @@ export default async function ToolDetailPage({ params }: PageProps) {
     await confirmHandoff(undefined, formData);
   };
 
-  return <ToolDetailClient tool={tool} manageLoan={manageLoanAction} confirmHandoff={confirmHandoffAction} />;
+  return (
+    <ToolDetailClient
+      tool={safeTool}
+      guestView={isGuest}
+      manageLoan={manageLoanAction}
+      confirmHandoff={confirmHandoffAction}
+    />
+  );
 }

@@ -21,6 +21,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { SKILL_CATEGORIES } from "@/lib/constants";
+import Redacted from "@/components/privacy/Redacted";
 
 const ALL_CATEGORIES = ["All", ...SKILL_CATEGORIES];
 
@@ -41,6 +42,11 @@ interface Skill {
 interface SkillsClientProps {
   initialSkills: Skill[];
   totalCount: number;
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases
+  // and availability status render as red asterisks. For guests the server
+  // has already replaced alias strings in the payload; the availability text
+  // is masked here at render time so the AVAILABLE ONLY filter keeps working.
+  guestView: boolean;
 }
 
 const formatVouch = (trustScore: number) => {
@@ -48,7 +54,7 @@ const formatVouch = (trustScore: number) => {
   return vouch >= 0 ? `+${vouch}` : `${vouch}`;
 };
 
-export default function SkillsClient({ initialSkills, totalCount }: SkillsClientProps) {
+export default function SkillsClient({ initialSkills, totalCount, guestView }: SkillsClientProps) {
   const [skills, setSkills] = useState<Skill[]>(initialSkills);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -159,11 +165,17 @@ export default function SkillsClient({ initialSkills, totalCount }: SkillsClient
               <div className="font-mono text-xs space-y-1 pt-3 mt-3 border-t border-zinc-900">
                 <p>
                   <span className="text-zinc-500">OWNER: </span>
-                  <span className="text-zinc-300">{skill.owner.alias}</span>
+                  {guestView ? (
+                    <Redacted value={skill.owner.alias} />
+                  ) : (
+                    <span className="text-zinc-300">{skill.owner.alias}</span>
+                  )}
                 </p>
                 <p>
                   <span className="text-zinc-500">STATUS: </span>
-                  {skill.available ? (
+                  {guestView ? (
+                    <Redacted value={skill.available ? "OFFERED" : "UNAVAILABLE"} />
+                  ) : skill.available ? (
                     <span className="text-emerald-400">OFFERED</span>
                   ) : (
                     <span className="text-zinc-500">UNAVAILABLE</span>

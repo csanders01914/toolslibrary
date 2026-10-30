@@ -21,6 +21,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/constants";
+import Redacted from "@/components/privacy/Redacted";
 
 const ALL_CATEGORIES = ["All", ...CATEGORIES];
 const STATUS_OPTIONS = ["All", "AVAILABLE", "BORROWED", "MAINTENANCE"];
@@ -42,6 +43,11 @@ interface Tool {
 
 interface ToolsClientProps {
   initialTools: Tool[];
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases
+  // and availability status render as red asterisks. For guests the server
+  // has already replaced alias strings in the payload; status is masked here
+  // at render time so the status filter keeps working.
+  guestView: boolean;
 }
 
 const formatVouch = (trustScore: number) => {
@@ -62,7 +68,7 @@ const statusValueClass = (status: string) => {
   }
 };
 
-export default function ToolsClient({ initialTools }: ToolsClientProps) {
+export default function ToolsClient({ initialTools, guestView }: ToolsClientProps) {
   const [tools, setTools] = useState<Tool[]>(initialTools);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -173,11 +179,19 @@ export default function ToolsClient({ initialTools }: ToolsClientProps) {
               <div className="font-mono text-xs space-y-1 pt-3 mt-3 border-t border-zinc-900">
                 <p>
                   <span className="text-zinc-500">OWNER: </span>
-                  <span className="text-zinc-300">{tool.owner.alias}</span>
+                  {guestView ? (
+                    <Redacted value={tool.owner.alias} />
+                  ) : (
+                    <span className="text-zinc-300">{tool.owner.alias}</span>
+                  )}
                 </p>
                 <p>
                   <span className="text-zinc-500">STATUS: </span>
-                  <span className={statusValueClass(tool.status)}>{tool.status}</span>
+                  {guestView ? (
+                    <Redacted value={tool.status} />
+                  ) : (
+                    <span className={statusValueClass(tool.status)}>{tool.status}</span>
+                  )}
                 </p>
                 <p>
                   <span className="text-zinc-500">VOUCH: </span>

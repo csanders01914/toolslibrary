@@ -17,12 +17,19 @@
 */
 
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import { redactText } from "@/lib/redact";
 import SkillsClient from "./SkillsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function SkillsPage() {
-  const [skillCount, recentSkills] = await Promise.all([
+  // Guest browsing (GUEST_ALIAS_REDACTION): owner aliases are stripped from
+  // the payload itself so the real strings never reach a guest's browser.
+  // The `available` boolean stays in the payload (the AVAILABLE ONLY filter
+  // needs it) and the status text is censored at render time in SkillsClient.
+  const [session, skillCount, recentSkills] = await Promise.all([
+    auth(),
     prisma.skill.count(),
     prisma.skill.findMany({
       where: { available: true },
@@ -35,6 +42,19 @@ export default async function SkillsPage() {
       take: 6,
     }),
   ]);
+  const isGuest = !session?.user;
 
-  return <SkillsClient initialSkills={recentSkills} totalCount={skillCount} />;
+  return (
+    <SkillsClient
+      guestView={isGuest}
+      initialSkills={recentSkills.map((skill) => ({
+        ...skill,
+        owner: {
+          ...skill.owner,
+          alias: isGuest ? redactText(skill.owner.alias) : skill.owner.alias,
+        },
+      }))}
+      totalCount={skillCount}
+    />
+  );
 }

@@ -17,7 +17,9 @@
 */
 
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 import { notFound } from "next/navigation";
+import { redactText } from "@/lib/redact";
 import SkillDetailClient from "./SkillDetailClient";
 import { toggleSkillAvailability, deleteSkill } from "@/lib/actions/skills";
 
@@ -30,18 +32,30 @@ interface PageProps {
 export default async function SkillDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const skill = await prisma.skill.findUnique({
-    where: { id },
-    include: {
-      owner: {
-        select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+  const [session, skill] = await Promise.all([
+    auth(),
+    prisma.skill.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+        },
       },
-    },
-  });
+    }),
+  ]);
 
   if (!skill) {
     notFound();
   }
+
+  // Guest browsing (GUEST_ALIAS_REDACTION): the owner alias is stripped from
+  // the payload before it crosses to the client, so the real string never
+  // reaches a guest's browser. Availability is censored at render time inside
+  // SkillDetailClient.
+  const isGuest = !session?.user;
+  const safeSkill = isGuest
+    ? { ...skill, owner: { ...skill.owner, alias: redactText(skill.owner.alias) } }
+    : skill;
 
   // Wrappers MUST be inline server actions: plain function props cannot cross
   // the server→client boundary (React serialization error → 500).
@@ -55,5 +69,12 @@ export default async function SkillDetailPage({ params }: PageProps) {
     await deleteSkill(undefined, formData);
   };
 
-  return <SkillDetailClient skill={skill} toggleAvailability={toggleAvailabilityAction} deleteSkill={deleteSkillAction} />;
+  return (
+    <SkillDetailClient
+      skill={safeSkill}
+      guestView={isGuest}
+      toggleAvailability={toggleAvailabilityAction}
+      deleteSkill={deleteSkillAction}
+    />
+  );
 }

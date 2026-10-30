@@ -25,6 +25,8 @@ import { Truck, RotateCcw, Calendar, X, AlertTriangle, MessageSquare, Loader2, Q
 import { format } from "date-fns";
 import { Modal } from "@/components/ui/Modal";
 import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
+import Redacted from "@/components/privacy/Redacted";
+import { redactText } from "@/lib/redact";
 
 interface Tool {
   id: string;
@@ -56,6 +58,11 @@ interface ManageLoanAction {
 
 interface ToolDetailClientProps {
   tool: Tool;
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner/borrower
+  // aliases and availability status render as red asterisks. For guests the
+  // server has already replaced alias strings in the payload; status is
+  // masked here at render time.
+  guestView: boolean;
   manageLoan: ManageLoanAction;
   confirmHandoff: ManageLoanAction;
 }
@@ -65,7 +72,7 @@ const formatVouch = (trustScore: number) => {
   return vouch >= 0 ? `+${vouch}` : `${vouch}`;
 };
 
-export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: ToolDetailClientProps) {
+export default function ToolDetailClient({ tool, guestView, manageLoan, confirmHandoff }: ToolDetailClientProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showLoanModal, setShowLoanModal] = useState(false);
@@ -118,6 +125,17 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
   };
 
   const getStatusDisplay = () => {
+    // Guest view: censor the availability status as a red masked chip. A
+    // neutral dot replaces the per-status icons, which would otherwise leak
+    // the state (e.g. the truck icon implies BORROWED).
+    if (guestView) {
+      return (
+        <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-red-500/50 text-red-400">
+          <span className="w-1.5 h-1.5 bg-red-400" aria-hidden="true" />
+          {redactText(tool.status)}
+        </span>
+      );
+    }
     switch (tool.status) {
       case "AVAILABLE":
         return (
@@ -163,13 +181,21 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
         <div className="font-mono text-xs space-y-1 pt-3 border-t border-zinc-900">
           <p>
             <span className="text-zinc-500">OWNER: </span>
-            <span className="text-zinc-300">{tool.owner.alias}</span>
+            {guestView ? (
+              <Redacted value={tool.owner.alias} />
+            ) : (
+              <span className="text-zinc-300">{tool.owner.alias}</span>
+            )}
           </p>
           <p>
             <span className="text-zinc-500">STATUS: </span>
-            <span className={tool.status === "AVAILABLE" ? "text-emerald-400" : tool.status === "BORROWED" ? "text-red-400" : tool.status === "MAINTENANCE" ? "text-amber-400" : "text-zinc-300"}>
-              {tool.status}
-            </span>
+            {guestView ? (
+              <Redacted value={tool.status} />
+            ) : (
+              <span className={tool.status === "AVAILABLE" ? "text-emerald-400" : tool.status === "BORROWED" ? "text-red-400" : tool.status === "MAINTENANCE" ? "text-amber-400" : "text-zinc-300"}>
+                {tool.status}
+              </span>
+            )}
           </p>
           <p>
             <span className="text-zinc-500">VOUCH: </span>
@@ -215,7 +241,11 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                     </p>
                     <p className="text-sm text-zinc-400 mt-1">
                       {activeLoan.status === "APPROVED" ? "Reserved for" : "Borrowed by"}{" "}
-                      <span className="text-zinc-200">{activeLoan.borrower.alias}</span>
+                      {guestView ? (
+                        <Redacted value={activeLoan.borrower.alias} />
+                      ) : (
+                        <span className="text-zinc-200">{activeLoan.borrower.alias}</span>
+                      )}
                     </p>
                   </div>
                   <span className={`font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border ${activeLoan.status === "APPROVED" ? "border-amber-500/50 text-amber-400" : "border-red-500/50 text-red-400"}`}>
@@ -268,7 +298,12 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                   <div>
                     <p className="font-mono text-xs uppercase tracking-widest text-amber-400">PENDING REQUEST</p>
                     <p className="text-sm text-zinc-400 mt-1">
-                      From <span className="text-zinc-200">{pendingLoan.borrower.alias}</span>
+                      From{" "}
+                      {guestView ? (
+                        <Redacted value={pendingLoan.borrower.alias} />
+                      ) : (
+                        <span className="text-zinc-200">{pendingLoan.borrower.alias}</span>
+                      )}
                     </p>
                   </div>
                   <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-amber-500/50 text-amber-400">
@@ -345,7 +380,11 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
             <div className="font-mono text-xs space-y-1">
               <p>
                 <span className="text-zinc-500">ALIAS: </span>
-                <span className="text-zinc-200">{tool.owner.alias}</span>
+                {guestView ? (
+                  <Redacted value={tool.owner.alias} />
+                ) : (
+                  <span className="text-zinc-200">{tool.owner.alias}</span>
+                )}
               </p>
               <p>
                 <span className="text-zinc-500">MEMBER SINCE: </span>
@@ -426,13 +465,15 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-zinc-500">STATUS</dt>
-                <dd className="text-zinc-300">{tool.status}</dd>
+                <dd>{guestView ? <Redacted value={tool.status} /> : <span className="text-zinc-300">{tool.status}</span>}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-zinc-500">LISTED</dt>
                 <dd className="text-zinc-300">{format(new Date(tool.createdAt), "MMM d, yyyy")}</dd>
               </div>
-              {activeLoan && (
+            {/* Loan panels are participant machinery; guests get no loan state
+                at all, since it would reveal the censored availability. */}
+            {activeLoan && !guestView && (
                 <>
                   <div className="flex justify-between gap-3">
                     <dt className="text-zinc-500">DUE BACK</dt>
@@ -440,7 +481,13 @@ export default function ToolDetailClient({ tool, manageLoan, confirmHandoff }: T
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-zinc-500">BORROWER</dt>
-                    <dd className="text-zinc-300">{activeLoan.borrower.alias}</dd>
+                    <dd>
+                      {guestView ? (
+                        <Redacted value={activeLoan.borrower.alias} />
+                      ) : (
+                        <span className="text-zinc-300">{activeLoan.borrower.alias}</span>
+                      )}
+                    </dd>
                   </div>
                 </>
               )}
