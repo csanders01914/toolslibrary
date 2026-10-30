@@ -22,9 +22,9 @@ import { MessagesSquare, ShieldCheck } from "lucide-react";
 import ChatAccess from "@/components/chat/ChatAccess";
 
 export const metadata: Metadata = {
-  title: "Matrix Chat — Tool Library",
+  title: "Matrix Chat — ToolsLibrary",
   description:
-    "Join the Tool Library community chat on our self-hosted Matrix server. Create a one-time access token behind a proof-of-work gate — no email, no phone, no IP logging.",
+    "Join the ToolsLibrary community chat on our self-hosted Matrix server. Create a one-time access token behind a proof-of-work gate — no email, no phone, no IP logging.",
 };
 
 const accessSteps = [
@@ -50,7 +50,7 @@ export default function MatrixChatPage() {
             Matrix Chat
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-            The Tool Library runs its own Matrix homeserver for lending
+            The ToolsLibrary runs its own Matrix homeserver for lending
             coordination, skill-sharing, and moderation questions. Choose how
             you want to get in.
           </p>

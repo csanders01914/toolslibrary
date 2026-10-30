@@ -1,6 +1,6 @@
 # DEPLOYMENT.md — Fedora CoreOS Rootless Podman Deployment
 
-This guide deploys the Tool Library as a rootless Podman container on a local
+This guide deploys the ToolsLibrary as a rootless Podman container on a local
 Fedora CoreOS (FCOS) server. The stack is fully self-hosted: SQLite in WAL mode
 on a single persistent volume, zero external CDNs, zero analytics, zero IP
 logging.
@@ -66,7 +66,7 @@ Notes:
   system's connection to your self-hosted Matrix (Synapse) server. The bot
   account answers help questions in community rooms and notifies the admin
   room when a request needs someone from the admin team. All replies are
-  pre-written strings selected by pure regular expressions — no external
+  pre-written strings selected by pure regular expressions: no external
   services are contacted and no message content is sent anywhere except your
   own homeserver. If these variables are omitted, the listener stays dormant
   and the website help form still works (escalations then surface only in the
@@ -74,7 +74,7 @@ Notes:
 - `BOT_WEBHOOK_URL` (required for the help form) points the website at the
   standalone helpdesk assistant in `tools-library-bot/`. In the multi-container
   Podman deployment this is the bot container's DNS name on a shared
-  user-defined network — `http://helpbot:3005` — never a hardcoded localhost
+  user-defined network (`http://helpbot:3005`), never a hardcoded localhost
   (localhost inside the website container is the website itself, not the bot).
   Missing configuration fails loudly: the support channel throws
   "BOT_WEBHOOK_URL is not configured." See the integration snippet below.
@@ -88,7 +88,7 @@ Notes:
 The website's support form forwards submissions to the standalone helpdesk
 assistant (`tools-library-bot/`: Express webhook `POST /api/web-support`,
 listening on port `3005` by default). Next.js resolves the bot STRICTLY from
-the environment — no hardcoded URL exists anywhere in the integration.
+the environment; no hardcoded URL exists anywhere in the integration.
 
 Podman's internal DNS resolves container names only on user-defined networks,
 so both containers must join one (e.g. `toollibrary-net`); a website container
@@ -107,7 +107,7 @@ podman run -d --name helpbot --network toollibrary-net \
 #   podman run -d --name tool-library --network toollibrary-net \
 #     -p 3000:3000 --userns=keep-id ... (remaining flags as in section 3)
 # Or simply export BOT_WEBHOOK_URL / HELPDESK_WEBHOOK_SECRET before
-# ./deploy.sh — the script forwards both into the container when set.
+# ./deploy.sh: the script forwards both into the container when set.
 ```
 
 Exact `.env` configuration (commented):
@@ -115,20 +115,20 @@ Exact `.env` configuration (commented):
 ```bash
 # ── Website container (.env; forwarded by deploy.sh) ─────────────────────
 # Next.js → helpbot routing uses Podman's internal DNS via the bot's
-# CONTAINER NAME — never localhost:
+# CONTAINER NAME, never localhost:
 BOT_WEBHOOK_URL=http://helpbot:3005
 # Shared secret; must equal WEBHOOK_SECRET in the helpbot container's .env.
 HELPDESK_WEBHOOK_SECRET=change-me-to-a-long-random-value
 
 # ── helpbot container (tools-library-bot/.env) ───────────────────────────
-# Webhook listen port — defaults to 3005 (no collision with Next.js :3000).
+# Webhook listen port; defaults to 3005 (no collision with Next.js :3000).
 PORT=3005
 # Must equal HELPDESK_WEBHOOK_SECRET in the website container's .env.
 WEBHOOK_SECRET=change-me-to-a-long-random-value
 ```
 
 Behavior: a missing `BOT_WEBHOOK_URL` throws "BOT_WEBHOOK_URL is not
-configured." (strict guardrail — misconfiguration is loud); a configured but
+configured." (strict guardrail: misconfiguration is loud); a configured but
 unreachable bot falls back to the website's built-in deterministic engine so
 the help form keeps working during bot restarts.
 
@@ -145,7 +145,7 @@ The first account registered on an empty database automatically receives the
 
 ### Post-deploy verification checklist (run on the live FCOS server)
 
-This project ships no seeded, mocked, or fake test data by design — every
+This project ships no seeded, mocked, or fake test data by design: every
 verification is performed against the live deployment with real member
 accounts. After each deploy, walk this checklist:
 
@@ -165,23 +165,23 @@ podman exec tool-library ./node_modules/.bin/prisma migrate status
 
 1. Register member A (on a fresh volume this account becomes ADMIN) and list
    a real tool from `/tools/new`.
-2. As A, open the tool page and open `QR HANDOFF LABEL` from Quick Actions —
+2. As A, open the tool page and open `QR HANDOFF LABEL` from Quick Actions;
    the printable label must render a QR encoding the public handoff URL.
 3. Register member B (second device, or after signing out) and request the
-   tool from its listing page.
+    tool from its listing page.
 4. As B, open the handoff URL (scan the printed label with a phone, or visit
-   `/tools/<id>/handoff`) — it must show the REQUESTED state with no confirm
-   button.
-5. As A, approve the request from the dashboard — the lent queue shows
-   `Awaiting Pickup` and offers no return buttons yet.
-6. As B, scan the label again and confirm pickup — the loan becomes ACTIVE
-   and the tool page shows BORROWED.
-7. As A, scan the label and mark the tool returned (Good) — the loan becomes
-   RETURNED, the tool shows AVAILABLE again, and B's trust score rises by 5.
+   `/tools/<id>/handoff`); it must show the REQUESTED state with no confirm
+    button.
+5. As A, approve the request from the dashboard; the lent queue shows
+    `Awaiting Pickup` and offers no return buttons yet.
+6. As B, scan the label again and confirm pickup; the loan becomes ACTIVE
+    and the tool page shows BORROWED.
+7. As A, scan the label and mark the tool returned (Good); the loan becomes
+    RETURNED, the tool shows AVAILABLE again, and B's trust score rises by 5.
 8. Check the dashboard's `TRUST // VOUCH YOUR COUNTERPARTS` section as A and
-   as B — each side vouches once (+2 to the counterparty's trust score), the
+    as B; each side vouches once (+2 to the counterparty's trust score), the
    queues empty afterwards, and a second vouch on the same loan is refused.
-   Also decline one queue entry with the `Decline` button — the row leaves
+   Also decline one queue entry with the `Decline` button; the row leaves
    the queue, the counterparty's trust score is unchanged, and the decision
    is final (vouching afterwards is refused).
 9. As B, exercise `/recover` with one of the recovery codes from step 1 and
@@ -200,11 +200,11 @@ Console help queue.
 
 ## 5. Maintenance
 
-- **Backups:** automated, WAL-safe, and safe while the server runs — see
+- **Backups:** automated, WAL-safe, and safe while the server runs; see
   section 6 (`backup.sh` + systemd timer). Never copy the live
   `tool_library.db` / `-wal` / `-shm` files directly.
 - **Schema changes:** update `prisma/schema.prisma`, generate a migration
-  with `prisma migrate dev`, commit it, rebuild the image, and restart —
+  with `prisma migrate dev`, commit it, rebuild the image, and restart;
   the entrypoint applies pending migrations with `prisma migrate deploy`
   (see section 7).
 - **Logs:** `podman logs tool-library` (the app logs errors only; no IP or
@@ -227,7 +227,7 @@ prunes snapshots older than the retention window (default 14 days).
 
 ```bash
 # FCOS ships minimal: install the sqlite3 CLI (requires a reboot), or skip
-# this step — backup.sh then falls back to a throwaway alpine container.
+# this step; backup.sh then falls back to a throwaway alpine container.
 sudo rpm-ostree install sqlite
 
 mkdir -p /var/home/core/srv/tool-library/backups
@@ -303,12 +303,12 @@ first boot applies `0_init` to the empty volume.
 # 1. Edit prisma/schema.prisma, then generate and apply a migration locally:
 npx prisma migrate dev --name <change_description>
 # 2. Commit prisma/migrations/<timestamp>_<name>/ together with the code change.
-# 3. Rebuild the image and redeploy — the entrypoint runs `migrate deploy`,
+# 3. Rebuild the image and redeploy; the entrypoint runs `migrate deploy`,
 #    which applies the new migration on boot.
 ```
 
 Never edit an applied migration file; always add a new one. If `migrate
-deploy` fails on boot, the container exits loudly instead of guessing —
+deploy` fails on boot, the container exits loudly instead of guessing;
 inspect `podman logs tool-library` and reconcile the drift before
 redeploying.
 
@@ -316,7 +316,7 @@ redeploying.
 
 Unauthenticated write surfaces are throttled by a zero-dependency, in-memory
 token bucket (`src/lib/rateLimit.ts`). Buckets are keyed by a SHA-256 hash of
-the client IP with a random per-process salt — the raw IP is never stored,
+the client IP with a random per-process salt; the raw IP is never stored,
 logged, or persisted, and buckets vanish on restart (zero-PII invariant).
 
 | Surface | Bucket | Burst | Sustained |
@@ -337,5 +337,5 @@ would enforce budgets per replica (this app is a single container by design).
 Client identification: behind a Cloudflare Tunnel the trusted
 `cf-connecting-ip` header is used; otherwise the first `x-forwarded-for`
 hop. With direct exposure and neither header present, all clients share one
-bucket per surface — throttling fails safe (still applies) rather than
+bucket per surface; throttling fails safe (still applies) rather than
 fail-open.

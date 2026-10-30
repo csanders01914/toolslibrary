@@ -20,7 +20,7 @@ import Link from "next/link";
 import { FileText, Wrench, ShieldAlert, Scale, Users, Gavel } from "lucide-react";
 
 export const metadata = {
-  title: "Terms of Service — Tool Library",
+  title: "Terms of Service — ToolsLibrary",
   description: "Good-faith peer lending, tool safety responsibility, and anti-abuse rules.",
 };
 
@@ -29,7 +29,7 @@ const sections = [
     icon: Users,
     color: "cyan",
     title: "1. The spirit of the agreement",
-    body: "Tool Library is a mutual-aid platform for neighbors to lend tools and exchange skills. By creating an account you agree to participate in good faith: describe your listings honestly, honor the loan commitments you accept, and treat other members with respect. This is a community agreement. No fees are charged and nothing is bought or sold.",
+    body: "ToolsLibrary is a mutual-aid platform for neighbors to lend tools and exchange skills. By creating an account you agree to participate in good faith: describe your listings honestly, honor the loan commitments you accept, and treat other members with respect. This is a community agreement. No fees are charged and nothing is bought or sold.",
   },
   {
     icon: Wrench,

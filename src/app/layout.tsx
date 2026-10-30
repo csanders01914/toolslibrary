@@ -27,7 +27,7 @@ import { ReadingGuide } from '@/components/a11y/ReadingGuide';
 import { MessengerWidget } from '@/components/messenger/MessengerWidget';
 
 export const metadata = {
-  title: 'Tool Library — Community Tool Sharing',
+  title: 'ToolsLibrary — Community Tool Sharing',
   description: 'Zero-PII peer-to-peer tool lending and skills exchange.',
   icons: { icon: '/icon.png' },
 };

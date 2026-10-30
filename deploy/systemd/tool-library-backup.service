@@ -1,4 +1,4 @@
-# Tool Library — user-level systemd service that runs backup.sh against the
+# ToolsLibrary — user-level systemd service that runs backup.sh against the
 # bind-mounted data volume. Install together with tool-library-backup.timer
 # (steps in DEPLOYMENT.md):
 #
@@ -12,7 +12,7 @@
 # escalation anywhere in the backup path.
 
 [Unit]
-Description=Tool Library: WAL-safe SQLite online backup (sqlite3 .backup)
+Description=ToolsLibrary: WAL-safe SQLite online backup (sqlite3 .backup)
 
 [Service]
 Type=oneshot

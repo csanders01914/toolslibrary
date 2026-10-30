@@ -19,7 +19,7 @@
 import { Activity, ShieldCheck, Server, Database, EyeOff, GitCommitHorizontal } from "lucide-react";
 
 export const metadata = {
-  title: "Transparency Report — Tool Library",
+  title: "Transparency Report — ToolsLibrary",
   description:
     "Warrant canary, third-party data sharing status, and local server metrics.",
 };

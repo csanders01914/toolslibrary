@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# Containerfile — multi-stage rootless-Podman image for the Tool Library.
+# Containerfile — multi-stage rootless-Podman image for the ToolsLibrary.
 # Target host: Fedora CoreOS, rootless Podman with --userns=keep-id.
 # Stack: Next.js 15 App Router with `output: 'standalone'` (see next.config.ts),
 # Prisma 5.22 + SQLite (WAL) on a bind-mounted volume, bcryptjs (pure JS — no

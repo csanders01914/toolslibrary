@@ -20,7 +20,7 @@ import Link from "next/link";
 import { Code2, Wrench, BookOpen, Bug, GitPullRequest, ShieldCheck } from "lucide-react";
 
 export const metadata = {
-  title: "Contribute — Tool Library",
+  title: "Contribute — ToolsLibrary",
   description: "Contribute code, donate tools, or improve documentation to the collective.",
 };
 

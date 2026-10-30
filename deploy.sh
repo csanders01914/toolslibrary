@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# deploy.sh — Fedora CoreOS rootless-Podman deployment for the Tool Library.
+# deploy.sh — Fedora CoreOS rootless-Podman deployment for the ToolsLibrary.
 #
 # Builds localhost/tool-library from ./Containerfile and (re)launches the
 # container with:

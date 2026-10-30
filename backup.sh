@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# backup.sh — WAL-safe online backup for the Tool Library SQLite database.
+# backup.sh — WAL-safe online backup for the ToolsLibrary SQLite database.
 #
 # Uses the native sqlite3 CLI `.backup` command (the SQLite Online Backup
 # API), which produces a consistent, transactionally sound snapshot of the

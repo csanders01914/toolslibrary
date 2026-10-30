@@ -68,7 +68,7 @@ function LoginForm() {
         <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-8">
           {/* Header */}
           <div className="mb-8">
-            <Link href="/" className="mb-6 inline-flex items-center gap-2" aria-label="Tool Library Home">
+            <Link href="/" className="mb-6 inline-flex items-center gap-2" aria-label="ToolsLibrary Home">
               <span
                 className="flex h-8 w-8 items-center justify-center border border-cyan-500/50 text-cyan-400"
                 aria-hidden="true"
@@ -78,7 +78,7 @@ function LoginForm() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </span>
-              <span className="font-mono text-xs uppercase tracking-widest text-zinc-400">Tool Library</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-zinc-400">ToolsLibrary</span>
             </Link>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">AUTH // LOGIN</p>
             <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">Welcome Back</h1>

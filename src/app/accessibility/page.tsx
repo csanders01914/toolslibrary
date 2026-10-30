@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Accessibility Statement — Tool Library",
+  title: "Accessibility Statement — ToolsLibrary",
   description: "WCAG 2.2 Level AAA conformance statement and accessibility features.",
 };
 
@@ -177,7 +177,7 @@ export default function AccessibilityStatementPage() {
             fully self-hosted: the conformance of every page you load is determined entirely by
             the code in this repository, with no third-party scripts, overlays, or widgets that
             could silently regress it. This is a self-declared conformance claim made by the
-            Tool Library Collective under the W3C conformance reporting model.
+            ToolsLibrary Collective under the W3C conformance reporting model.
           </p>
         </div>
       </section>
