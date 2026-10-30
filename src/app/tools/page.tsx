@@ -17,22 +17,33 @@
 */
 
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
+import { redactText } from "@/lib/redact";
 import ToolsClient from "./ToolsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function ToolsPage() {
-  const tools = await prisma.tool.findMany({
-    include: {
-      owner: {
-        select: { id: true, alias: true, trustScore: true },
+  // Guest browsing (GUEST_ALIAS_REDACTION): owner aliases are stripped from
+  // the payload itself so the real strings never reach a guest's browser.
+  // Availability status stays in the payload (the status filter needs it) and
+  // is censored at render time inside ToolsClient.
+  const [session, tools] = await Promise.all([
+    auth(),
+    prisma.tool.findMany({
+      include: {
+        owner: {
+          select: { id: true, alias: true, trustScore: true },
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+  const isGuest = !session?.user;
 
   return (
     <ToolsClient
+      guestView={isGuest}
       initialTools={tools.map((tool) => ({
         id: tool.id,
         name: tool.name,
@@ -40,7 +51,10 @@ export default async function ToolsPage() {
         category: tool.category,
         status: tool.status,
         imageUrl: tool.imageUrl,
-        owner: tool.owner,
+        owner: {
+          ...tool.owner,
+          alias: isGuest ? redactText(tool.owner.alias) : tool.owner.alias,
+        },
         createdAt: tool.createdAt.toISOString(),
       }))}
     />

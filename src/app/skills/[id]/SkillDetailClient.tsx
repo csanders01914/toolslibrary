@@ -23,6 +23,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, MessageSquare, X, AlertTriangle, RotateCcw, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import Redacted from "@/components/privacy/Redacted";
+import { redactText } from "@/lib/redact";
 
 interface Skill {
   id: string;
@@ -50,6 +52,11 @@ interface DeleteSkillAction {
 
 interface SkillDetailClientProps {
   skill: Skill;
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) the owner
+  // alias and availability status render as red asterisks. For guests the
+  // server has already replaced the alias string in the payload; the
+  // availability text is masked here at render time.
+  guestView: boolean;
   toggleAvailability: ToggleAvailabilityAction;
   deleteSkill: DeleteSkillAction;
 }
@@ -59,7 +66,7 @@ const formatVouch = (trustScore: number) => {
   return vouch >= 0 ? `+${vouch}` : `${vouch}`;
 };
 
-export default function SkillDetailClient({ skill, toggleAvailability, deleteSkill }: SkillDetailClientProps) {
+export default function SkillDetailClient({ skill, guestView, toggleAvailability, deleteSkill }: SkillDetailClientProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -104,6 +111,17 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
   };
 
   const getAvailabilityDisplay = () => {
+    // Guest view: censor the availability status as a red masked chip. A
+    // neutral dot replaces the per-state icons, which would otherwise leak
+    // the state (e.g. the EyeOff icon implies UNAVAILABLE).
+    if (guestView) {
+      return (
+        <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-red-500/50 text-red-400">
+          <span className="w-1.5 h-1.5 bg-red-400" aria-hidden="true" />
+          {redactText(skill.available ? "OFFERED" : "UNAVAILABLE")}
+        </span>
+      );
+    }
     if (skill.available) {
       return (
         <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 border border-emerald-500/50 text-emerald-400">
@@ -136,11 +154,17 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
         <div className="font-mono text-xs space-y-1 pt-3 border-t border-zinc-900">
           <p>
             <span className="text-zinc-500">OWNER: </span>
-            <span className="text-zinc-300">{skill.owner.alias}</span>
+            {guestView ? (
+              <Redacted value={skill.owner.alias} />
+            ) : (
+              <span className="text-zinc-300">{skill.owner.alias}</span>
+            )}
           </p>
           <p>
             <span className="text-zinc-500">STATUS: </span>
-            {skill.available ? (
+            {guestView ? (
+              <Redacted value={skill.available ? "OFFERED" : "UNAVAILABLE"} />
+            ) : skill.available ? (
               <span className="text-emerald-400">OFFERED</span>
             ) : (
               <span className="text-zinc-500">UNAVAILABLE</span>
@@ -205,7 +229,11 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
             <div className="font-mono text-xs space-y-1">
               <p>
                 <span className="text-zinc-500">ALIAS: </span>
-                <span className="text-zinc-200">{skill.owner.alias}</span>
+                {guestView ? (
+                  <Redacted value={skill.owner.alias} />
+                ) : (
+                  <span className="text-zinc-200">{skill.owner.alias}</span>
+                )}
               </p>
               <p>
                 <span className="text-zinc-500">MEMBER SINCE: </span>
@@ -277,7 +305,13 @@ export default function SkillDetailClient({ skill, toggleAvailability, deleteSki
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-zinc-500">STATUS</dt>
-                <dd className="text-zinc-300">{skill.available ? "OFFERED" : "UNAVAILABLE"}</dd>
+                <dd>
+                  {guestView ? (
+                    <Redacted value={skill.available ? "OFFERED" : "UNAVAILABLE"} />
+                  ) : (
+                    <span className="text-zinc-300">{skill.available ? "OFFERED" : "UNAVAILABLE"}</span>
+                  )}
+                </dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-zinc-500">LISTED</dt>

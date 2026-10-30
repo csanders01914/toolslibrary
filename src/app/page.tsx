@@ -19,6 +19,7 @@
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import Link from 'next/link';
+import Redacted from '@/components/privacy/Redacted';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +80,11 @@ export default async function HomePage() {
       take: 6,
     }),
   ]);
+
+  // Guest browsing (GUEST_ALIAS_REDACTION): unauthenticated visitors see
+  // member aliases and availability status masked as red asterisks. Redacting
+  // here, server-side, means the real strings never reach a guest's HTML.
+  const isGuest = !session?.user;
 
   return (
     <div className="space-y-16">
@@ -176,11 +182,19 @@ export default async function HomePage() {
                 <div className="font-mono text-xs space-y-1 pt-3 mt-3 border-t border-zinc-900">
                   <p>
                     <span className="text-zinc-500">OWNER: </span>
-                    <span className="text-zinc-300">{tool.owner.alias}</span>
+                    {isGuest ? (
+                      <Redacted value={tool.owner.alias} />
+                    ) : (
+                      <span className="text-zinc-300">{tool.owner.alias}</span>
+                    )}
                   </p>
                   <p>
                     <span className="text-zinc-500">STATUS: </span>
-                    <span className={statusValueClass(tool.status)}>{tool.status}</span>
+                    {isGuest ? (
+                      <Redacted value={tool.status} />
+                    ) : (
+                      <span className={statusValueClass(tool.status)}>{tool.status}</span>
+                    )}
                   </p>
                   <p>
                     <span className="text-zinc-500">VOUCH: </span>
