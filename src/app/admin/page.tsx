@@ -19,6 +19,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { getCanaryState } from "@/lib/canary";
 import AdminClient from "./AdminClient";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default async function AdminPage() {
     recentSkills,
     users,
     helpRequests,
+    canaryState,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.tool.count(),
@@ -79,6 +81,9 @@ export default async function AdminPage() {
       take: 50,
       orderBy: { createdAt: "desc" },
     }),
+    // PHASE_30: canary state for the dashboard strip — the operator must see
+    // STALE/DISCLOSED status without visiting the canary console.
+    getCanaryState(session.user.id),
   ]);
 
   const userRows = users.map((user) => ({
@@ -109,6 +114,11 @@ export default async function AdminPage() {
       auditSkills={recentSkills}
       users={userRows}
       helpRequests={helpRequests}
+      canary={{
+        status: canaryState.status,
+        latest: canaryState.latest,
+        pending: canaryState.pending,
+      }}
     />
   );
 }

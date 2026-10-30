@@ -59,6 +59,9 @@ export interface RateLimitConfig {
  *   against the Synapse login endpoint.
  * - adminEmail: 5 burst / 2 per minute — authenticated admin-only surface
  *   (PHASE_29); password-verified when replacing an existing destination.
+ * - canary: 5 burst / 2 per minute — authenticated admin-only surface
+ *   (PHASE_30); throttles canary passphrase checks and staging against
+ *   brute force.
  */
 export const RATE_LIMITS = {
   login: { capacity: 10, refillPerMinute: 5 },
@@ -70,6 +73,7 @@ export const RATE_LIMITS = {
   powChallenge: { capacity: 20, refillPerMinute: 8 },
   chatToken: { capacity: 5, refillPerMinute: 2 },
   adminEmail: { capacity: 5, refillPerMinute: 2 },
+  canary: { capacity: 5, refillPerMinute: 2 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

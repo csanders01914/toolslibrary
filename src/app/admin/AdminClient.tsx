@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Shield,
+  ShieldCheck,
   Save,
   Minus,
   Plus,
@@ -41,6 +42,14 @@ import {
   clearHelpQueueAction,
   type HelpActionState,
 } from "@/lib/actions/help";
+// Type-only import from the client-safe contract module (see
+// src/lib/canaryShared.ts header): the server module "@/lib/canary" must
+// never enter the client bundle.
+import type {
+  CanaryEventPublic,
+  CanaryPendingPublic,
+  CanaryStatus,
+} from "@/lib/canaryShared";
 import {
   chip,
   StatusChip,
@@ -99,6 +108,12 @@ interface AdminClientProps {
   auditSkills: SkillRow[];
   users: UserRow[];
   helpRequests: HelpRequestRow[];
+  // PHASE_30: warrant-canary strip state (public data, safe to render).
+  canary: {
+    status: CanaryStatus;
+    latest: CanaryEventPublic | null;
+    pending: CanaryPendingPublic | null;
+  };
 }
 
 type ActionState = AdminActionState;
@@ -243,6 +258,7 @@ export default function AdminClient({
   auditSkills,
   users,
   helpRequests,
+  canary,
 }: AdminClientProps) {
   const router = useRouter();
 
@@ -284,6 +300,28 @@ export default function AdminClient({
 
   const openHelp = helpRequests.filter((r) => r.status === "OPEN");
   const closedHelp = helpRequests.filter((r) => r.status === "RESOLVED");
+
+  // PHASE_30: warrant-canary strip presentation, derived from DB truth.
+  const canaryChip =
+    canary.status === "INTACT"
+      ? "green"
+      : canary.status === "DISCLOSED"
+        ? "red"
+        : "amber";
+  const canaryLabel =
+    canary.status === "INTACT"
+      ? `INTACT UNTIL ${canary.latest?.expiresAt ? formatDate(canary.latest.expiresAt) : "—"}`
+      : canary.status === "STALE"
+        ? "STALE — RE-AFFIRM REQUIRED"
+        : canary.status === "DISCLOSED"
+          ? "DISCLOSED"
+          : "NEVER AFFIRMED";
+  const canaryBorder =
+    canary.status === "INTACT"
+      ? "border-emerald-500/50"
+      : canary.status === "DISCLOSED"
+        ? "border-red-500/50"
+        : "border-amber-500/50";
 
   const renderToolCard = (tool: ToolRow) => {
     return (
@@ -368,6 +406,28 @@ export default function AdminClient({
           <Shield className="w-3.5 h-3.5 inline mr-1.5" aria-hidden="true" />
           ADMIN
         </span>
+      </section>
+
+      {/* Warrant canary strip (PHASE_30) — status must be visible on the
+          console without visiting the canary page: a STALE or DISCLOSED
+          canary is exactly the thing an operator cannot afford to miss. */}
+      <section aria-label="Warrant canary status">
+        <div className={`flex flex-wrap items-center justify-between gap-3 border bg-[#0a0a0a] p-4 ${canaryBorder}`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <ShieldCheck className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+            <span className="font-mono text-xs uppercase tracking-widest text-zinc-400">
+              WARRANT CANARY:
+            </span>
+            <span className={chip(canaryChip)}>{canaryLabel}</span>
+            {canary.pending && <span className={chip("amber")}>AWAITING EMAIL APPROVAL</span>}
+          </div>
+          <Link
+            href="/admin/canary"
+            className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+          >
+            Update canary
+          </Link>
+        </div>
       </section>
 
       {/* Telemetry */}

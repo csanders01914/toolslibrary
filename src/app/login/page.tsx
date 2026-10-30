@@ -27,7 +27,16 @@ import { Lock, AlertCircle, Eye, EyeOff, Loader2, CheckCircle } from "lucide-rea
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  // Post-auth open-redirect guard: only same-origin relative paths are
+  // honored. A callbackUrl like "https://evil.example" or "//evil.example"
+  // would otherwise bounce a freshly authenticated session to an attacker-
+  // controlled host (the canary approval flow constructs safe relative
+  // callbacks, but this receiver must not trust arbitrary query input).
+  const rawCallbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl =
+    rawCallbackUrl.startsWith("/") && !rawCallbackUrl.startsWith("//")
+      ? rawCallbackUrl
+      : "/dashboard";
   const error = searchParams.get("error");
   const passwordChanged = searchParams.get("changed") === "1";
 

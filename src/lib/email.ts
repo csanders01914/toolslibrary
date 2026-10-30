@@ -171,7 +171,31 @@ export type AdminNotification =
       oldEmail: string;
       newEmail: string;
       changedBy: string;
-    };
+    }
+  // PHASE_30_CANARY_SIGNING: warrant-canary lifecycle alerts. canary_staged
+  // is the out-of-band approval half of the two-factor gate — it routes to
+  // the staging admin's OWN notification address (like email_changed) and
+  // carries the single-use confirmation link. canary_committed and
+  // canary_failed_attempt use default routing (all configured admins): a
+  // committed canary event is public information, and a failed passphrase
+  // attempt against a hijacked session is exactly the signal every admin
+  // must not miss.
+  | {
+      type: "canary_staged";
+      to: string;
+      action: "AFFIRM" | "DISCLOSE";
+      confirmUrl: string;
+      expiresInMinutes: number;
+    }
+  | {
+      type: "canary_committed";
+      action: "AFFIRM" | "DISCLOSE";
+      alias: string;
+      validUntil: string | null;
+      note: string | null;
+    }
+  | { type: "canary_failed_attempt"; alias: string }
+  | { type: "canary_passphrase_enrolled"; alias: string };
 
 // Shared email chrome: plain, minimal, inline-styled dark background. No
 // external assets, no tracking pixels, no HTML entities beyond what the
@@ -208,11 +232,11 @@ function escapeHtml(value: string): string {
 
 /**
  * Fire-and-forget admin alert dispatcher. Builds the minimal HTML email for
- * the notification type, routes it (email_changed → the OLD address only;
- * everything else → all configured admin destinations), and swallows every
- * failure with a single coarse log line. Callers use
- * `void notifyAdmins(...)` — this must never block or fail the surrounding
- * server action.
+ * the notification type, routes it (email_changed → the OLD address only and
+ * canary_staged → the staged destination only; everything else → all
+ * configured admin destinations), and swallows every failure with a single
+ * coarse log line. Callers use `void notifyAdmins(...)` — this must never
+ * block or fail the surrounding server action.
  */
 export async function notifyAdmins(notification: AdminNotification): Promise<void> {
   try {
@@ -256,6 +280,58 @@ ${row("Changed by", escapeHtml(notification.changedBy))}
         // Route to the OLD address: the party being alerted about the change
         // is whoever still controls the previous inbox.
         to = [notification.to];
+        break;
+      }
+      case "canary_staged": {
+        subject = "Approve canary update — ToolsLibrary";
+        const actionLabel =
+          notification.action === "AFFIRM"
+            ? "Affirm canary for another month"
+            : "Disclose a canary event";
+        html = `<div style="${EMAIL_STYLES.body}"><div style="${EMAIL_STYLES.card}">
+<h2 style="${EMAIL_STYLES.heading}">Canary approval required</h2>
+${row("Action", escapeHtml(actionLabel))}
+${row("Expires in", `${notification.expiresInMinutes} minutes`)}
+<p style="margin:12px 0 4px"><span style="${EMAIL_STYLES.label}">Confirmation link (single-use):</span><br /><a style="color:#8ab4f8;word-break:break-all" href="${escapeHtml(notification.confirmUrl)}">${escapeHtml(notification.confirmUrl)}</a></p>
+<p style="${EMAIL_STYLES.footer}">This link is single-use and requires you to be signed in as an administrator. If you did not stage this update, treat the admin session as compromised.</p>
+</div></div>`;
+        // Route to the staging admin's OWN address: the out-of-band factor
+        // must reach the inbox that the passphrase holder expects.
+        to = [notification.to];
+        break;
+      }
+      case "canary_committed": {
+        subject = "Canary update committed";
+        const committedLabel =
+          notification.action === "AFFIRM"
+            ? "Affirm canary for another month"
+            : "Disclose a canary event";
+        html = `<div style="${EMAIL_STYLES.body}"><div style="${EMAIL_STYLES.card}">
+<h2 style="${EMAIL_STYLES.heading}">Canary update committed</h2>
+${row("Action", escapeHtml(committedLabel))}
+${row("Signed by", escapeHtml(notification.alias))}
+${row("Valid until", notification.validUntil ? escapeHtml(notification.validUntil.slice(0, 10)) : "—")}
+${row("Note", notification.note ? escapeHtml(notification.note) : "—")}
+<p style="${EMAIL_STYLES.footer}">The transparency page now reflects this event.</p>
+</div></div>`;
+        break;
+      }
+      case "canary_failed_attempt": {
+        subject = "FAILED canary passphrase attempt";
+        html = `<div style="${EMAIL_STYLES.body}"><div style="${EMAIL_STYLES.card}">
+<h2 style="${EMAIL_STYLES.heading}">Failed canary passphrase attempt</h2>
+${row("Attempted by", escapeHtml(notification.alias))}
+<p style="${EMAIL_STYLES.footer}">Someone using this admin session entered a wrong canary passphrase. If this wasn't you, rotate credentials immediately.</p>
+</div></div>`;
+        break;
+      }
+      case "canary_passphrase_enrolled": {
+        subject = "Canary passphrase enrolled";
+        html = `<div style="${EMAIL_STYLES.body}"><div style="${EMAIL_STYLES.card}">
+<h2 style="${EMAIL_STYLES.heading}">Canary passphrase enrolled</h2>
+${row("Enrolled by", escapeHtml(notification.alias))}
+<p style="${EMAIL_STYLES.footer}">A canary passphrase was set for this admin account — first enrollment needs no current passphrase by definition. If this wasn't you, a hijacked session may be enrolling its own canary credentials: rotate credentials immediately.</p>
+</div></div>`;
         break;
       }
     }
