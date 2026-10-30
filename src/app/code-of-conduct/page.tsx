@@ -20,7 +20,7 @@ import Link from "next/link";
 import { HeartHandshake, Shield, Hammer, Megaphone, Scale, Ban } from "lucide-react";
 
 export const metadata = {
-  title: "Code of Conduct — Tool Library",
+  title: "Code of Conduct — ToolsLibrary",
   description: "Mutual aid respect, harassment-free workshops, and moderation accountability.",
 };
 

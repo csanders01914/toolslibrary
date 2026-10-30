@@ -21,9 +21,9 @@ import type { Metadata } from "next";
 import { LogIn, MessagesSquare, ShieldCheck, ExternalLink } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Discord Chat — Tool Library",
+  title: "Discord Chat — ToolsLibrary",
   description:
-    "Join the Tool Library community on Discord. The invite link takes you straight to the server — this platform never sees your Discord credentials.",
+    "Join the ToolsLibrary community on Discord. The invite link takes you straight to the server — this platform never sees your Discord credentials.",
 };
 
 // The current community invite link — the single place it is configured.
@@ -53,7 +53,7 @@ export default function DiscordChatPage() {
             Discord Chat
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-            The Tool Library community also gathers on Discord for lending
+            The ToolsLibrary community also gathers on Discord for lending
             coordination, skill-sharing, and moderation questions. The invite
             link below takes you straight to the server.
           </p>

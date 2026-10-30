@@ -101,7 +101,7 @@ export default async function ToolLabelPage({ params }: PageProps) {
         className="border-4 border-black bg-white p-8 text-center text-black"
       >
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-black/60">
-          TOOL LIBRARY // HANDOFF
+          TOOLSLIBRARY // HANDOFF
         </p>
         <h2 className="mt-2 text-2xl font-bold break-words">{tool.name}</h2>
         <div

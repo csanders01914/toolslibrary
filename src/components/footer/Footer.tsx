@@ -61,9 +61,6 @@ const communityLinks = [
   { href: "/code-of-conduct", label: "Code of Conduct", icon: HeartHandshake },
   { href: "/contribute", label: "Contribute / Get Involved", icon: Code2 },
   { href: "/donate", label: "Donate / Support Us", icon: Heart },
-  // Operator's Liberapay page (PHASE_27_SUSTAINABILITY_DOCS): rendered only
-  // when LIBERAPAY_URL is configured at build/deploy time — never a fake or
-  // placeholder URL.
   ...(process.env.LIBERAPAY_URL?.trim()
     ? [
         {
@@ -225,7 +222,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-zinc-900 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-center font-mono text-[11px] text-zinc-500 sm:text-left">
-            © {new Date().getFullYear()} Tool Library Collective, licensed under GNU AGPLv3.
+            © {new Date().getFullYear()} ToolsLibrary Collective, licensed under GNU AGPLv3.
             Built for mutual aid and right to repair.
           </p>
           <p className="font-mono text-[11px] text-zinc-600">

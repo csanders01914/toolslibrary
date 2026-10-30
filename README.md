@@ -1,6 +1,6 @@
-# Tool Library Wiki
+# ToolsLibrary Wiki
 
-> **Complete documentation for the Tool Library v2 codebase** — a zero-PII, self-hosted community tool lending and skills exchange platform built with Next.js 15, Prisma/SQLite, and a strictly deterministic support and triage system (pure TypeScript + Regular Expressions, no external services).
+> **Complete documentation for the ToolsLibrary v2 codebase**: a zero-PII, self-hosted community tool lending and skills exchange platform built with Next.js 15, Prisma/SQLite, and a strictly deterministic support and triage system (pure TypeScript and regular expressions, no external services).
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://typescriptlang.org/)
@@ -12,22 +12,22 @@
 
 ---
 
-## 🎯 Project Vision
+## Project Vision
 
-The Tool Library is a **privacy-first, community-operated platform** for neighbor-to-neighbor tool lending and skill sharing. Designed for communities that value data sovereignty, it runs entirely on your hardware with zero external dependencies, zero tracking, and zero personally identifiable information.
+The ToolsLibrary is a privacy-first, community-operated platform for neighbor-to-neighbor tool lending and skill sharing. Designed for communities that value data sovereignty, it runs entirely on your hardware with zero external dependencies, zero tracking, and zero personally identifiable information.
 
 ### Why This Exists
 
 | Problem | Our Approach |
 |---------|--------------|
-| Tool libraries require signups with email/phone | **Zero PII** — only a username and public alias |
-| Cloud platforms harvest usage data | **Local-first** — single SQLite file on your volume |
-| "Smart" features send data to third parties | **Deterministic by design** — every automated reply is a pre-written, reviewed string selected by plain regular expressions |
-| Complex deployments need Kubernetes | **Single binary** — rootless Podman on Fedora CoreOS |
+| Tool libraries require signups with email/phone | **Zero PII**: only a username and public alias |
+| Cloud platforms harvest usage data | **Local-first**: single SQLite file on your volume |
+| "Smart" features send data to third parties | **Deterministic by design**: every automated reply is a pre-written, reviewed string selected by plain regular expressions |
+| Complex deployments need Kubernetes | **One container**: rootless Podman on Fedora CoreOS |
 
 ---
 
-## 📖 Documentation Index
+## Documentation Index
 
 The full documentation lives in the [`wiki/`](wiki/) directory (LeafWiki source):
 
@@ -44,7 +44,7 @@ The full documentation lives in the [`wiki/`](wiki/) directory (LeafWiki source)
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 graph TB
@@ -97,15 +97,15 @@ graph TB
 
 | Principle | Implementation |
 |-----------|----------------|
-| **Zero PII** | No emails, phones, IPs, locations — only `username` + public `alias` |
+| **Zero PII** | No emails, phones, IPs, or locations; only `username` + public `alias` |
 | **Local-first** | Single SQLite file on bind-mounted volume; no external DB |
-| **Deterministic support** | Replies come from a fixed, reviewed dictionary; routing is pure regex — no external services in the support path |
-| **Accessibility by default** | WCAG 2.1 AA contrast, dyslexic font, reduced motion, reading guide |
+| **Deterministic support** | Replies come from a fixed, reviewed dictionary; routing is pure regex, with no external services in the support path |
+| **Accessibility by default** | WCAG 2.2 AAA targets: contrast, dyslexia-friendly font, reduced motion, reading guide |
 | **No telemetry** | `NEXT_TELEMETRY_DISABLED=1`, no analytics, no request/IP logging |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development
 
@@ -150,11 +150,11 @@ podman healthcheck run tool-library
 
 ---
 
-## 🔑 Key Concepts
+## Key Concepts
 
 | Concept | Summary | Deep Dive |
 |---------|---------|-----------|
-| **Zero-PII** | No emails, phones, IPs — only `username` + public `alias` | [Project Overview](wiki/Platform%20Overview/Project-Overview.md), [Security & Privacy](wiki/System%20Architecture%20&%20Security/Security-Privacy.md) |
+| **Zero-PII** | No emails, phones, or IPs; only `username` + public `alias` | [Project Overview](wiki/Platform%20Overview/Project-Overview.md), [Security & Privacy](wiki/System%20Architecture%20&%20Security/Security-Privacy.md) |
 | **Intent Router** | Priority-ordered regular expressions classify every help message | [Help System & Triage](wiki/Platform%20Administration/Help-System-Triage.md) |
 | **Dual-Channel Support** | The website help form and the community Matrix server share one triage engine | [Help System & Triage](wiki/Platform%20Administration/Help-System-Triage.md) |
 | **Trust Score** | Base 100, displayed as `vouch = score - 100` (±N) | [Core Features](wiki/Platform%20Overview/Core-Features.md) |
@@ -163,7 +163,7 @@ podman healthcheck run tool-library
 
 ---
 
-## 🛠️ Development Commands
+## Development Commands
 
 ```bash
 # ─── Type Safety ───
@@ -188,7 +188,7 @@ node scripts/verify-handoff.mjs  # CI gate: checksum verification
 
 ---
 
-## 📁 Repository Structure (Annotated)
+## Repository Structure (Annotated)
 
 ```
 toolslibrary-v2/
@@ -238,7 +238,7 @@ toolslibrary-v2/
 
 ---
 
-## 🗄️ Data Model Overview
+## Data Model Overview
 
 ```mermaid
 erDiagram
@@ -264,7 +264,7 @@ erDiagram
 
 ---
 
-## 🛡️ Security Highlights
+## Security Highlights
 
 | Layer | Mechanism |
 |-------|-----------|
@@ -276,7 +276,7 @@ erDiagram
 
 ---
 
-## 🧪 Quality Assurance
+## Quality Assurance
 
 - **Zero-stub tolerance**: No `TODO`, `FIXME`, or `throw "Not implemented"` in `src/`
 - **Strict TypeScript**: `tsc --noEmit` passes with no errors
@@ -286,7 +286,7 @@ erDiagram
 
 ---
 
-## 🔗 External References
+## External References
 
 | Technology | Documentation |
 |------------|---------------|
@@ -302,25 +302,25 @@ erDiagram
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-See [`CONTRIBUTING.md`](wiki/Community%20and%20Guidelines/CONTRIBUTING.md) on the wiki, or the copy in the repository root:
+See [`CONTRIBUTING.md`](wiki/Community%20%26%20Guidelines/CONTRIBUTING.md) on the wiki, or the copy in the repository root:
 
 1. **Fork → Branch → PR** with descriptive title
-2. **TypeScript strict mode** — no `any`, no implicit returns
+2. **TypeScript strict mode**: no `any`, no implicit returns
 3. **Zod validation** on all inputs (API routes, Server Actions)
-4. **Zero-stub tolerance** — no `TODO`, `FIXME`, placeholder implementations
-5. **Update relevant wiki page(s)** — documentation lives in `wiki/`
-6. **Run quality gates** — `npm run typecheck`, `npm run build`, `node scripts/verify-handoff.mjs`
+4. **Zero-stub tolerance**: no `TODO`, `FIXME`, placeholder implementations
+5. **Update relevant wiki page(s)**: documentation lives in `wiki/`
+6. **Run quality gates**: `npm run typecheck`, `npm run build`, `node scripts/verify-handoff.mjs`
 
 ---
 
-## 📄 License
+## License
 
-**AGPL-3.0-only** — see `Containerfile` OCI labels and repository root.
+**AGPL-3.0-only**; see the `Containerfile` OCI labels and the license file in the repository root.
 
 This license ensures that if you modify and deploy this software as a network service, you must offer the corresponding source code to your users. It protects the community's right to self-host and audit the platform they depend on.
 
 ---
 
-> **Generated from codebase analysis** — This wiki reflects the actual implementation in `toolslibrary-v2/` as of 2026. Run `node scripts/verify-handoff.mjs` to verify integrity.
+> **Generated from codebase analysis**: this wiki reflects the actual implementation in `toolslibrary-v2/` as of 2026. Run `node scripts/verify-handoff.mjs` to verify integrity.

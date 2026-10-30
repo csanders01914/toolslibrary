@@ -37,7 +37,7 @@ collection.
   host user's UID maps into the container and the volume keeps host ownership.
   No root, no daemon as root, no privileged containers.
 - **Migrations on boot:** the entrypoint runs `prisma migrate deploy` against
-  the version-controlled SQL migrations — never `db push` (a prototyping
+  the version-controlled SQL migrations; never `db push` (a prototyping
   command that can silently truncate or drop columns on drift).
 
 ## 2. Fedora CoreOS preparation
@@ -63,7 +63,7 @@ sudo firewall-cmd --permanent --add-port=3000/tcp && sudo firewall-cmd --reload
 mkdir -p /var/home/core/srv/tool-library/data/uploads
 cd /var/home/core/srv/tool-library
 git clone https://github.com/csanders01914/toolslibrary.git repo
-# (or your fork — the deployment scripts live in the repo root)
+# (or your fork; the deployment scripts live in the repo root)
 ```
 
 Permission model: everything under `data/` is owned by YOUR host user. The
@@ -88,10 +88,10 @@ cd repo
 launches it rootless with `--userns=keep-id`, the `:Z` volume mount, and
 `--network host` (the app serves directly on `APP_PORT`, default 3000). Every
 environment variable you export before calling it is forwarded into the
-container — see the reference table below.
+container; see the reference table below.
 
 First boot applies the SQL migrations (`prisma migrate deploy`), then boots
-`node server.js`. **Register immediately** — the first account on an empty
+`node server.js`. **Register immediately**: the first account on an empty
 database becomes the `ADMIN`.
 
 ## 5. Environment reference
@@ -100,19 +100,19 @@ database becomes the `ADMIN`.
 |---|---|---|
 | `DATABASE_URL` | website | `file:/app/data/tool_library.db` (set by deploy.sh/Containerfile) |
 | `AUTH_SECRET` | website | Session signing secret (regenerated per deploy unless pinned) |
-| `AUTH_TRUST_HOST` | website | `true` — required behind proxies/tunnels |
+| `AUTH_TRUST_HOST` | website | `true`; required behind proxies/tunnels |
 | `APP_PORT` | host (deploy.sh) | Host port for the website (default 3000) |
 | `MATRIX_HOMESERVER_URL` / `MATRIX_BOT_USER_ID` / `MATRIX_BOT_ACCESS_TOKEN` / `MATRIX_ADMIN_ROOM_ID` | website | Deterministic support & triage via your own Matrix homeserver (dormant until set) |
-| `BOT_WEBHOOK_URL` | website | helpbot webhook URL — **Podman container DNS, e.g. `http://helpbot:3005`, never localhost** (required for the help form) |
+| `BOT_WEBHOOK_URL` | website | helpbot webhook URL: **Podman container DNS, e.g. `http://helpbot:3005`, never localhost** (required for the help form) |
 | `HELPDESK_WEBHOOK_SECRET` | website | Shared secret; must equal the bot's `WEBHOOK_SECRET` |
-| `PORT` | helpbot | Webhook listen port (default **3005** — no collision with Next.js :3000) |
+| `PORT` | helpbot | Webhook listen port (default **3005**, no collision with Next.js :3000) |
 | `WEBHOOK_SECRET` | helpbot | Shared secret; must equal `HELPDESK_WEBHOOK_SECRET` |
-| `LIBERAPAY_URL` | build (deploy.sh) | Your Liberapay page URL — surfaced in the site footer when set |
+| `LIBERAPAY_URL` | build (deploy.sh) | Your Liberapay page URL, surfaced in the site footer when set |
 
 ## 6. Cloudflare Tunnel integration
 
 A Cloudflare Tunnel exposes the site publicly without opening firewall ports or
-exposing your home IP — the tunnel makes an outbound-only connection from the
+exposing your home IP; the tunnel makes an outbound-only connection from the
 host to Cloudflare's edge.
 
 ```bash
@@ -134,7 +134,7 @@ sudo cloudflared service install
 Notes that matter for this application:
 
 - **Trusted client IP:** the rate limiter (`src/lib/rateLimit.ts`) prefers the
-  `cf-connecting-ip` header that Cloudflare sets — behind the tunnel, per-IP
+  `cf-connecting-ip` header that Cloudflare sets; behind the tunnel, per-IP
   throttling of login/recovery/help routes works correctly.
 - **HTTPS origin:** the tunnel terminates TLS, and `x-forwarded-proto: https`
   flows through, so the printable QR handoff labels encode the public
@@ -157,8 +157,8 @@ podman run -d --name helpbot --network toollibrary-net --restart always localhos
 # website: join the same network and set BOT_WEBHOOK_URL=http://helpbot:3005
 ```
 
-Full details — including the exact commented `.env` for both containers and
-the strict "BOT_WEBHOOK_URL is not configured." guardrail behavior — are in
+Full details, including the exact commented `.env` for both containers and
+the strict "BOT_WEBHOOK_URL is not configured." guardrail behavior, are in
 `DEPLOYMENT.md`, section "helpbot webhook integration (multi-container
 Podman)".
 
@@ -169,9 +169,9 @@ Podman)".
   `PRAGMA integrity_check`, and prune after 14 days. Setup steps and the
   restore procedure: `DEPLOYMENT.md` section 6.
 - **Schema changes:** `prisma migrate dev` locally, commit the migration,
-  redeploy — `migrate deploy` applies it on boot. Existing `db push`-era
+  redeploy; `migrate deploy` applies it on boot. Existing `db push`-era
   databases need the one-time baseline: `DEPLOYMENT.md` section 7.
-- **Updating:** `git pull && ./deploy.sh` — the build is deterministic
+- **Updating:** `git pull && ./deploy.sh`: the build is deterministic
   (lockfile-driven `npm ci`), migrations apply on boot, and the verification
   checklist in `DEPLOYMENT.md` section 4 confirms the deployment is healthy.
 
@@ -179,5 +179,5 @@ Podman)".
 
 The ToolsLibrary is free software under GNU AGPLv3. Section 13 of the license
 requires that the full corresponding source of this network service remains
-available to every user — if you run a modified version publicly, publish your
+available to every user: if you run a modified version publicly, publish your
 source. The footer links to it on every page.

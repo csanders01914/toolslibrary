@@ -44,7 +44,7 @@ const STEPS = [
   {
     step: '1 · BROWSE',
     accent: 'text-cyan-400',
-    body: 'Search the catalog for anything from power drills to pressure washers — free to browse, no account needed.',
+    body: 'Search the catalog for anything from power drills to pressure washers. Free to browse, no account needed.',
   },
   {
     step: '2 · REQUEST',
@@ -89,7 +89,7 @@ export default async function HomePage() {
         </h1>
         <p className="mt-6 text-zinc-400 max-w-2xl">
           Zero-PII peer-to-peer tool lending and skills exchange. Share, borrow, and connect with
-          your neighbors — no email, no phone, no tracking.
+          your neighbors: no email, no phone, no tracking.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link

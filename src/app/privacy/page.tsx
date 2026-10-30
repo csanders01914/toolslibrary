@@ -20,7 +20,7 @@ import Link from "next/link";
 import { ShieldCheck, Lock, EyeOff, Server, FileX, Ban } from "lucide-react";
 
 export const metadata = {
-  title: "Privacy Policy — Tool Library",
+  title: "Privacy Policy — ToolsLibrary",
   description: "Zero-PII privacy policy: no email, no phone, no IP logging, no analytics.",
 };
 

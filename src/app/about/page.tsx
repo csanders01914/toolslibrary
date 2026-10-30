@@ -20,7 +20,7 @@ import Link from "next/link";
 import { Wrench, ShieldOff, Recycle, Network, Hammer, BookOpen } from "lucide-react";
 
 export const metadata = {
-  title: "About / Manifesto — Tool Library",
+  title: "About / Manifesto — ToolsLibrary",
   description:
     "Right-to-repair, anti-surveillance capitalism, local resilience, and decentralization.",
 };
@@ -66,7 +66,7 @@ export default function AboutPage() {
           About / Manifesto
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          Tool Library is a cypherpunk mutual-aid project: a tool-lending and skill-exchange
+          ToolsLibrary is a cypherpunk mutual-aid project: a tool-lending and skill-exchange
           platform for local communities, built to collect no personal data and run on self-hosted
           hardware.
         </p>
