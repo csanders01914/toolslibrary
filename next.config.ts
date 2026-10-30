@@ -35,6 +35,19 @@ const nextConfig: NextConfig = {
   // Pin workspace tracing to this repository so a stray lockfile in a parent
   // directory cannot pull build traces from outside the project.
   outputFileTracingRoot: path.join(__dirname),
+  // Referrer-Policy: cross-origin navigations leak only the origin, never a
+  // full URL — so path-borne secrets (e.g. the PHASE_30 single-use canary
+  // confirmation token) cannot reach third-party edge infrastructure via a
+  // Referer header. Browsers default to strict-origin-when-cross-origin, but
+  // the header is pinned so older or misconfigured clients cannot regress it.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

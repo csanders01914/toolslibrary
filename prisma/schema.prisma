@@ -36,6 +36,7 @@ model User {
   trustScore         Int           @default(100)
   a11yPrefs          String?       // Anonymous JSON string for synced accessibility prefs
   notificationEmail String?       // PHASE_29: admin-only alert destination for admin alert emails via the local Postfix SMTP relay — the single deliberate PII exception (operator account only, never collected from members)
+  canaryPassphraseHash String?       // PHASE_30: separate canary passphrase (bcrypt cost 12), independent of the login password; required to stage warrant-canary updates
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -47,6 +48,7 @@ model User {
   receivedMsgs Message[]     @relation("ReceivedMessages")
   vouchesGiven    Vouch[]    @relation("VouchesGiven")
   vouchesReceived Vouch[]    @relation("VouchesReceived")
+  canaryPending CanaryPending?
 
   @@index([username])
 }
@@ -171,4 +173,56 @@ model HelpRequest {
   updatedAt    DateTime @updatedAt
 
   @@index([status, route])
+}
+
+// Warrant canary event log (PHASE_30_CANARY_SIGNING). Append-only public
+// audit history: every committed canary action (monthly re-affirmation or
+// disclosure) is recorded with an Ed25519 detached signature over the
+// canonical payload. Deliberately NO foreign key to User — the public canary
+// history must survive the deletion of any account, so the signing admin is
+// snapshotted as plain public handles (alias + username, both public data).
+model CanaryEvent {
+  id            String   @id @default(cuid())
+  seq           Int      @unique // monotonic sequence number, 1-based, allocated inside the commit transaction
+  action        String // "AFFIRM" | "DISCLOSE"
+  note          String? // operator note: optional context for AFFIRM, the required disclosure statement for DISCLOSE
+  committedAt   DateTime
+  expiresAt     DateTime? // AFFIRM only: committedAt + 30 days; null for DISCLOSE
+  signature     String // Ed25519 detached signature (hex) over the canonical payload
+  publicKey     String // Ed25519 public key (base64 SPKI DER) used at signing time
+  adminAlias    String // snapshot of the signing admin's public alias at commit time
+  adminUsername String // snapshot of the signing admin's public username at commit time
+  createdAt     DateTime @default(now())
+
+  @@index([committedAt])
+}
+
+// Staged (pending) canary update awaiting out-of-band email approval
+// (PHASE_30). One per admin: staging a new update replaces any prior row.
+// The raw confirmation token is never stored — only its SHA-256 hash; the
+// single-use token is delivered exclusively via the admin notification email.
+model CanaryPending {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String // "AFFIRM" | "DISCLOSE"
+  note      String?
+  tokenHash String   @unique // SHA-256 hex of the single-use confirmation token
+  expiresAt DateTime // stagedAt + 15 minutes
+  createdAt DateTime @default(now())
+}
+
+// Ed25519 signing keypair for canary events (PHASE_30, singleton row).
+// Generated on first commit. The private key is sealed with AES-256-GCM
+// under a key derived from AUTH_SECRET (environment, never the database) so
+// a database leak alone cannot re-sign forged history; it is decrypted only
+// in memory, only to sign. The public key is published on /transparency so
+// third parties can verify canary signatures offline. Operators record the
+// public-key fingerprint out-of-band — a DB-tampered key swap is then
+// detectable against that record.
+model CanaryKey {
+  id         String   @id @default(cuid())
+  publicKey  String   @unique // base64 SPKI DER
+  privateKey String // sealed: v1:<iv>:<ciphertext>:<authTag>, AES-256-GCM over the PKCS8 PEM
+  createdAt  DateTime @default(now())
 }

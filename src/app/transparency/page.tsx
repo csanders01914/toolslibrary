@@ -14,9 +14,17 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 import { Activity, ShieldCheck, Server, Database, EyeOff, GitCommitHorizontal } from "lucide-react";
+import {
+  CANARY_STATEMENTS,
+  getCanaryHistory,
+  getCanaryState,
+} from "@/lib/canary";
+import { formatDate } from "@/app/admin/AdminShared";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Transparency Report — ToolsLibrary",
@@ -24,19 +32,23 @@ export const metadata = {
     "Warrant canary, third-party data sharing status, and local server metrics.",
 };
 
-const canaryStatements = [
-  "As of the date below, this service has received zero government or law-enforcement requests for user data.",
-  "No gag orders, national security letters, or secret subpoenas have been served on the operators.",
-  "No warrants, court orders, or informal requests have been received from any local, state, or federal agency.",
-  "No backdoors, lawful-intercept hooks, or deliberate weaknesses have been introduced into this software.",
-];
+// PHASE_30_CANARY_SIGNING: the canary section is now database-driven. The
+// statements live in src/lib/canary.ts (embedded in every signed canonical
+// payload — treat that list as immutable); this page renders the derived
+// status, the latest signed event, and the append-only event history. A
+// stale or disclosed canary is rendered as such — the whole value of a
+// warrant canary is that its absence or alteration is loud, not quiet.
 
 const sharingRows = [
   { party: "Advertising networks", status: "None exist" },
   { party: "Analytics services", status: "None exist" },
   { party: "Cloud hosting services", status: "None, self-hosted on local hardware" },
   { party: "Payment processors", status: "None, no payments are processed" },
-  { party: "Email delivery services", status: "None, no emails are collected or sent" },
+  {
+    party: "Email delivery services",
+    status:
+      "Only operator alert emails, via self-hosted local SMTP relay — members never have an email field",
+  },
   { party: "CDNs & font services", status: "None, all assets are served locally" },
 ];
 
@@ -77,7 +89,39 @@ const accentMap: Record<string, string> = {
   emerald: "text-emerald-400",
 };
 
-export default function TransparencyPage() {
+export default async function TransparencyPage() {
+  const [canary, history] = await Promise.all([
+    getCanaryState(),
+    getCanaryHistory(6),
+  ]);
+
+  const status = canary.status;
+  const latest = canary.latest;
+  const disclosed = status === "DISCLOSED";
+  const stale = status === "STALE";
+  const neverAffirmed = status === "NEVER_AFFIRMED";
+
+  // Section chrome follows the status: emerald while intact, amber when the
+  // freshness window lapses or nothing was ever affirmed, red once dropped.
+  const canaryBorder = disclosed
+    ? "border-red-500/50"
+    : stale || neverAffirmed
+      ? "border-amber-500/50"
+      : "border-emerald-500/50";
+  const statusChipClass = disclosed
+    ? "border-red-500/50 bg-red-500/5 text-red-400"
+    : stale || neverAffirmed
+      ? "border-amber-500/50 bg-amber-500/5 text-amber-400"
+      : "border-emerald-500/50 bg-emerald-500/5 text-emerald-400";
+  const statusDotClass = disclosed ? "bg-red-400" : stale || neverAffirmed ? "bg-amber-400" : "bg-emerald-400";
+  const statusLabel = disclosed
+    ? "STATUS: DISCLOSED"
+    : stale
+      ? "STATUS: STALE — ASSUME COMPROMISE"
+      : neverAffirmed
+        ? "STATUS: NEVER AFFIRMED"
+        : "STATUS: INTACT";
+
   return (
     <div className="space-y-8">
       {/* Hero */}
@@ -97,30 +141,131 @@ export default function TransparencyPage() {
       </section>
 
       {/* Warrant Canary */}
-      <section className="border border-emerald-500/50 bg-[#0a0a0a] rounded-none p-6 sm:p-8">
+      <section className={`border bg-[#0a0a0a] rounded-none p-6 sm:p-8 ${canaryBorder}`}>
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <h2 className="flex items-center gap-3 text-xl font-bold text-white tracking-tight">
-            <ShieldCheck className="h-5 w-5 text-emerald-400" aria-hidden="true" />
+            <ShieldCheck className={`h-5 w-5 ${disclosed ? "text-red-400" : stale || neverAffirmed ? "text-amber-400" : "text-emerald-400"}`} aria-hidden="true" />
             Warrant canary
           </h2>
-          <span className="inline-flex items-center gap-2 border border-emerald-500/50 bg-emerald-500/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-400">
-            <span className="h-2 w-2 bg-emerald-400" aria-hidden="true" />
-            STATUS: INTACT
+          <span className={`inline-flex items-center gap-2 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${statusChipClass}`}>
+            <span className={`h-2 w-2 ${statusDotClass}`} aria-hidden="true" />
+            {statusLabel}
           </span>
         </div>
-        <ul className="space-y-3">
-          {canaryStatements.map((statement) => (
-            <li key={statement} className="flex items-start gap-3 text-sm text-zinc-400">
-              <span className="mt-1.5 h-2 w-2 shrink-0 bg-emerald-400" aria-hidden="true" />
-              <span>{statement}</span>
-            </li>
-          ))}
-        </ul>
+
+        {disclosed ? (
+          <>
+            <p className="text-sm leading-relaxed text-red-300">
+              {latest?.note ?? "The operator has disclosed a canary event."}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              The canary was dropped on {latest ? formatDate(latest.committedAt) : "an unknown date"} by the
+              operator. The statements below no longer stand.
+            </p>
+          </>
+        ) : neverAffirmed ? (
+          <p className="text-sm leading-relaxed text-zinc-400">
+            This deployment has not published a canary affirmation yet. Assume
+            compromise until an affirmation appears.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {CANARY_STATEMENTS.map((statement) => (
+              <li key={statement} className="flex items-start gap-3 text-sm text-zinc-400">
+                <span className={`mt-1.5 h-2 w-2 shrink-0 ${disclosed ? "bg-red-400" : "bg-emerald-400"}`} aria-hidden="true" />
+                <span>{statement}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {stale && (
+          <p className="mt-4 border border-amber-500/50 bg-amber-500/5 p-4 font-mono text-xs leading-relaxed text-amber-400" role="note">
+            The canary has not been re-affirmed within its 30-day freshness
+            window (last affirmed {latest ? formatDate(latest.committedAt) : "an unknown date"}).
+            Until an affirmation or an explanation is published, assume
+            compromise and verify independently.
+          </p>
+        )}
+
         <p className="mt-6 font-mono text-[11px] leading-relaxed text-zinc-500">
           If this canary is ever removed, altered, or left stale without explanation, assume
-          compromise and verify independently. Canary last affirmed:{" "}
-          <span className="font-mono text-emerald-400">2026-10-25</span>.
+          compromise and verify independently.{" "}
+          {latest?.action === "AFFIRM" && latest.expiresAt ? (
+            <>
+              Canary last affirmed:{" "}
+              <span className="font-mono text-emerald-400">{formatDate(latest.committedAt)}</span>{" "}
+              · valid through{" "}
+              <span className="font-mono text-emerald-400">{formatDate(latest.expiresAt)}</span>.
+            </>
+          ) : latest ? (
+            <>
+              Canary dropped:{" "}
+              <span className="font-mono text-red-400">{formatDate(latest.committedAt)}</span>.
+            </>
+          ) : (
+            <>No affirmation on record.</>
+          )}
         </p>
+
+        {/* Latest signed event (PHASE_30): the Ed25519 signature and public
+            key are published so third parties can verify the canary offline —
+            a tampered database cannot forge history without a detectable key
+            swap against the operator's out-of-band fingerprint record. */}
+        {latest && (
+          <div className="mt-6 border border-zinc-800 bg-black p-4">
+            <h3 className="mb-3 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+              Latest signed event
+            </h3>
+            <p className="mb-3 font-mono text-[11px] text-zinc-400">
+              SEQ #{latest.seq} · {latest.action} · {formatDate(latest.committedAt)} · signed by{" "}
+              {latest.adminAlias}
+            </p>
+            {/* The note is part of the signed canonical payload — publishing
+                it here is what makes the signature independently verifiable:
+                without it, a third party could not reconstruct the payload of
+                an AFFIRM event to check the signature offline. */}
+            <p className="mb-3 font-mono text-[11px] text-zinc-400">
+              Note: <span className="break-words text-zinc-300">{latest.note ?? "—"}</span>
+            </p>
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-zinc-600">Signature (hex)</p>
+            <pre className="mb-3 overflow-x-auto whitespace-pre-wrap break-all border border-zinc-800 bg-black p-3 font-mono text-[10px] leading-relaxed text-zinc-500">
+              {latest.signature}
+            </pre>
+            <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-zinc-600">Public key (base64 SPKI DER)</p>
+            <pre className="overflow-x-auto whitespace-pre-wrap break-all border border-zinc-800 bg-black p-3 font-mono text-[10px] leading-relaxed text-zinc-500">
+              {latest.publicKey}
+            </pre>
+            <p className="mt-3 font-mono text-[10px] leading-relaxed text-zinc-600">
+              Verify offline: decode the base64 SPKI public key to PEM (openssl pkey -pubin -inform
+              DER -pubout), reconstruct the canonical payload per src/lib/canary.ts
+              (buildCanonicalPayload), then openssl dgst -sha256 -verify.
+            </p>
+          </div>
+        )}
+
+        {/* Append-only event history */}
+        {history.length > 1 && (
+          <div className="mt-6">
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+              Event history
+            </p>
+            <ul className="space-y-1">
+              {history.map((event) => (
+                <li key={event.id} className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-zinc-500">
+                  <span>
+                    #{event.seq}{" "}
+                    <span className={event.action === "DISCLOSE" ? "text-red-400" : "text-emerald-400"}>
+                      {event.action}
+                    </span>{" "}
+                    {formatDate(event.committedAt)} by {event.adminAlias}
+                    {event.note && <span className="text-zinc-600"> · {event.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {/* Third-party sharing */}
