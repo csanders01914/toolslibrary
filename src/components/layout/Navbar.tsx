@@ -105,7 +105,7 @@ export function Navbar() {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2" aria-label="ToolsLibrary Home">
           <img src="/hand-icon.png" alt="" className="w-7 h-7" />
-          <img src="/navbar_logo.png" alt="" className="h-7" />
+          <img src="/navbar_logo.png" alt="" className="h-10" />
         </Link>
 
         {/* Desktop: nav links + session cluster */}
