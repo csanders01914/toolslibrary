@@ -54,7 +54,7 @@ const channels: Channel[] = [
     accent: "hover:border-purple-500/50",
     iconColor: "text-purple-400",
     title: "Liberapay",
-    body: "Recurring donations with zero platform tracking. Liberapay is itself a free-software, self-hostable patronage network, which suits how this project is funded.",
+    body: "Recurring donations with zero platform tracking. Liberapay is a website that processes anonymous donations, which suits how this project is funded.",
     note: "Now Live",
     href: LIBERAPAY_PROFILE_URL,
     cta: <LiberapayDonateButton />,

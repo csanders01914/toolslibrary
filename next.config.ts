@@ -23,6 +23,15 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // Server Actions carry the tool-listing photo on /tools/[id]/edit. The
+  // default 1MB body limit rejects virtually every real phone photo (2-8MB)
+  // with a silent 413 before updateTool runs, so the limit is raised above
+  // the 5MB client-validated image cap plus multipart field overhead.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
+  },
   // Pin workspace tracing to this repository so a stray lockfile in a parent
   // directory cannot pull build traces from outside the project.
   outputFileTracingRoot: path.join(__dirname),
