@@ -22,7 +22,11 @@ import {
   getCanaryHistory,
   getCanaryState,
 } from "@/lib/canary";
-import { formatDate } from "@/app/admin/AdminShared";
+// Server-safe utility module — NOT AdminShared.tsx, which is a "use client"
+// module: importing its functions into this Server Component turned them into
+// client references and threw "Attempted to call formatDate() from the
+// server" the moment a committed canary event existed to render.
+import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 

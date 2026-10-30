@@ -53,11 +53,13 @@ import type {
 import {
   chip,
   StatusChip,
-  formatDate,
-  formatTime,
   type ToolRow,
   type SkillRow,
 } from "./AdminShared";
+// Date utilities live in the server-safe "@/lib/format" module (see its
+// header) — AdminShared no longer exports them so server components can
+// share the same implementations.
+import { formatDate, formatTime } from "@/lib/format";
 
 // ================================================================
 // Admin Command Console — terminal aesthetic.
