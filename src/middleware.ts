@@ -22,10 +22,18 @@ export default auth((req) => {
   // Force password change: a session flagged mustChangePassword (stock seeded
   // credentials) is locked out of every route until the password is replaced.
   const mustChangePassword = req.auth?.user?.mustChangePassword === true;
+  // PHASE_29: forced admin notification-email setup flag (see below).
+  const needsAdminEmail = req.auth?.user?.needsAdminEmail === true;
   const { pathname } = req.nextUrl;
 
   if (mustChangePassword && pathname !== "/change-password") {
     return Response.redirect(new URL("/change-password", req.nextUrl));
+  }
+
+  // PHASE_29: forced admin email setup runs AFTER the password gate — a flagged
+  // admin is locked to /admin-email until a notification email is on record.
+  if (!mustChangePassword && needsAdminEmail && pathname !== "/admin-email") {
+    return Response.redirect(new URL("/admin-email", req.nextUrl));
   }
 
   // Route protection is handled in authConfig.callbacks.authorized

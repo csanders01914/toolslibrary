@@ -51,6 +51,11 @@
 #   LIBERAPAY_URL
 #              (optional funding surface: the operator's Liberapay page URL,
 #              passed as a build arg and surfaced in the site footer)
+#   SMTP_HOST / SMTP_PORT / SMTP_FROM
+#              (admin alert emails via the local Postfix relay; host defaults
+#              to localhost and port to 25 — with --network host that is the
+#              FCOS host's Postfix loopback listener. Alerts are skipped when
+#              SMTP_FROM is unset)
 #
 # Notes:
 #   - AUTH_SECRET is regenerated on every deploy; existing login sessions are
@@ -105,6 +110,9 @@ if [ -n "${MATRIX_BOT_ACCESS_TOKEN:-}" ]; then RUN_ARGS+=(-e "MATRIX_BOT_ACCESS_
 if [ -n "${MATRIX_ADMIN_ROOM_ID:-}" ];  then RUN_ARGS+=(-e "MATRIX_ADMIN_ROOM_ID=$MATRIX_ADMIN_ROOM_ID");     fi
 if [ -n "${BOT_WEBHOOK_URL:-}" ];       then RUN_ARGS+=(-e "BOT_WEBHOOK_URL=$BOT_WEBHOOK_URL");               fi
 if [ -n "${HELPDESK_WEBHOOK_SECRET:-}" ]; then RUN_ARGS+=(-e "HELPDESK_WEBHOOK_SECRET=$HELPDESK_WEBHOOK_SECRET"); fi
+if [ -n "${SMTP_HOST:-}" ]; then RUN_ARGS+=(-e "SMTP_HOST=$SMTP_HOST"); fi
+if [ -n "${SMTP_PORT:-}" ]; then RUN_ARGS+=(-e "SMTP_PORT=$SMTP_PORT"); fi
+if [ -n "${SMTP_FROM:-}" ]; then RUN_ARGS+=(-e "SMTP_FROM=$SMTP_FROM"); fi
 
 podman run "${RUN_ARGS[@]}" "$IMAGE"
 

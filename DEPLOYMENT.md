@@ -120,6 +120,17 @@ BOT_WEBHOOK_URL=http://helpbot:3005
 # Shared secret; must equal WEBHOOK_SECRET in the helpbot container's .env.
 HELPDESK_WEBHOOK_SECRET=change-me-to-a-long-random-value
 
+# Admin alert emails (PHASE_29) via the local Postfix SMTP relay — no
+# third-party email API, no API keys. Requires Postfix installed on the FCOS
+# host and listening on the loopback interface (inet_interfaces = localhost):
+#   sudo dnf install -y postfix && sudo systemctl enable --now postfix
+# SMTP_HOST/SMTP_PORT default to localhost:25 (correct for --network host);
+# when SMTP_FROM is empty the app stores the admin notification email but
+# skips sending.
+SMTP_HOST=localhost
+SMTP_PORT=25
+SMTP_FROM=ToolsLibrary <alerts@tools-library.com>
+
 # ── helpbot container (tools-library-bot/.env) ───────────────────────────
 # Webhook listen port; defaults to 3005 (no collision with Next.js :3000).
 PORT=3005

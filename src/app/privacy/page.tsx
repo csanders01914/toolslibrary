@@ -21,11 +21,11 @@ import { ShieldCheck, Lock, EyeOff, Server, FileX, Ban } from "lucide-react";
 
 export const metadata = {
   title: "Privacy Policy — ToolsLibrary",
-  description: "Zero-PII privacy policy: no email, no phone, no IP logging, no analytics.",
+  description: "Zero-PII privacy policy: no member email, no phone, no IP logging, no analytics.",
 };
 
 const neverCollected = [
-  "Email addresses: we never ask for them, and the sign-up form has no field to enter one.",
+  "Email addresses: member accounts never have an email field — the sign-up form has no place to enter one. The single exception is the operator's own admin account, which may store one notification email address (see the data inventory below).",
   "Phone numbers: never requested, never stored.",
   "Real names: your public identity is a self-chosen alias. We do not ask for your legal name.",
   "IP addresses: the application performs no IP logging.",
@@ -57,6 +57,10 @@ const whatIsStored = [
   {
     title: "Anonymous Accessibility Preferences",
     body: "Optional JSON (contrast, font size, dyslexia font, spacing) synced to your account so your accessibility settings follow you between devices. It contains no identifying data.",
+  },
+  {
+    title: "Operator Notification Email (admin account only)",
+    body: "One email address on the administrator account, used exclusively as the destination for operational alert emails (support escalations, new registrations, and change alerts) delivered by the platform's own self-hosted local SMTP relay — never a third-party email provider. It is never requested from member accounts, never displayed publicly, and member-facing features never read it.",
   },
 ];
 

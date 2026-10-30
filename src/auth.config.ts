@@ -48,6 +48,11 @@ export const authConfig = {
         token.alias = user.alias;
         token.role = user.role;
         token.mustChangePassword = user.mustChangePassword ?? false;
+        // PHASE_29: forced admin notification-email setup flag, derived from
+        // the authorize() return (DB truth at sign-in). The Node bundle in
+        // src/auth.ts re-derives this on session.update() — client payloads
+        // are never trusted.
+        token.needsAdminEmail = user.needsAdminEmail ?? false;
       }
       return token;
     },
@@ -58,6 +63,7 @@ export const authConfig = {
         session.user.alias = token.alias as string;
         session.user.role = token.role as string;
         session.user.mustChangePassword = token.mustChangePassword === true;
+        session.user.needsAdminEmail = token.needsAdminEmail === true;
       }
       return session;
     },
