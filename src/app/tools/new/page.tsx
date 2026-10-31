@@ -21,7 +21,8 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import PhotoUpload from "@/components/tools/PhotoUpload";
 
 const CATEGORIES = [
   "Power Tools",
@@ -69,31 +70,6 @@ export default function NewToolPage() {
       </div>
     );
   }
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Image must be less than 5MB");
-        return;
-      }
-      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!allowedTypes.includes(file.type)) {
-        setError("Invalid image type. Use JPEG, PNG, GIF, or WebP");
-        return;
-      }
-      setImage(file);
-      setError("");
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setImage(null);
-    setImagePreview(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,34 +208,20 @@ export default function NewToolPage() {
           <span className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
             TOOL PHOTO (OPTIONAL, MAX 5MB)
           </span>
-          <div className="relative border border-zinc-800 bg-black">
-            {imagePreview ? (
-              <div className="relative">
-                <img src={imagePreview} alt="Preview" className="w-full h-auto object-contain max-h-64" />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 p-2 bg-black border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                  aria-label="Remove image"
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative w-full h-40 flex flex-col items-center justify-center text-center">
-                <p className="font-mono text-xs text-zinc-400">CLICK TO UPLOAD</p>
-                <p className="font-mono text-[11px] text-zinc-600 mt-1">JPEG, PNG, GIF, WebP · MAX 5MB</p>
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleImageChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  aria-label="Upload tool photo"
-                />
-              </div>
-            )}
-          </div>
+          <PhotoUpload
+            id="image-upload"
+            previewUrl={imagePreview}
+            file={image}
+            onAccept={(file, dataUrl) => {
+              setImage(file);
+              setImagePreview(dataUrl);
+            }}
+            onClear={() => {
+              setImage(null);
+              setImagePreview(null);
+            }}
+            clearLabel="Remove image"
+          />
         </div>
 
         {/* Submit */}
