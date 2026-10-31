@@ -24,6 +24,7 @@ import { AlertTriangle, Loader2, Save, Trash2, X } from "lucide-react";
 import { updateTool, deleteTool } from "@/lib/actions/tools";
 import { CATEGORIES } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
+import PhotoUpload from "@/components/tools/PhotoUpload";
 
 type ActionState = { success?: boolean; error?: string; toolId?: string } | undefined;
 
@@ -50,7 +51,6 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
   const [imageRemoved, setImageRemoved] = useState(false);
-  const [imageError, setImageError] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
 
@@ -69,33 +69,6 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
       router.refresh();
     }
   }, [deleteState, router]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setImageError("Image must be less than 5MB");
-        return;
-      }
-      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!allowedTypes.includes(file.type)) {
-        setImageError("Invalid image type. Use JPEG, PNG, GIF, or WebP");
-        return;
-      }
-      setImage(file);
-      setImageRemoved(false);
-      setImageError("");
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const clearImage = () => {
-    setImage(null);
-    setImagePreview(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
-    setImageRemoved(false);
-  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -123,9 +96,9 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
         <input type="hidden" name="toolId" value={tool.id} />
         <input type="hidden" name="removeImage" value={imageRemoved ? "true" : "false"} />
 
-        {(updateState?.error || imageError) && (
+        {updateState?.error && (
           <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs" role="alert">
-            {updateState?.error || imageError}
+            {updateState.error}
           </div>
         )}
 
@@ -188,47 +161,37 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
           </p>
         </div>
 
-        {/* Photo — the file input stays mounted so a selected file always
-            reaches the server action; the preview renders above it. */}
+        {/* Photo — PhotoUpload keeps the file input mounted in every state so a
+            selected file always reaches the server action, and resets the input
+            on clear/rejection so a removed or rejected file is never submitted. */}
         <div>
           <span className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
             TOOL PHOTO (OPTIONAL, MAX 5MB)
           </span>
-          <div className="border border-zinc-800 bg-black">
-            {imagePreview && (
-              <div className="relative">
-                <img src={imagePreview} alt="Photo preview" className="w-full h-auto object-contain max-h-64" />
-                <button
-                  type="button"
-                  onClick={clearImage}
-                  className="absolute top-2 right-2 p-2 bg-black border border-red-500/60 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                  aria-label={image ? "Remove selected photo" : "Remove existing photo"}
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
-            )}
-            <div className={`relative w-full h-24 flex flex-col items-center justify-center text-center ${imagePreview ? "border-t border-zinc-800" : "h-40"}`}>
-              <p className="font-mono text-xs text-zinc-400">
-                {imagePreview ? "CLICK TO REPLACE" : "CLICK TO UPLOAD"}
-              </p>
-              <p className="font-mono text-[11px] text-zinc-600 mt-1">JPEG, PNG, GIF, WebP · MAX 5MB</p>
-              <input
-                id="image-upload"
-                type="file"
-                name="image"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleImageChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                aria-label="Upload tool photo"
-              />
-            </div>
-          </div>
-          {tool.imageUrl && !imageRemoved && !image && (
-            <p className="mt-1 font-mono text-[11px] text-zinc-500">
-              Current photo is kept unless you remove or replace it.
-            </p>
-          )}
+          <PhotoUpload
+            id="image-upload"
+            name="image"
+            previewUrl={imagePreview}
+            file={image}
+            onAccept={(file, dataUrl) => {
+              setImage(file);
+              setImageRemoved(false);
+              setImagePreview(dataUrl);
+            }}
+            onClear={() => {
+              setImage(null);
+              setImagePreview(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
+              setImageRemoved(false);
+            }}
+            clearLabel={image ? "Remove selected photo" : "Remove existing photo"}
+            hint={
+              tool.imageUrl && !imageRemoved && !image ? (
+                <p className="mt-1 font-mono text-[11px] text-zinc-500">
+                  Current photo is kept unless you remove or replace it.
+                </p>
+              ) : undefined
+            }
+          />
         </div>
 
         {/* Submit */}
