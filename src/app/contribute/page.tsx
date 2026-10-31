@@ -50,7 +50,7 @@ const paths = [
     icon: BookOpen,
     accent: "purple" as const,
     title: "Documentation & wiki",
-    body: "The self-hosted BookStack wiki at wiki.tools-library.com hosts guides: tool maintenance walkthroughs, safety primers, and self-hosting documentation. Good documentation is as valuable as good code, and the wiki never requires an account to read.",
+    body: "The self-hosted LeafWiki wiki at wiki.tools-library.com hosts guides: tool maintenance walkthroughs, safety primers, and self-hosting documentation. Good documentation is as valuable as good code, and the wiki never requires an account to read.",
     action: { href: "http://wiki.tools-library.com", label: "Visit the wiki", external: true },
   },
 ];
