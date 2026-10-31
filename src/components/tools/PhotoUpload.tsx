@@ -19,12 +19,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Image as ImageIcon, X } from "lucide-react";
 
 /**
- * Client-side mirror of the server checks in lib/actions/tools.ts and
- * api/tools/create/route.ts so a file that passes here never bounces at 400.
+ * Client-side mirror of the server checks in lib/uploads.ts (enforced by the
+ * /api/tools/create and /api/tools/[id]/image route handlers) so a file that
+ * passes here never bounces at 400.
  */
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -42,17 +43,8 @@ interface PhotoUploadProps {
   previewUrl: string | null;
   /** Newly selected, validated file; null when the preview is the existing stored photo. */
   file: File | null;
-  /** FormData key for server-action forms ("image"); omit when the form builds its own FormData. */
-  name?: string;
   /** Optional note rendered under the upload zone. */
   hint?: ReactNode;
-  /**
-   * Optional external ref to the file input. Server-action forms need it to
-   * re-populate the input after React 19's post-action form reset wipes
-   * uncontrolled fields — otherwise a failed save silently drops the photo
-   * on the next submission.
-   */
-  inputRef?: RefObject<HTMLInputElement | null>;
   /**
    * Called with the validated file and its blob: URL preview. The URL is
    * created and revoked by this component — consumers must only store it.
@@ -77,22 +69,20 @@ interface PhotoUploadProps {
  * tracked and revoked on replace, on clear, and on unmount; page-owned URLs
  * (/api/uploads/...) are never revoked here.
  *
- * Submission: the file input stays mounted in every state so server-action
- * forms always receive the raw File via the form's FormData, and the input is
- * reset on clear/rejection so a removed or rejected file is never submitted.
+ * Submission: consumers read the validated File from onAccept and append it
+ * to their own fetch FormData (see /api/tools/[id]/image); the input is reset
+ * on clear/rejection so a removed or rejected file is never re-picked.
  */
 export default function PhotoUpload({
   id,
   previewUrl,
   file,
-  name,
   hint,
-  inputRef,
   onAccept,
   onClear,
   clearLabel,
 }: PhotoUploadProps) {
-  const localInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   /** The blob: URL this component currently owns, if any. */
   const createdUrlRef = useRef<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
@@ -114,11 +104,6 @@ export default function PhotoUpload({
       }
     };
   }, []);
-
-  const setInputRef = (node: HTMLInputElement | null) => {
-    localInputRef.current = node;
-    if (inputRef) inputRef.current = node;
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files?.[0];
@@ -145,7 +130,7 @@ export default function PhotoUpload({
   };
 
   const handleClear = () => {
-    if (localInputRef.current) localInputRef.current.value = "";
+    if (inputRef.current) inputRef.current.value = "";
     revokeCreatedUrl();
     setRejectError(null);
     onClear();
@@ -223,10 +208,9 @@ export default function PhotoUpload({
             </>
           )}
           <input
-            ref={setInputRef}
+            ref={inputRef}
             id={id}
             type="file"
-            name={name}
             accept="image/jpeg,image/png,image/gif,image/webp"
             onChange={handleImageChange}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"

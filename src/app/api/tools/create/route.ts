@@ -20,9 +20,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
 import { CATEGORIES } from "@/lib/constants";
+import { saveUploadedImage } from "@/lib/uploads";
 
 const createToolSchema = z.object({
   name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
@@ -59,28 +58,11 @@ export async function POST(request: NextRequest) {
   let imageUrl: string | null = null;
 
   if (image && image instanceof File && image.size > 0) {
-    if (image.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ success: false, error: "Image must be less than 5MB" }, { status: 400 });
+    const saved = await saveUploadedImage(image);
+    if (saved.error) {
+      return NextResponse.json({ success: false, error: saved.error }, { status: 400 });
     }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(image.type)) {
-      return NextResponse.json({ success: false, error: "Invalid image type. Use JPEG, PNG, GIF, or WebP" }, { status: 400 });
-    }
-
-    const uploadsDir = path.resolve(process.cwd(), "data/uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    const ext = path.extname(image.name).toLowerCase();
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const filePath = path.join(uploadsDir, filename);
-
-    const buffer = Buffer.from(await image.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
-
-    imageUrl = filename;
+    imageUrl = saved.filename ?? null;
   }
 
   const tool = await prisma.tool.create({
