@@ -45,21 +45,25 @@ const STEPS = [
   {
     step: '1 · BROWSE',
     accent: 'text-cyan-400',
+    glow: 'hover:border-cyan-300 hover:shadow-[0_0_2px_#67e8f9]',
     body: 'Search the catalog for anything from power drills to pressure washers. Free to browse, no account needed.',
   },
   {
     step: '2 · REQUEST',
     accent: 'text-purple-400',
+    glow: 'hover:border-purple-300 hover:shadow-[0_0_2px_#d8b4fe]',
     body: 'Pick your dates and send a borrow request. The owner gets a message and approves it.',
   },
   {
     step: '3 · MEET',
     accent: 'text-emerald-400',
+    glow: 'hover:border-emerald-300 hover:shadow-[0_0_2px_#6ee7b7]',
     body: 'Meet the owner and verify the handoff with a one-time code, so both of you know the exchange happened.',
   },
   {
     step: '4 · RETURN',
     accent: 'text-red-400',
+    glow: 'hover:border-red-300 hover:shadow-[0_0_2px_#fca5a5]',
     body: 'Return the tool on time and leave a vouch for the owner. Good karma keeps the library healthy.',
   },
 ];
@@ -133,7 +137,10 @@ export default async function HomePage() {
         <h2 className="font-mono text-xs uppercase tracking-[0.2em] text-zinc-500 mb-4">HOW IT WORKS</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {STEPS.map((step) => (
-            <div key={step.step} className="bg-[#0a0a0a] border border-zinc-800 p-5">
+            <div
+              key={step.step}
+              className={`bg-[#0a0a0a] border border-zinc-800 p-5 transition-[border-color,box-shadow] duration-200 ${step.glow}`}
+            >
               <h3 className={`font-mono text-xs tracking-widest ${step.accent}`}>{step.step}</h3>
               <p className="text-sm text-zinc-400 mt-3 leading-relaxed">{step.body}</p>
             </div>
