@@ -26,8 +26,8 @@ export const dynamic = "force-dynamic";
 export default async function ToolsPage() {
   // Guest browsing (GUEST_ALIAS_REDACTION): owner aliases are stripped from
   // the payload itself so the real strings never reach a guest's browser.
-  // Availability status stays in the payload (the status filter needs it) and
-  // is censored at render time inside ToolsClient.
+  // Availability status stays in the payload (the AVAILABLE ONLY filter needs
+  // it) and is censored at render time inside ToolsClient.
   const [session, tools] = await Promise.all([
     auth(),
     prisma.tool.findMany({
