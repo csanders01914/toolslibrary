@@ -24,7 +24,6 @@ import { CATEGORIES } from "@/lib/constants";
 import Redacted from "@/components/privacy/Redacted";
 
 const ALL_CATEGORIES = ["All", ...CATEGORIES];
-const STATUS_OPTIONS = ["All", "AVAILABLE", "BORROWED", "MAINTENANCE"];
 
 interface Tool {
   id: string;
@@ -46,7 +45,7 @@ interface ToolsClientProps {
   // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases
   // and availability status render as red asterisks. For guests the server
   // has already replaced alias strings in the payload; status is masked here
-  // at render time so the status filter keeps working.
+  // at render time so the AVAILABLE ONLY filter keeps working.
   guestView: boolean;
 }
 
@@ -72,15 +71,15 @@ export default function ToolsClient({ initialTools, guestView }: ToolsClientProp
   const [tools, setTools] = useState<Tool[]>(initialTools);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
-  const [status, setStatus] = useState("All");
+  const [availableOnly, setAvailableOnly] = useState(true);
 
   const filteredTools = tools.filter((tool) => {
     const matchesSearch =
       tool.name.toLowerCase().includes(search.toLowerCase()) ||
       tool.description.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = category === "All" || tool.category === category;
-    const matchesStatus = status === "All" || tool.status === status;
-    return matchesSearch && matchesCategory && matchesStatus;
+    const matchesAvailability = !availableOnly || tool.status === "AVAILABLE";
+    return matchesSearch && matchesCategory && matchesAvailability;
   });
 
   return (
@@ -88,7 +87,9 @@ export default function ToolsClient({ initialTools, guestView }: ToolsClientProp
       {/* Header row */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="font-mono text-sm text-cyan-400 tracking-[0.2em] uppercase">TOOLS CATALOG</h1>
-        <span className="font-mono text-xs text-zinc-500">{filteredTools.length} listings</span>
+        <span className="font-mono text-xs text-zinc-500">
+          {filteredTools.length} of {tools.length} listings
+        </span>
       </div>
 
       {/* Search */}
@@ -133,18 +134,16 @@ export default function ToolsClient({ initialTools, guestView }: ToolsClientProp
             </button>
           ))}
         </div>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-base text-zinc-100 focus:border-cyan-500 focus:outline-none appearance-none cursor-pointer"
-          aria-label="Filter by status"
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <label className="tap-target gap-2 cursor-pointer font-mono text-[10px] uppercase tracking-wider text-zinc-400">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => setAvailableOnly(e.target.checked)}
+            className="w-4 h-4 bg-black border border-zinc-700 accent-cyan-500 cursor-pointer"
+            aria-label="Show only available tools"
+          />
+          AVAILABLE ONLY
+        </label>
         <Link
           href="/tools/new"
           className="ml-auto font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 active:bg-cyan-500/20 transition-colors cursor-pointer"
