@@ -18,8 +18,8 @@
 
 "use client";
 
-import { useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
 import { AlertCircle, CheckCircle2, Image as ImageIcon, X } from "lucide-react";
 
 /**
@@ -38,7 +38,7 @@ function formatFileSize(bytes: number): string {
 interface PhotoUploadProps {
   /** id for the file input, for aria wiring. */
   id: string;
-  /** Preview to render: data URL of a newly picked file, or /api/uploads/<name> for the stored photo. */
+  /** Preview to render: blob: URL of a newly picked file, or /api/uploads/<name> for the stored photo. */
   previewUrl: string | null;
   /** Newly selected, validated file; null when the preview is the existing stored photo. */
   file: File | null;
@@ -46,8 +46,18 @@ interface PhotoUploadProps {
   name?: string;
   /** Optional note rendered under the upload zone. */
   hint?: ReactNode;
-  /** Called with a validated file and its data-URL preview once it passes client validation. */
-  onAccept: (file: File, previewDataUrl: string) => void;
+  /**
+   * Optional external ref to the file input. Server-action forms need it to
+   * re-populate the input after React 19's post-action form reset wipes
+   * uncontrolled fields — otherwise a failed save silently drops the photo
+   * on the next submission.
+   */
+  inputRef?: RefObject<HTMLInputElement | null>;
+  /**
+   * Called with the validated file and its blob: URL preview. The URL is
+   * created and revoked by this component — consumers must only store it.
+   */
+  onAccept: (file: File, previewUrl: string) => void;
   /** Called when the user removes the selected or existing photo. */
   onClear: () => void;
   /** Accessible label for the remove button. */
@@ -60,8 +70,16 @@ interface PhotoUploadProps {
  *  - red border + inline alert when a file is rejected (too large / wrong type). The input
  *    value is reset on rejection so re-picking the same file re-triggers validation;
  *  - neutral "CURRENT PHOTO" strip when an existing stored photo is displayed.
- * The file input stays mounted in every state so server-action forms always receive the
- * selected file, and it is reset on clear so a removed photo is never silently submitted.
+ *
+ * Preview lifecycle: the preview for a newly picked file is a same-origin
+ * `blob:` URL from URL.createObjectURL — never a local file path, never a
+ * multi-megabyte base64 data URL. Every blob URL this component creates is
+ * tracked and revoked on replace, on clear, and on unmount; page-owned URLs
+ * (/api/uploads/...) are never revoked here.
+ *
+ * Submission: the file input stays mounted in every state so server-action
+ * forms always receive the raw File via the form's FormData, and the input is
+ * reset on clear/rejection so a removed or rejected file is never submitted.
  */
 export default function PhotoUpload({
   id,
@@ -69,12 +87,38 @@ export default function PhotoUpload({
   file,
   name,
   hint,
+  inputRef,
   onAccept,
   onClear,
   clearLabel,
 }: PhotoUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const localInputRef = useRef<HTMLInputElement>(null);
+  /** The blob: URL this component currently owns, if any. */
+  const createdUrlRef = useRef<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
+
+  const revokeCreatedUrl = () => {
+    if (createdUrlRef.current) {
+      URL.revokeObjectURL(createdUrlRef.current);
+      createdUrlRef.current = null;
+    }
+  };
+
+  // Unmount cleanup: release the blob URL so the decoded image is not held
+  // in browser memory after the picker is gone.
+  useEffect(() => {
+    return () => {
+      if (createdUrlRef.current) {
+        URL.revokeObjectURL(createdUrlRef.current);
+        createdUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const setInputRef = (node: HTMLInputElement | null) => {
+    localInputRef.current = node;
+    if (inputRef) inputRef.current = node;
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = e.target.files?.[0];
@@ -92,13 +136,17 @@ export default function PhotoUpload({
     }
 
     setRejectError(null);
-    const reader = new FileReader();
-    reader.onloadend = () => onAccept(picked, reader.result as string);
-    reader.readAsDataURL(picked);
+    // Same-origin blob: URL preview — created synchronously, no base64
+    // materialization, and no local path ever reaches the DOM.
+    revokeCreatedUrl();
+    const url = URL.createObjectURL(picked);
+    createdUrlRef.current = url;
+    onAccept(picked, url);
   };
 
   const handleClear = () => {
-    if (inputRef.current) inputRef.current.value = "";
+    if (localInputRef.current) localInputRef.current.value = "";
+    revokeCreatedUrl();
     setRejectError(null);
     onClear();
   };
@@ -175,7 +223,7 @@ export default function PhotoUpload({
             </>
           )}
           <input
-            ref={inputRef}
+            ref={setInputRef}
             id={id}
             type="file"
             name={name}
