@@ -50,6 +50,7 @@ import {
 // header) — AdminShared is a "use client" module and must not export plain
 // functions that server components also need.
 import { formatDate, formatTime } from "@/lib/format";
+import PasswordStrengthMeter from "@/components/auth/PasswordStrengthMeter";
 
 // ================================================================
 // Warrant Canary Console (PHASE_30_CANARY_SIGNING) — terminal
@@ -151,6 +152,12 @@ export default function CanaryClient({
     CanaryActionState,
     FormData
   >(cancelCanaryStagingAction, undefined);
+
+  // Controlled new-passphrase fields so the strength meter re-grades on
+  // every keystroke. Setup (first enrollment) and change keep separate
+  // state — they are independent forms that never render simultaneously.
+  const [setupPassphrase, setSetupPassphrase] = useState("");
+  const [changePassphrase, setChangePassphrase] = useState("");
 
   // Refresh server data after any successful action so the status panel,
   // pending banner, and setup/operate mode switch reflect database truth.
@@ -330,7 +337,18 @@ export default function CanaryClient({
                 maxLength={128}
                 required
                 disabled={passphrasePending}
+                value={setupPassphrase}
+                onChange={(e) => setSetupPassphrase(e.target.value)}
+                aria-describedby="canary-setup-passphrase-strength"
                 className={inputClass}
+              />
+              {/* Real-time strength meter: STRONG requires 20+ characters,
+                  upper/lower case, a number, and a symbol. The server action
+                  still enforces the CANARY_MIN_PASSPHRASE_LENGTH floor. */}
+              <PasswordStrengthMeter
+                value={setupPassphrase}
+                minLength={CANARY_MIN_PASSPHRASE_LENGTH}
+                describedById="canary-setup-passphrase-strength"
               />
             </div>
             <div>
@@ -556,7 +574,15 @@ export default function CanaryClient({
                   maxLength={128}
                   required
                   disabled={passphrasePending}
+                  value={changePassphrase}
+                  onChange={(e) => setChangePassphrase(e.target.value)}
+                  aria-describedby="canary-change-passphrase-strength"
                   className={inputClass}
+                />
+                <PasswordStrengthMeter
+                  value={changePassphrase}
+                  minLength={CANARY_MIN_PASSPHRASE_LENGTH}
+                  describedById="canary-change-passphrase-strength"
                 />
               </div>
               <div>

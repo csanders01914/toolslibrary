@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerUser } from "@/lib/actions/auth";
 import PowExplainerLink from "@/components/pow/PowExplainer";
+import PasswordStrengthMeter from "@/components/auth/PasswordStrengthMeter";
 import { extractNonce, fetchChallenge, solveProofOfWork } from "@/lib/powClient";
 import { AlertCircle, CheckCircle, Copy, Download, Shield, Loader2, Key } from "lucide-react";
 
@@ -33,6 +34,9 @@ export default function RegisterPage() {
   const [keysConfirmed, setKeysConfirmed] = useState(false);
   const [powStatus, setPowStatus] = useState("");
   const [powError, setPowError] = useState("");
+  // The password is controlled so the strength meter re-grades on every
+  // keystroke (real-time indicator requirement).
+  const [password, setPassword] = useState("");
   // Guards against double-submits while the proof of work is being solved.
   const powSubmitGuardRef = useRef(false);
 
@@ -326,12 +330,18 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                   disabled={state?.success}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-describedby="register-password-strength"
                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
                   placeholder="At least 10 characters"
                   minLength={10}
                 />
               </div>
-              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 10 characters. Use a passphrase for best security.</p>
+              {/* Real-time strength meter: STRONG requires 20+ characters,
+                  upper/lower case, a number, and a symbol. Server-side the
+                  register action still enforces its own 10-char minimum. */}
+              <PasswordStrengthMeter value={password} minLength={10} describedById="register-password-strength" />
             </div>
 
             {/* Proof-of-work status + explainer */}
