@@ -58,9 +58,10 @@
 #              SMTP_FROM is unset)
 #
 # Notes:
-#   - AUTH_SECRET is regenerated on every deploy; existing login sessions are
-#     invalidated. Pin it by exporting AUTH_SECRET before calling this script
-#     if session persistence across redeploys is required.
+#   - AUTH_SECRET is persisted in $DATA_DIR/.auth_secret and reused across
+#     deploys, so login sessions and the admin canary seal survive redeploys.
+#     Export AUTH_SECRET to pin or rotate it explicitly (rotating signs every
+#     member out once and invalidates the canary seal until re-sealed).
 #   - Nothing here modifies the local source tree: the build context is
 #     filtered by .dockerignore and all persistent state lives in DATA_DIR.
 
@@ -81,6 +82,33 @@ CONTAINERFILE="$SCRIPT_DIR/Containerfile"
 echo "==> Preparing persistent data volume at $DATA_DIR"
 mkdir -p "$DATA_DIR/uploads"
 
+# --- AUTH_SECRET persistence -------------------------------------------------
+# The session cookie is an Auth.js JWE encrypted with AUTH_SECRET, and the
+# admin canary seal is AES-encrypted with a key derived from it. Generating a
+# fresh secret on every deploy invalidates every existing login (the browser
+# keeps sending a cookie the new container cannot decrypt — Auth.js logs
+# JWTSessionError "no matching decryption secret" and every authenticated
+# route answers 401) and breaks canary seal verification. Persist the secret
+# in the data volume and reuse it; it changes only on a fresh DATA_DIR or
+# when the operator pins/rotates it explicitly via the AUTH_SECRET
+# environment variable. The file lives inside the mounted volume — the same
+# trust domain as the container environment that already carries the secret.
+SECRET_FILE="$DATA_DIR/.auth_secret"
+if [ -n "${AUTH_SECRET:-}" ]; then
+  # Operator-pinned or rotated secret: honor it and persist for future deploys.
+  printf '%s\n' "$AUTH_SECRET" > "$SECRET_FILE"
+  chmod 600 "$SECRET_FILE"
+  echo "==> AUTH_SECRET: using operator-provided value (persisted to $SECRET_FILE)"
+elif [ -s "$SECRET_FILE" ]; then
+  AUTH_SECRET="$(cat "$SECRET_FILE")"
+  echo "==> AUTH_SECRET: reusing persisted secret from $SECRET_FILE"
+else
+  AUTH_SECRET="$(openssl rand -hex 32)"
+  printf '%s\n' "$AUTH_SECRET" > "$SECRET_FILE"
+  chmod 600 "$SECRET_FILE"
+  echo "==> AUTH_SECRET: generated and persisted to $SECRET_FILE"
+fi
+
 echo "==> Building $IMAGE"
 podman build --build-arg "LIBERAPAY_URL=${LIBERAPAY_URL:-}" -t "$IMAGE" -f "$CONTAINERFILE" "$SCRIPT_DIR"
 
@@ -99,11 +127,7 @@ RUN_ARGS=(
   -e "AUTH_TRUST_HOST=true"
   -v "$DATA_DIR:/app/data:Z"
 )
-if [ -n "${AUTH_SECRET:-}" ]; then
-  RUN_ARGS+=(-e "AUTH_SECRET=$AUTH_SECRET")
-else
-  RUN_ARGS+=(-e "AUTH_SECRET=$(openssl rand -hex 32)")
-fi
+RUN_ARGS+=(-e "AUTH_SECRET=$AUTH_SECRET")
 if [ -n "${MATRIX_HOMESERVER_URL:-}" ]; then RUN_ARGS+=(-e "MATRIX_HOMESERVER_URL=$MATRIX_HOMESERVER_URL"); fi
 if [ -n "${MATRIX_BOT_USER_ID:-}" ];    then RUN_ARGS+=(-e "MATRIX_BOT_USER_ID=$MATRIX_BOT_USER_ID");         fi
 if [ -n "${MATRIX_BOT_ACCESS_TOKEN:-}" ]; then RUN_ARGS+=(-e "MATRIX_BOT_ACCESS_TOKEN=$MATRIX_BOT_ACCESS_TOKEN"); fi
