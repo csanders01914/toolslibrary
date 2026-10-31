@@ -209,7 +209,9 @@ export async function getUnreadCount(userId: string) {
 }
 
 export async function getUserStats(userId: string) {
-  const [toolsLent, activeBorrows, skillsOffered, trustScore, activeLoansAsOwner, activeLoansAsBorrower] = await Promise.all([
+  const [toolsLent, toolsOwned, activeBorrows, skillsOffered, trustScore, activeLoansAsOwner, activeLoansAsBorrower] = await Promise.all([
+    // "Tools Lent" = tools currently out on loan (approved or active), not merely owned.
+    prisma.loan.count({ where: { tool: { ownerId: userId }, status: { in: ["APPROVED", "ACTIVE"] } } }),
     prisma.tool.count({ where: { ownerId: userId } }),
     prisma.loan.count({ where: { borrowerId: userId, status: { in: ["APPROVED", "ACTIVE"] } } }),
     prisma.skill.count({ where: { ownerId: userId, available: true } }),
@@ -228,6 +230,7 @@ export async function getUserStats(userId: string) {
 
   return {
     toolsLent,
+    toolsOwned,
     activeBorrows,
     skillsOffered,
     trustScore: trustScore?.trustScore ?? 100,
