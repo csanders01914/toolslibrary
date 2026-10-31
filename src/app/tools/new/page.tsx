@@ -212,9 +212,9 @@ export default function NewToolPage() {
             id="image-upload"
             previewUrl={imagePreview}
             file={image}
-            onAccept={(file, dataUrl) => {
+            onAccept={(file, previewUrl) => {
               setImage(file);
-              setImagePreview(dataUrl);
+              setImagePreview(previewUrl);
             }}
             onClear={() => {
               setImage(null);

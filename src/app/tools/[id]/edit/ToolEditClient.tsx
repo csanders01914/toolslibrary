@@ -18,7 +18,7 @@
 
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, Save, Trash2, X } from "lucide-react";
 import { updateTool, deleteTool } from "@/lib/actions/tools";
@@ -54,7 +54,32 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
 
+  // Live handle on the file input inside PhotoUpload, used to re-populate it
+  // before submission (see syncFileInput below).
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+
   const onLoan = tool.status === "BORROWED";
+
+  /**
+   * React 19 resets uncontrolled inputs after a server action completes, so a
+   * failed save (validation error, auth error) wipes the file input while the
+   * `image` state still holds the selected File — the next save would then
+   * silently submit no photo. Before every submission, re-attach the held
+   * File to the input via DataTransfer so the raw File object always reaches
+   * the server action's FormData.
+   */
+  const syncFileInput = () => {
+    const input = imageInputRef.current;
+    if (!input || !image || (input.files && input.files.length > 0)) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(image);
+      input.files = dt.files;
+    } catch {
+      // DataTransfer is unavailable on very old browsers; the user can
+      // re-pick the file. Never block submission on this self-heal.
+    }
+  };
 
   useEffect(() => {
     if (updateState?.success && updateState.toolId) {
@@ -92,7 +117,7 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
       )}
 
       {/* Edit Form */}
-      <form action={updateAction} className="space-y-6">
+      <form action={updateAction} onSubmitCapture={syncFileInput} className="space-y-6">
         <input type="hidden" name="toolId" value={tool.id} />
         <input type="hidden" name="removeImage" value={imageRemoved ? "true" : "false"} />
 
@@ -171,12 +196,13 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
           <PhotoUpload
             id="image-upload"
             name="image"
+            inputRef={imageInputRef}
             previewUrl={imagePreview}
             file={image}
-            onAccept={(file, dataUrl) => {
+            onAccept={(file, previewUrl) => {
               setImage(file);
               setImageRemoved(false);
-              setImagePreview(dataUrl);
+              setImagePreview(previewUrl);
             }}
             onClear={() => {
               setImage(null);
