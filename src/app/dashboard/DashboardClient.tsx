@@ -64,6 +64,7 @@ interface User {
 
 interface Stats {
   toolsLent: number;
+  toolsOwned: number;
   activeBorrows: number;
   skillsOffered: number;
   skillsTotal: number;
@@ -522,7 +523,7 @@ export default function DashboardClient({
               <div>
                 <p className="font-mono text-xs text-red-400">Danger Zone</p>
                 <p className="font-mono text-[11px] text-zinc-500 mt-1">
-                  Permanently delete this account, your {stats.toolsLent} tool(s), {stats.skillsTotal}{" "}
+                  Permanently delete this account, your {stats.toolsOwned} tool(s), {stats.skillsTotal}{" "}
                   skill(s), and all loans and messages. Zero-PII purge — cannot be undone.
                 </p>
               </div>
@@ -887,7 +888,7 @@ export default function DashboardClient({
           <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400">
             <p className="font-mono text-xs uppercase tracking-widest">THIS ACTION CANNOT BE UNDONE.</p>
             <p className="text-sm mt-2 text-zinc-400">
-              Your account <span className="font-mono">@{user.username}</span>, your {stats.toolsLent}{" "}
+              Your account <span className="font-mono">@{user.username}</span>, your {stats.toolsOwned}{" "}
               tool(s), {stats.skillsTotal} skill(s), and all loans and messages will be permanently
               purged. Recovery codes become invalid.
             </p>
