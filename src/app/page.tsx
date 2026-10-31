@@ -49,7 +49,7 @@ const STEPS = [
   },
   {
     step: '2 · REQUEST',
-    accent: 'text-cyan-400',
+    accent: 'text-purple-400',
     body: 'Pick your dates and send a borrow request. The owner gets a message and approves it.',
   },
   {
@@ -59,7 +59,7 @@ const STEPS = [
   },
   {
     step: '4 · RETURN',
-    accent: 'text-emerald-400',
+    accent: 'text-red-400',
     body: 'Return the tool on time and leave a vouch for the owner. Good karma keeps the library healthy.',
   },
 ];
