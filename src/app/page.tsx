@@ -45,25 +45,25 @@ const STEPS = [
   {
     step: '1 · BROWSE',
     accent: 'text-cyan-400',
-    glow: 'hover:border-cyan-300 hover:shadow-[0_0_2px_#67e8f9]',
+    glow: 'hover:border-cyan-400 hover:shadow-[0_0_2px_#67e8f9]',
     body: 'Search the catalog for anything from power drills to pressure washers. Free to browse, no account needed.',
   },
   {
     step: '2 · REQUEST',
     accent: 'text-purple-400',
-    glow: 'hover:border-purple-300 hover:shadow-[0_0_2px_#d8b4fe]',
+    glow: 'hover:border-purple-400 hover:shadow-[0_0_2px_#d8b4fe]',
     body: 'Pick your dates and send a borrow request. The owner gets a message and approves it.',
   },
   {
     step: '3 · MEET',
     accent: 'text-emerald-400',
-    glow: 'hover:border-emerald-300 hover:shadow-[0_0_2px_#6ee7b7]',
+    glow: 'hover:border-emerald-400 hover:shadow-[0_0_2px_#6ee7b7]',
     body: 'Meet the owner and verify the handoff with a one-time code, so both of you know the exchange happened.',
   },
   {
     step: '4 · RETURN',
     accent: 'text-red-400',
-    glow: 'hover:border-red-300 hover:shadow-[0_0_2px_#fca5a5]',
+    glow: 'hover:border-red-400 hover:shadow-[0_0_2px_#fca5a5]',
     body: 'Return the tool on time and leave a vouch for the owner. Good karma keeps the library healthy.',
   },
 ];
