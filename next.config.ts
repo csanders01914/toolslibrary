@@ -30,6 +30,13 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '6mb',
+      // Cloudflare tunnel: the browser sends the public site in the Origin
+      // header while the container serves on an internal host, so the Server
+      // Actions CSRF origin check rejects every action POST with 403
+      // ("x-forwarded-host" mismatch). Allowlist the public deployment
+      // origins — bare hostnames, no scheme, as Next matches them against
+      // the Origin header's host component.
+      allowedOrigins: ['www.tools-library.com', 'tools-library.com'],
     },
   },
   // Pin workspace tracing to this repository so a stray lockfile in a parent
