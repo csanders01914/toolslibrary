@@ -101,7 +101,7 @@ database becomes the `ADMIN`.
 | Variable | Set on | Purpose |
 |---|---|---|
 | `DATABASE_URL` | website | `file:/app/data/tool_library.db` (set by deploy.sh/Containerfile) |
-| `AUTH_SECRET` | website | Session signing secret (regenerated per deploy unless pinned) |
+| `AUTH_SECRET` | website | Session signing + canary-seal key; persisted in `data/.auth_secret` and reused across deploys (export `AUTH_SECRET` to pin/rotate) |
 | `AUTH_TRUST_HOST` | website | `true`; required behind proxies/tunnels |
 | `APP_PORT` | host (deploy.sh) | Host port for the website (default 3000) |
 | `MATRIX_HOMESERVER_URL` / `MATRIX_BOT_USER_ID` / `MATRIX_BOT_ACCESS_TOKEN` / `MATRIX_ADMIN_ROOM_ID` | website | Deterministic support & triage via your own Matrix homeserver (dormant until set) |

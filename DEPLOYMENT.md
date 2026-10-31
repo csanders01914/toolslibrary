@@ -33,6 +33,18 @@ podman build -t localhost/tool-library:latest -f Containerfile .
 
 ## 3. Run the container (rootless, keep-id)
 
+Generate the session secret ONCE and persist it in the data volume; every
+deploy must reuse it. Regenerating per deploy invalidates all existing logins
+(the browser keeps sending a session cookie the new container cannot decrypt —
+Auth.js logs `JWTSessionError: no matching decryption secret` and every
+authenticated route answers 401) and breaks the admin canary seal, which is
+keyed from `AUTH_SECRET`:
+
+```bash
+printf '%s\n' "$(openssl rand -hex 32)" > /var/home/core/srv/tool-library/data/.auth_secret
+chmod 600 /var/home/core/srv/tool-library/data/.auth_secret
+```
+
 ```bash
 podman run -d \
   --name tool-library \
@@ -40,7 +52,7 @@ podman run -d \
   --userns=keep-id \
   --network host \
   -e DATABASE_URL="file:/app/data/tool_library.db" \
-  -e AUTH_SECRET="$(openssl rand -hex 32)" \
+  -e AUTH_SECRET="$(cat /var/home/core/srv/tool-library/data/.auth_secret)" \
   -e AUTH_TRUST_HOST="true" \
   -e MATRIX_HOMESERVER_URL="https://matrix.tools-library.com" \
   -e MATRIX_BOT_USER_ID="@helpbot:matrix.tools-library.com" \
