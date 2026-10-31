@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [user, toolsLent, toolsOwned, activeBorrows, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower, vouchableLoans] = await Promise.all([
+  const [user, toolsLent, toolsOwned, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower, vouchableLoans] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, username: true, alias: true, bio: true, trustScore: true, role: true, notificationEmail: true, createdAt: true },
@@ -38,7 +38,6 @@ export default async function DashboardPage() {
     // "Tools Lent" = tools currently out on loan (approved or active), not merely owned.
     prisma.loan.count({ where: { tool: { ownerId: session.user.id }, status: { in: ["APPROVED", "ACTIVE"] } } }),
     prisma.tool.count({ where: { ownerId: session.user.id } }),
-    prisma.loan.count({ where: { borrowerId: session.user.id, status: { in: ["APPROVED", "ACTIVE"] } } }),
     prisma.skill.count({ where: { ownerId: session.user.id, available: true } }),
     prisma.skill.count({ where: { ownerId: session.user.id } }),
     prisma.loan.findMany({
@@ -65,7 +64,6 @@ export default async function DashboardPage() {
       stats={{
         toolsLent,
         toolsOwned,
-        activeBorrows,
         skillsOffered,
         skillsTotal,
         trustScore: user?.trustScore ?? 100,
