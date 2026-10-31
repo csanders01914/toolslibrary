@@ -34,7 +34,6 @@ import {
   Pencil,
   Save,
   Clock,
-  ArrowLeftRight,
   Wrench,
   AlertTriangle,
   KeyRound,
@@ -65,7 +64,6 @@ interface User {
 interface Stats {
   toolsLent: number;
   toolsOwned: number;
-  activeBorrows: number;
   skillsOffered: number;
   skillsTotal: number;
   trustScore: number;
@@ -206,7 +204,17 @@ export default function DashboardClient({
     }
   }, [emailState?.success, session, router, update]);
 
-  const statCards = [
+  interface StatCard {
+    label: string;
+    value: string;
+    icon: typeof Shield;
+    accent: string;
+    hover: string;
+    // When set, the whole card is a link to a management surface.
+    href?: string;
+  }
+
+  const statCards: StatCard[] = [
     {
       label: "Trust Score",
       value: String(stats.trustScore),
@@ -222,11 +230,12 @@ export default function DashboardClient({
       hover: "hover:border-cyan-500/50",
     },
     {
-      label: "Active Borrows",
-      value: String(stats.activeBorrows),
-      icon: ArrowLeftRight,
+      label: "Tools Offered",
+      value: String(stats.toolsOwned),
+      icon: Package,
       accent: "text-amber-400",
       hover: "hover:border-amber-500/50",
+      href: "/dashboard/tools",
     },
     {
       label: "Skills Offered",
@@ -234,6 +243,7 @@ export default function DashboardClient({
       icon: Wrench,
       accent: "text-purple-400",
       hover: "hover:border-purple-500/50",
+      href: "/dashboard/skills",
     },
   ];
 
@@ -266,18 +276,36 @@ export default function DashboardClient({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;
-            return (
-              <div
-                key={card.label}
-                className={`bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 transition-colors ${card.hover}`}
-              >
+            const body = (
+              <>
                 <div className="mb-4 flex items-center justify-between">
                   <Icon className={`h-6 w-6 ${card.accent}`} aria-hidden="true" />
+                  {card.href && (
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">Manage →</span>
+                  )}
                 </div>
                 <p className={`font-mono text-4xl font-bold ${card.accent}`}>
                   {card.value}
                 </p>
                 <p className="mt-1 font-mono text-[11px] uppercase tracking-widest text-zinc-500">{card.label}</p>
+              </>
+            );
+            const classes = `block bg-[#0a0a0a] border border-zinc-800 rounded-none p-6 transition-colors ${card.hover}`;
+            if (card.href) {
+              return (
+                <Link
+                  key={card.label}
+                  href={card.href}
+                  className={`${classes} focus-visible:outline-none focus-visible:border-white`}
+                  aria-label={`${card.label} — view and manage your listings`}
+                >
+                  {body}
+                </Link>
+              );
+            }
+            return (
+              <div key={card.label} className={classes}>
+                {body}
               </div>
             );
           })}
