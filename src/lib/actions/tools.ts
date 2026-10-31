@@ -22,25 +22,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import fs from "node:fs";
-import path from "node:path";
-import { CATEGORIES } from "@/lib/constants";
-
-const createToolSchema = z.object({
-  name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long"),
-  category: z.string().min(1, "Category is required"),
-  image: z.instanceof(File).optional().nullable(),
-});
-
-const updateToolSchema = z.object({
-  toolId: z.string().min(1),
-  name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long"),
-  category: z.string().min(1, "Category is required"),
-  image: z.instanceof(File).optional().nullable(),
-  removeImage: z.string().optional(), // "true" when the owner clears the existing photo
-});
+import { deleteUploadedImage } from "@/lib/uploads";
 
 const deleteToolSchema = z.object({
   toolId: z.string().min(1),
@@ -58,162 +40,14 @@ const manageLoanSchema = z.object({
   returnCondition: z.enum(["GOOD", "DAMAGED"]).optional(),
 });
 
-const UPLOADS_DIR = path.resolve(process.cwd(), "data/uploads");
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-
 /**
- * Validates and persists an uploaded listing photo into data/uploads.
- * Returns the stored filename, an error string, or null when no file was provided.
+ * Listing creation and metadata edits (including photo upload/replace/remove)
+ * are handled by the REST route handlers /api/tools/create and
+ * /api/tools/[id]/image — plain fetch endpoints that pass the Cloudflare
+ * Tunnel edge, which rejects multi-megabyte multipart POSTs aimed at Server
+ * Action endpoints with an instant 403. Only text-only server actions remain
+ * here.
  */
-async function saveUploadedImage(image: File): Promise<{ filename?: string; error?: string }> {
-  if (image.size > 5 * 1024 * 1024) {
-    return { error: "Image must be less than 5MB" };
-  }
-  if (!ALLOWED_IMAGE_TYPES.includes(image.type)) {
-    return { error: "Invalid image type. Use JPEG, PNG, GIF, or WebP" };
-  }
-
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-
-  const ext = path.extname(image.name).toLowerCase();
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-  const filePath = path.join(UPLOADS_DIR, filename);
-
-  const buffer = Buffer.from(await image.arrayBuffer());
-  fs.writeFileSync(filePath, buffer);
-
-  return { filename };
-}
-
-/** Removes a previously stored upload. Filenames are system-generated; anything else is refused. */
-function deleteUploadedImage(filename: string | null | undefined) {
-  if (!filename || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
-  const filePath = path.join(UPLOADS_DIR, filename);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-}
-
-export async function createTool(
-  prevState: { success?: boolean; error?: string; toolId?: string } | undefined,
-  formData: FormData
-) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { success: false, error: "Authentication required" };
-  }
-
-  const rawData = {
-    name: formData.get("name"),
-    description: formData.get("description"),
-    category: formData.get("category"),
-    image: formData.get("image"),
-  };
-
-  const parsed = createToolSchema.safeParse(rawData);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
-  }
-
-  const { name, description, category, image } = parsed.data;
-
-  if (!CATEGORIES.includes(category)) {
-    return { success: false, error: "Invalid category" };
-  }
-
-  let imageUrl: string | null = null;
-
-  if (image && image instanceof File && image.size > 0) {
-    const saved = await saveUploadedImage(image);
-    if (saved.error) {
-      return { success: false, error: saved.error };
-    }
-    imageUrl = saved.filename ?? null;
-  }
-
-  const tool = await prisma.tool.create({
-    data: {
-      name,
-      description,
-      category,
-      imageUrl,
-      ownerId: session.user.id,
-    },
-  });
-
-  return { success: true, toolId: tool.id };
-}
-
-/**
- * Owner (or admin) edit path for an existing listing. Replaces metadata and,
- * optionally, the photo: a new upload supersedes the old file, an explicit
- * removeImage flag clears it, and otherwise the current photo is kept.
- */
-export async function updateTool(
-  prevState: { success?: boolean; error?: string; toolId?: string } | undefined,
-  formData: FormData
-) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { success: false, error: "Authentication required" };
-  }
-
-  const rawData = {
-    toolId: formData.get("toolId"),
-    name: formData.get("name"),
-    description: formData.get("description"),
-    category: formData.get("category"),
-    image: formData.get("image"),
-    // Null (absent field) must normalize to undefined for the optional zod
-    // schema — see manageLoan above.
-    removeImage: formData.get("removeImage") ?? undefined,
-  };
-
-  const parsed = updateToolSchema.safeParse(rawData);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
-  }
-
-  const { toolId, name, description, category, image, removeImage } = parsed.data;
-
-  if (!CATEGORIES.includes(category)) {
-    return { success: false, error: "Invalid category" };
-  }
-
-  const tool = await prisma.tool.findUnique({ where: { id: toolId } });
-  if (!tool) {
-    return { success: false, error: "Tool not found" };
-  }
-
-  if (tool.ownerId !== session.user.id && session.user.role !== "ADMIN") {
-    return { success: false, error: "Not authorized to modify this tool" };
-  }
-
-  let imageUrl = tool.imageUrl;
-
-  if (image && image instanceof File && image.size > 0) {
-    const saved = await saveUploadedImage(image);
-    if (saved.error) {
-      return { success: false, error: saved.error };
-    }
-    if (saved.filename) {
-      deleteUploadedImage(tool.imageUrl);
-      imageUrl = saved.filename;
-    }
-  } else if (removeImage === "true" && tool.imageUrl) {
-    deleteUploadedImage(tool.imageUrl);
-    imageUrl = null;
-  }
-
-  await prisma.tool.update({
-    where: { id: tool.id },
-    data: { name, description, category, imageUrl },
-  });
-
-  return { success: true, toolId: tool.id };
-}
 
 /**
  * Owner (or admin) removal of a listing. Blocked while the tool is on an

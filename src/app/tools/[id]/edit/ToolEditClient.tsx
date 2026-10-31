@@ -18,10 +18,10 @@
 
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, Save, Trash2, X } from "lucide-react";
-import { updateTool, deleteTool } from "@/lib/actions/tools";
+import { deleteTool } from "@/lib/actions/tools";
 import { CATEGORIES } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
 import PhotoUpload from "@/components/tools/PhotoUpload";
@@ -42,7 +42,6 @@ interface ToolEditClientProps {
 export default function ToolEditClient({ tool }: ToolEditClientProps) {
   const router = useRouter();
 
-  const [updateState, updateAction, updatePending] = useActionState<ActionState, FormData>(updateTool, undefined);
   const [deleteState, deleteAction, deletePending] = useActionState<ActionState, FormData>(deleteTool, undefined);
 
   const [name, setName] = useState(tool.name);
@@ -51,42 +50,55 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
-
-  // Live handle on the file input inside PhotoUpload, used to re-populate it
-  // before submission (see syncFileInput below).
-  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const onLoan = tool.status === "BORROWED";
 
   /**
-   * React 19 resets uncontrolled inputs after a server action completes, so a
-   * failed save (validation error, auth error) wipes the file input while the
-   * `image` state still holds the selected File — the next save would then
-   * silently submit no photo. Before every submission, re-attach the held
-   * File to the input via DataTransfer so the raw File object always reaches
-   * the server action's FormData.
+   * Submission bypasses Server Actions entirely: the whole edit form —
+   * including the photo File held in React state — is POSTed as
+   * multipart/form-data with a standard fetch to /api/tools/[id]/image.
+   * Behind the Cloudflare Tunnel the edge proxy rejects multi-megabyte binary
+   * multipart POSTs aimed at Server Action endpoints with an instant 403,
+   * while plain REST route handlers pass. The File is appended straight from
+   * state, so no input re-population (DataTransfer) workaround is needed.
    */
-  const syncFileInput = () => {
-    const input = imageInputRef.current;
-    if (!input || !image || (input.files && input.files.length > 0)) return;
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (saving) return;
+    setError(null);
+
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("description", description);
+    formData.append("category", category);
+    formData.append("removeImage", imageRemoved ? "true" : "false");
+    if (image) {
+      formData.append("image", image);
+    }
+
+    setSaving(true);
     try {
-      const dt = new DataTransfer();
-      dt.items.add(image);
-      input.files = dt.files;
+      const res = await fetch(`/api/tools/${tool.id}/image`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/tools/${data.toolId}`);
+        router.refresh();
+      } else {
+        setError(data.error || "Failed to save changes");
+      }
     } catch {
-      // DataTransfer is unavailable on very old browsers; the user can
-      // re-pick the file. Never block submission on this self-heal.
+      setError("Network error. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
-
-  useEffect(() => {
-    if (updateState?.success && updateState.toolId) {
-      router.push(`/tools/${updateState.toolId}`);
-      router.refresh();
-    }
-  }, [updateState, router]);
 
   useEffect(() => {
     if (deleteState?.success) {
@@ -117,13 +129,10 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
       )}
 
       {/* Edit Form */}
-      <form action={updateAction} onSubmitCapture={syncFileInput} className="space-y-6">
-        <input type="hidden" name="toolId" value={tool.id} />
-        <input type="hidden" name="removeImage" value={imageRemoved ? "true" : "false"} />
-
-        {updateState?.error && (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 font-mono text-xs" role="alert">
-            {updateState.error}
+            {error}
           </div>
         )}
 
@@ -186,17 +195,16 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
           </p>
         </div>
 
-        {/* Photo — PhotoUpload keeps the file input mounted in every state so a
-            selected file always reaches the server action, and resets the input
-            on clear/rejection so a removed or rejected file is never submitted. */}
+        {/* Photo — the selected File lives in React state and is appended to
+            the fetch FormData on submit; PhotoUpload owns the blob: preview
+            lifecycle and resets the input on clear/rejection so a removed or
+            rejected file is never submitted. */}
         <div>
           <span className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
             TOOL PHOTO (OPTIONAL, MAX 5MB)
           </span>
           <PhotoUpload
             id="image-upload"
-            name="image"
-            inputRef={imageInputRef}
             previewUrl={imagePreview}
             file={image}
             onAccept={(file, previewUrl) => {
@@ -206,8 +214,15 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
             }}
             onClear={() => {
               setImage(null);
-              setImagePreview(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
-              setImageRemoved(false);
+              if (image) {
+                // Discarding a newly picked file: fall back to the stored photo.
+                setImagePreview(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
+                setImageRemoved(false);
+              } else {
+                // Removing the stored photo: mark it for deletion on save.
+                setImagePreview(null);
+                setImageRemoved(true);
+              }
             }}
             clearLabel={image ? "Remove selected photo" : "Remove existing photo"}
             hint={
@@ -231,10 +246,10 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
           </button>
           <button
             type="submit"
-            disabled={updatePending}
+            disabled={saving}
             className="flex-1 font-mono text-xs uppercase tracking-widest px-4 py-2 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {updatePending ? (
+            {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 SAVING...
