@@ -52,10 +52,14 @@
 #              (optional funding surface: the operator's Liberapay page URL,
 #              passed as a build arg and surfaced in the site footer)
 #   SMTP_HOST / SMTP_PORT / SMTP_FROM
-#              (admin alert emails via the local Postfix relay; host defaults
-#              to localhost and port to 25 — with --network host that is the
-#              FCOS host's Postfix loopback listener. Alerts are skipped when
-#              SMTP_FROM is unset)
+#              (admin alert emails, end-to-end encrypted: every body is
+#              PGP-encrypted to the operator's public key before the SMTP
+#              handoff, then relayed via the local Postfix → Resend smart
+#              host. SMTP_HOST defaults to host.containers.internal
+#              (containerized topology); with --network host set
+#              SMTP_HOST=localhost so it reaches the FCOS host's Postfix
+#              loopback listener. Alerts are skipped when SMTP_FROM is
+#              unset)
 #
 # Notes:
 #   - AUTH_SECRET is persisted in $DATA_DIR/.auth_secret and reused across

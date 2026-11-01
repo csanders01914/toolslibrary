@@ -105,7 +105,7 @@ graph TB
         RATELIMIT[Token-Bucket Rate Limiter]
         CRYPTO[Crypto Service<br/>Recovery Code Hashing]
         CANARY[Ed25519 Canary Signing]
-        EMAIL[Admin Alert Emails<br/>local Postfix relay]
+        EMAIL[Admin Alert Emails<br/>PGP-encrypted · Postfix → Resend]
     end
 
     subgraph "Data Layer"
@@ -281,7 +281,9 @@ toolslibrary-v2/
 │   │   ├── rateLimit.ts       # Token-bucket rate limiter
 │   │   ├── pow.ts / powClient.ts  # Proof-of-work gate (server + browser)
 │   │   ├── canary.ts / canaryShared.ts  # Signed warrant canary engine
-│   │   ├── email.ts           # Admin alert emails via local Postfix relay
+│   │   ├── email.ts           # Admin alert notifications (E2EE: PGP-encrypted bodies)
+│   │   ├── crypto/encryptEmail.ts  # PGP body encryption to the operator's key
+│   │   ├── mail/transporter.ts     # E2EE SMTP dispatch (local Postfix → Resend)
 │   │   ├── redact.ts          # Guest alias/availability masking
 │   │   ├── crypto.ts          # Recovery code generation + hashing
 │   │   ├── format.ts          # Server-safe date formatting
@@ -354,6 +356,7 @@ erDiagram
 | **Abuse resistance** | Token-bucket rate limits and proof-of-work gates on unauthenticated write surfaces |
 | **Support** | Deterministic triage: fixed replies, regex routing, escalation to the admin team room and the operator's alert email |
 | **Warrant canary** | Ed25519-signed append-only event log; staging requires a dedicated passphrase plus an emailed single-use token |
+| **Email (E2EE)** | Alert and test-email bodies are PGP-encrypted to the operator's public key before the SMTP handoff; the Postfix → Resend relay chain only ever observes ciphertext plus routing metadata |
 | **Validation** | Zod schemas on all inputs (API routes, forms, Server Actions) |
 | **Container** | Rootless Podman, `--userns=keep-id`, SELinux `:Z`, non-root user |
 
@@ -365,7 +368,7 @@ erDiagram
 - **Strict TypeScript**: `tsc --noEmit` passes with no errors
 - **Schema-driven**: Prisma is the single source of truth; Zod mirrors it for runtime validation
 - **Checksum verification**: `verify-handoff.mjs` checks repo integrity between sessions
-- **No runtime external dependencies**: everything bundles into the standalone build
+- **No runtime external services in the request path**: everything bundles into the standalone build; the only outbound third-party hop is the Resend email smart host, which relays PGP-ciphertext bodies it cannot read
 
 ---
 
@@ -378,6 +381,8 @@ erDiagram
 | NextAuth v5 | <https://authjs.dev> |
 | Tailwind CSS v4 | <https://tailwindcss.com> |
 | Zod | <https://zod.dev> |
+| openpgp 6 (E2EE mail) | <https://openpgpjs.org> |
+| nodemailer (SMTP transport) | <https://nodemailer.com> |
 | Matrix Client-Server API | <https://matrix.org/docs/> |
 | Podman Rootless | <https://rootlesscontaine.rs/getting-started/podman/> |
 | Fedora CoreOS | <https://fedoraproject.org/coreos/> |

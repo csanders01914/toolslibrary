@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   KeyRound,
   Mail,
+  Send,
   Trash2,
   Loader2,
 } from "lucide-react";
@@ -45,7 +46,7 @@ import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
 import { vouchForUser, declineVouch } from "@/lib/actions/vouch";
 import { updateProfile } from "@/lib/actions/messages";
 import { deleteOwnAccount } from "@/lib/actions/auth";
-import { setAdminEmail } from "@/lib/actions/admin";
+import { setAdminEmail, sendTestEmail } from "@/lib/actions/admin";
 import { VOUCH_DELTA } from "@/lib/constants";
 import { Modal } from "@/components/ui/Modal";
 import { NOTIFICATION_REFRESH_EVENT } from "@/components/layout/NotificationBell";
@@ -127,6 +128,7 @@ export default function DashboardClient({
     undefined
   );
   const [emailState, emailAction, emailPending] = useActionState<AdminEmailActionState, FormData>(setAdminEmail, undefined);
+  const [testEmailState, testEmailAction, testEmailPending] = useActionState<ActionState, FormData>(sendTestEmail, undefined);
   const { data: session, update } = useSession();
   const [editingProfile, setEditingProfile] = useState(false);
   const [localAlias, setLocalAlias] = useState(user.alias);
@@ -447,8 +449,9 @@ export default function DashboardClient({
                 <div className="min-w-0">
                   <p className="font-mono text-xs text-zinc-400">Notification Email (Admin)</p>
                   <p className="font-mono text-[11px] text-zinc-500 mt-1">
-                    Destination for operational alert emails (support escalations, new registrations)
-                    sent via the self-hosted local SMTP relay. The only email stored on this platform — operator account only.
+                    Destination for operational alert emails (support escalations, new registrations),
+                    PGP-encrypted to your key before leaving the server via the local Postfix → Resend relay.
+                    The only email stored on this platform — operator account only.
                   </p>
                   {!editingEmail &&
                     (user.notificationEmail ? (
@@ -458,6 +461,17 @@ export default function DashboardClient({
                         Not set — admin alert emails are disabled.
                       </p>
                     ))}
+                  {!editingEmail && testEmailState?.success && (
+                    <p className="font-mono text-[11px] text-emerald-400 mt-2" role="status">
+                      Test email sent — check your inbox (and spam folder). The body arrives
+                      PGP-encrypted; ProtonMail decrypts it automatically.
+                    </p>
+                  )}
+                  {!editingEmail && testEmailState?.error && (
+                    <p className="font-mono text-[11px] text-red-400 mt-2" role="alert">
+                      {testEmailState.error}
+                    </p>
+                  )}
                 </div>
                 {editingEmail ? (
                   <form action={emailAction} noValidate className="w-full sm:w-auto sm:min-w-[320px] space-y-3">
@@ -533,17 +547,45 @@ export default function DashboardClient({
                     </div>
                   </form>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingEmail(true);
-                      setLocalEmail(user.notificationEmail ?? "");
-                    }}
-                    className="inline-flex items-center gap-2 self-start border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 sm:self-auto"
-                  >
-                    <Mail className="h-4 w-4" aria-hidden="true" />
-                    {user.notificationEmail ? "Change Email" : "Add Email"}
-                  </button>
+                  <div className="flex flex-wrap items-start gap-3 self-start sm:self-auto">
+                    {/* Hardcoded test send: exercises the E2EE relay chain
+                        (PGP encrypt → local Postfix → Resend) against the
+                        address on record. Sibling form so it can never submit
+                        the change-email action. */}
+                    {user.notificationEmail && (
+                      <form action={testEmailAction}>
+                        <input type="hidden" name="email" value={user.notificationEmail} />
+                        <button
+                          type="submit"
+                          disabled={testEmailPending}
+                          className="inline-flex items-center gap-2 border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {testEmailPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4" aria-hidden="true" />
+                              Send Test Email
+                            </>
+                          )}
+                        </button>
+                      </form>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingEmail(true);
+                        setLocalEmail(user.notificationEmail ?? "");
+                      }}
+                      className="inline-flex items-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10"
+                    >
+                      <Mail className="h-4 w-4" aria-hidden="true" />
+                      {user.notificationEmail ? "Change Email" : "Add Email"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

@@ -24,6 +24,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
+import { sendEncryptedEmail } from "@/lib/mail/transporter";
 
 export type AdminActionState = {
   success?: boolean;
@@ -312,4 +313,69 @@ export async function setAdminEmail(
   }
 
   return { success: true, email: parsed.data.email };
+}
+
+// Hardcoded test-email content for the "Send Test Email" button on the admin
+// notification-email screens. Fixed by design: the button is a relay-chain
+// health check, not a free-form send — there is no user-editable content to
+// sanitize, and the fixed copy makes flooding the relay chain the only
+// possible abuse (handled by the dedicated rate-limit budget).
+const TEST_EMAIL_SUBJECT = "ToolsLibrary test email";
+const TEST_EMAIL_BODY = [
+  "This is a test email from your ToolsLibrary deployment.",
+  "",
+  "If you can read this, the outbound chain works end to end: the body was",
+  "PGP-encrypted in process to your ProtonMail public key, handed to the",
+  "local Postfix relay, and dispatched through the Resend smart host. Only",
+  "routing metadata (From, To, Subject) traveled as plaintext.",
+  "",
+  "No action is needed — this message was sent by the Send Test Email",
+  "button on the admin notification-email screen.",
+].join("\n");
+
+const testEmailSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254, "Email too long (max 254 characters)"),
+});
+
+/**
+ * Send the hardcoded test email to the address the admin provides — the
+ * typed address on the /admin-email setup screen, or the address on record
+ * from the dashboard. Admin-only and rate-limited (dedicated budget, kept
+ * separate from the password-verified setAdminEmail bucket). The send goes
+ * through sendEncryptedEmail, so the body is PGP-encrypted to the operator's
+ * key BEFORE it touches the relay chain, and every failure collapses into a
+ * coarse reason that is safe to surface to the operator. Unlike the alert
+ * dispatcher this action AWAITS the send: the button exists to report the
+ * outcome, and the 10-second per-phase SMTP caps bound the wait.
+ */
+export async function sendTestEmail(
+  prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const session = await auth();
+  if (session?.user?.role !== "ADMIN") {
+    return { success: false, error: "Admin privileges required" };
+  }
+
+  const limit = await enforceRateLimit("adminEmailTest");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
+  const parsed = testEmailSchema.safeParse({
+    email: formData.get("email"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0].message };
+  }
+
+  const result = await sendEncryptedEmail({
+    to: parsed.data.email,
+    subject: TEST_EMAIL_SUBJECT,
+    body: TEST_EMAIL_BODY,
+  });
+  if (!result.sent) {
+    return { success: false, error: `Test email failed: ${result.reason}` };
+  }
+  return { success: true };
 }

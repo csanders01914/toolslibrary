@@ -20,10 +20,13 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { setAdminEmail } from "@/lib/actions/admin";
-import { AlertCircle, CheckCircle, Loader2, Lock, Mail, ShieldAlert } from "lucide-react";
+import { setAdminEmail, sendTestEmail } from "@/lib/actions/admin";
+import { AlertCircle, CheckCircle, Loader2, Lock, Mail, Send, ShieldAlert } from "lucide-react";
 
 type AdminEmailActionState = { success?: boolean; error?: string; email?: string } | undefined;
+
+// Mirrors the sendTestEmail server action's return shape.
+type TestEmailActionState = { success?: boolean; error?: string } | undefined;
 
 interface AdminEmailClientProps {
   mode: "setup" | "already-set";
@@ -33,6 +36,7 @@ interface AdminEmailClientProps {
 export default function AdminEmailClient({ mode, alias }: AdminEmailClientProps) {
   const { update } = useSession();
   const [state, formAction, isPending] = useActionState<AdminEmailActionState, FormData>(setAdminEmail, undefined);
+  const [testState, testAction, testPending] = useActionState<TestEmailActionState, FormData>(sendTestEmail, undefined);
   const [email, setEmail] = useState("");
   const [updateFailed, setUpdateFailed] = useState(false);
   const [continuePending, setContinuePending] = useState(false);
@@ -196,9 +200,10 @@ export default function AdminEmailClient({ mode, alias }: AdminEmailClientProps)
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p>
-              Operational alerts (support escalations, new registrations) are emailed to this address
-              via the self-hosted local SMTP relay. It is the only email stored on this platform — operator account only.
-              Members never have an email field.
+              Operational alerts (support escalations, new registrations) are emailed to this address —
+              every body PGP-encrypted to the operator&apos;s key before it leaves the server, relayed via
+              the self-hosted Postfix → Resend smart host. It is the only email stored on this platform —
+              operator account only. Members never have an email field.
             </p>
           </div>
 
@@ -237,7 +242,7 @@ export default function AdminEmailClient({ mode, alias }: AdminEmailClientProps)
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || testPending}
               className="flex w-full cursor-pointer items-center justify-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isPending ? (
@@ -253,6 +258,44 @@ export default function AdminEmailClient({ mode, alias }: AdminEmailClientProps)
               )}
             </button>
           </form>
+
+          {/* Test send: fires the hardcoded test email to the address typed
+              above, before it is committed — verifies the relay chain (PGP
+              encrypt → local Postfix → Resend) without touching the saved
+              notification email. A sibling form (never nested) so the test
+              cannot submit the save action; the hidden field mirrors the
+              typed address. */}
+          <form action={testAction} className="mt-3" noValidate>
+            <input type="hidden" name="email" value={email} />
+            <button
+              type="submit"
+              disabled={testPending || isPending || email.trim().length === 0}
+              className="flex w-full cursor-pointer items-center justify-center gap-2 border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {testPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Sending test...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                  Send Test Email
+                </>
+              )}
+            </button>
+          </form>
+          {testState?.success && (
+            <p className="mt-3 font-mono text-[11px] text-emerald-400" role="status">
+              Test email sent — check your inbox (and spam folder). The body arrives
+              PGP-encrypted; ProtonMail decrypts it automatically.
+            </p>
+          )}
+          {testState?.error && (
+            <p className="mt-3 font-mono text-[11px] text-red-400" role="alert">
+              {testState.error}
+            </p>
+          )}
         </div>
       </div>
     </div>

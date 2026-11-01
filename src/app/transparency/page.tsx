@@ -51,7 +51,7 @@ const sharingRows = [
   {
     party: "Email delivery services",
     status:
-      "Only operator alert emails, via self-hosted local SMTP relay — members never have an email field",
+      "Operator alert emails only — bodies are PGP-encrypted to the operator's key before leaving the server, so the outbound smart host (Resend) relays ciphertext it cannot read; members never have an email field",
   },
   { party: "CDNs & font services", status: "None, all assets are served locally" },
 ];

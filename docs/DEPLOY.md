@@ -110,9 +110,15 @@ database becomes the `ADMIN`.
 | `PORT` | helpbot | Webhook listen port (default **3005**, no collision with Next.js :3000) |
 | `WEBHOOK_SECRET` | helpbot | Shared secret; must equal `HELPDESK_WEBHOOK_SECRET` |
 | `LIBERAPAY_URL` | build (deploy.sh) | Your Liberapay page URL, surfaced in the site footer when set |
-| `SMTP_HOST` | website | Local Postfix relay host (default `localhost`; with `--network host` this is the FCOS host's loopback listener) |
+| `SMTP_HOST` | website | Local Postfix relay host (default `host.containers.internal` — rootless-Podman DNS for the host relay; set `localhost` with `--network host`) |
 | `SMTP_PORT` | website | Local Postfix relay port (default `25`) |
 | `SMTP_FROM` | website | Sender identity for admin alert emails, e.g. "ToolsLibrary \<alerts@tools-library.com\>"; alerts are skipped when unset |
+
+Admin alert and test-email bodies are PGP-encrypted to the operator's public
+key before the SMTP handoff (`src/lib/crypto/encryptEmail.ts`), so the
+Postfix → Resend relay chain only ever observes ciphertext bodies plus
+routing metadata. Postfix must be configured with Resend as its outbound
+smart host.
 
 ## 6. Cloudflare Tunnel integration
 
