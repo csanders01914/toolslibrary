@@ -11,6 +11,11 @@ data/uploads/*
 .handoff/
 .env
 .env.local
+# Mail infrastructure secrets (DKIM private keys etc.) — server-side only,
+# never committed. Keys belong in the Postfix config location, not the repo.
+dkim/
+*.private
+*.key
 *.tsbuildinfo
 next-env.d.ts
 AGENTS.md
