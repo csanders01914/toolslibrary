@@ -36,7 +36,7 @@ import {
 export const metadata = {
   title: "Donate / Support Us — ToolsLibrary",
   description:
-    "Support the collective via Open Collective, Liberapay, or the hardware fund — and fund the accessibility audit, multi-city expansion, bug bounty, and tool fleet.",
+    "Support the collective via Open Collective, Liberapay, or the hardware fund, and fund the accessibility audit, multi-city expansion, bug bounty, and tool fleet.",
 };
 
 const LIBERAPAY_PROFILE_URL = "https://liberapay.com/toolslibrary";
@@ -93,21 +93,21 @@ type FundingGoal = {
 };
 
 /**
- * Costed fundraising targets. Amounts are grounded in real quotes and
- * itemized estimates — the accessibility audit figure comes from a
- * screen-by-screen estimate of all 34 auditable pages (7 complex, 13 medium,
- * 5 light, 9 simple at $250/$175/$100/$50), not a round guess. Keep these
- * numbers honest: update them when a quote changes, never to inflate.
+ * Costed fundraising targets. The audit figure comes from a screen-by-screen
+ * estimate of all 34 auditable pages (7 complex, 13 medium, 5 light, 9 simple
+ * at $250/$175/$100/$50); the rest are ballpark hardware and supply costs.
+ * Keep these numbers honest: update them when a quote comes in, never to
+ * inflate.
  */
 const fundingGoals: FundingGoal[] = [
   {
     icon: Accessibility,
     accent: "hover:border-cyan-500/50",
     iconColor: "text-cyan-400",
-    title: "Professional accessibility audit",
+    title: "Accessibility audit",
     amount: 5000,
     cadence: "One-time",
-    body: "A fully manual WCAG 2.1 AA audit of all 34 pages and screens — every form, modal, and dynamic flow — with an AXE automated scan as review and a formal report we publish. The itemized estimate came to $4,975 (7 complex, 13 medium, 5 light, 9 simple screens); the goal rounds up to cover re-testing after fixes.",
+    body: "A person works through all 34 pages and screens against WCAG 2.1 AA: every form, modal, menu, and dynamic flow. An AXE automated scan runs as a review pass, and we publish the formal report. The itemized estimate came to $4,975 (7 complex screens, 13 medium, 5 light, 9 simple); the goal is rounded to $5,000 to leave room for re-testing after fixes.",
   },
   {
     icon: Server,
@@ -116,7 +116,7 @@ const fundingGoals: FundingGoal[] = [
     title: "Multi-city server upgrade",
     amount: 1500,
     cadence: "One-time",
-    body: "A second self-hosted Fedora CoreOS node — hardware, UPS, and replicated storage — so members in Kansas City, St. Louis, and future partner cities get low-latency access. The platform stays on local hardware under operator control: no cloud, no managed hosting, no new data exposure.",
+    body: "A second self-hosted Fedora CoreOS node: the machine, a UPS, and replicated storage. Requests from Kansas City, St. Louis, and whatever city joins next stop funneling through one box. The platform stays on hardware the operator can touch. No cloud, no managed hosting, no new data exposure.",
   },
   {
     icon: ShieldCheck,
@@ -125,7 +125,7 @@ const fundingGoals: FundingGoal[] = [
     title: "Bug bounty pool",
     amount: 1000,
     cadence: "Reserved pool",
-    body: "A reserved pool that pays community researchers who responsibly disclose vulnerabilities in authentication, proof-of-work, messaging, and loan handoff. Every payout and disclosure is published in the transparency report next to the warrant canary.",
+    body: "Pays researchers who find a hole and tell us before they exploit it. The surface that matters most: authentication, the proof-of-work gate, messaging, and loan handoff. Payouts and disclosures land in the transparency report, next to the warrant canary.",
   },
   {
     icon: Hammer,
@@ -134,7 +134,7 @@ const fundingGoals: FundingGoal[] = [
     title: "Tool fleet: replace & expand",
     amount: 800,
     cadence: "Rolling fund",
-    body: "Takes broken and worn-out tools out of circulation and replaces them, and buys requested additions — new or used. Every funded purchase is added to the public inventory and lent out like any other tool.",
+    body: "Replaces the tools that break or wear out, and buys the ones members keep asking for, new or used. Either way the purchase goes into the public inventory and lends out like any other tool.",
   },
   {
     icon: Layers,
@@ -143,7 +143,7 @@ const fundingGoals: FundingGoal[] = [
     title: "Shared consumables",
     amount: 300,
     cadence: "Per quarter",
-    body: "Keeps shared wear items stocked: sandpaper in common grits, drill bits, and saw blades. Fresh consumables are the difference between a borrowed tool that works and one that ruins the project — or the tool.",
+    body: "Restocks what gets used up: sandpaper in common grits, drill bits, saw blades. Fresh consumables are the difference between a borrowed tool that works and one that ruins the project, or the tool.",
   },
 ];
 
@@ -280,9 +280,8 @@ export default function DonatePage() {
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">COMMUNITY // FUNDING GOALS</p>
         <h2 className="mb-2 mt-2 text-2xl font-bold text-white tracking-tight">Funding Goals</h2>
         <p className="mb-6 max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Specific, costed targets your contribution goes toward. Amounts come from real
-          quotes and itemized estimates, not round guesses — progress is reported in
-          Matrix and on the wiki.
+          Each goal has a number attached. The audit amount is itemized down to the screen
+          count; the rest are ballpark figures. Progress gets posted in Matrix and on the wiki.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {fundingGoals.map((goal) => {
@@ -307,7 +306,7 @@ export default function DonatePage() {
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border border-zinc-800 bg-[#0a0a0a] px-5 py-4">
           <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
-            COMBINED TARGET — CONSUMABLES RECUR QUARTERLY, THE REST ARE ONE-TIME OR POOLED
+            COMBINED TARGET (CONSUMABLES RECUR QUARTERLY; THE REST ARE ONE-TIME OR POOLED)
           </p>
           <p className="font-mono text-sm text-white">{formatUSD(combinedGoal)}</p>
         </div>
