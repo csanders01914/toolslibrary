@@ -132,13 +132,18 @@ BOT_WEBHOOK_URL=http://helpbot:3005
 # Shared secret; must equal WEBHOOK_SECRET in the helpbot container's .env.
 HELPDESK_WEBHOOK_SECRET=change-me-to-a-long-random-value
 
-# Admin alert emails (PHASE_29) via the local Postfix SMTP relay — no
-# third-party email API, no API keys. Requires Postfix installed on the FCOS
-# host and listening on the loopback interface (inet_interfaces = localhost):
+# Admin alert emails (PHASE_29, end-to-end encrypted): every body is
+# PGP-encrypted in process to the operator's ProtonMail public key before
+# the SMTP handoff, so the relay chain only ever observes ciphertext bodies
+# plus routing metadata (From, To, Subject). Requires Postfix installed on
+# the FCOS host and listening on the loopback interface
+# (inet_interfaces = localhost), with Resend configured as the outbound
+# smart host (the residential ISP blocks direct port-25 delivery):
 #   sudo dnf install -y postfix && sudo systemctl enable --now postfix
-# SMTP_HOST/SMTP_PORT default to localhost:25 (correct for --network host);
-# when SMTP_FROM is empty the app stores the admin notification email but
-# skips sending.
+# SMTP_HOST/SMTP_PORT default to host.containers.internal:25 (containerized
+# topology); set SMTP_HOST=localhost for --network host deployments. When
+# SMTP_FROM is empty the app stores the admin notification email but skips
+# sending.
 SMTP_HOST=localhost
 SMTP_PORT=25
 SMTP_FROM=ToolsLibrary <alerts@tools-library.com>

@@ -59,6 +59,9 @@ export interface RateLimitConfig {
  *   against the Synapse login endpoint.
  * - adminEmail: 5 burst / 2 per minute — authenticated admin-only surface
  *   (PHASE_29); password-verified when replacing an existing destination.
+ * - adminEmailTest: 3 burst / 2 per minute — authenticated admin-only surface;
+ *   throttles the hardcoded "Send Test Email" button so the relay chain
+ *   (local Postfix → Resend smart host) cannot be flooded from the admin UI.
  * - canary: 5 burst / 2 per minute — authenticated admin-only surface
  *   (PHASE_30); throttles canary passphrase checks and staging against
  *   brute force.
@@ -73,6 +76,7 @@ export const RATE_LIMITS = {
   powChallenge: { capacity: 20, refillPerMinute: 8 },
   chatToken: { capacity: 5, refillPerMinute: 2 },
   adminEmail: { capacity: 5, refillPerMinute: 2 },
+  adminEmailTest: { capacity: 3, refillPerMinute: 2 },
   canary: { capacity: 5, refillPerMinute: 2 },
 } as const satisfies Record<string, RateLimitConfig>;
 

@@ -60,7 +60,7 @@ const whatIsStored = [
   },
   {
     title: "Operator Notification Email (admin account only)",
-    body: "One email address on the administrator account, used exclusively as the destination for operational alert emails (support escalations, new registrations, and change alerts) delivered by the platform's own self-hosted local SMTP relay — never a third-party email provider. It is never requested from member accounts, never displayed publicly, and member-facing features never read it.",
+    body: "One email address on the administrator account, used exclusively as the destination for operational alert emails (support escalations, new registrations, and change alerts). Every alert body is PGP-encrypted on the server to the operator's own public key before it leaves the machine: the self-hosted Postfix relay hands the message to an outbound smart host (Resend), which can only observe the encrypted body and routing metadata (sender, recipient, subject) — never the content. It is never requested from member accounts, never displayed publicly, and member-facing features never read it.",
   },
 ];
 
