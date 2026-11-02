@@ -9,6 +9,14 @@
 .env.*.local
 Recovery/
 
+# --- Mail infrastructure secrets (Postfix/DKIM keys live on the host, never
+# --- in the image: the website only sends SMTP to the relay, it never signs
+# --- mail. A root-owned 0600 key file is also unreadable by the rootless
+# --- copier under --userns=keep-id, which aborts `COPY . .` outright) ---
+dkim/
+*.private
+*.key
+
 # --- Runtime data volume (bind-mounted at `podman run`, never baked) ---
 data/
 

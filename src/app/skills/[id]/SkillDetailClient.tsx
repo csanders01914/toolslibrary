@@ -36,6 +36,7 @@ interface Skill {
   owner: {
     id: string;
     alias: string;
+    location: string | null;
     trustScore: number;
     bio: string | null;
     createdAt: Date | string;
@@ -53,9 +54,9 @@ interface DeleteSkillAction {
 interface SkillDetailClientProps {
   skill: Skill;
   // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) the owner
-  // alias and availability status render as red asterisks. For guests the
-  // server has already replaced the alias string in the payload; the
-  // availability text is masked here at render time.
+  // alias, location, and availability status render as red asterisks. For
+  // guests the server has already replaced the alias/location strings in the
+  // payload; the availability text is masked here at render time.
   guestView: boolean;
   toggleAvailability: ToggleAvailabilityAction;
   deleteSkill: DeleteSkillAction;
@@ -235,6 +236,16 @@ export default function SkillDetailClient({ skill, guestView, toggleAvailability
                   <span className="text-zinc-200">{skill.owner.alias}</span>
                 )}
               </p>
+              {skill.owner.location && (
+                <p>
+                  <span className="text-zinc-500">LOCATION: </span>
+                  {guestView ? (
+                    <Redacted value={skill.owner.location} />
+                  ) : (
+                    <span className="text-zinc-200">{skill.owner.location}</span>
+                  )}
+                </p>
+              )}
               <p>
                 <span className="text-zinc-500">MEMBER SINCE: </span>
                 <span className="text-zinc-300">{format(new Date(skill.owner.createdAt), "MMM yyyy")}</span>

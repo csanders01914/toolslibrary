@@ -34,6 +34,7 @@ interface Skill {
   owner: {
     id: string;
     alias: string;
+    location: string | null;
     trustScore: number;
   };
   createdAt: Date | string;
@@ -42,10 +43,11 @@ interface Skill {
 interface SkillsClientProps {
   initialSkills: Skill[];
   totalCount: number;
-  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases
-  // and availability status render as red asterisks. For guests the server
-  // has already replaced alias strings in the payload; the availability text
-  // is masked here at render time so the AVAILABLE ONLY filter keeps working.
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases,
+  // locations, and availability status render as red asterisks. For guests the
+  // server has already replaced alias/location strings in the payload; the
+  // availability text is masked here at render time so the AVAILABLE ONLY
+  // filter keeps working.
   guestView: boolean;
 }
 
@@ -171,6 +173,16 @@ export default function SkillsClient({ initialSkills, totalCount, guestView }: S
                     <span className="text-zinc-300">{skill.owner.alias}</span>
                   )}
                 </p>
+                {skill.owner.location && (
+                  <p>
+                    <span className="text-zinc-500">LOCATION: </span>
+                    {guestView ? (
+                      <Redacted value={skill.owner.location} />
+                    ) : (
+                      <span className="text-zinc-300">{skill.owner.location}</span>
+                    )}
+                  </p>
+                )}
                 <p>
                   <span className="text-zinc-500">STATUS: </span>
                   {guestView ? (

@@ -38,7 +38,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
       where: { id },
       include: {
         owner: {
-          select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+          select: { id: true, alias: true, location: true, trustScore: true, bio: true, createdAt: true },
         },
         loans: {
           where: { status: { in: ["ACTIVE", "APPROVED", "REQUESTED"] } },
@@ -54,15 +54,20 @@ export default async function ToolDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Guest browsing (GUEST_ALIAS_REDACTION): owner and borrower aliases are
-  // stripped from the payload before it crosses to the client, so the real
-  // strings never reach a guest's browser. Availability status stays in the
-  // payload and is censored at render time inside ToolDetailClient.
+  // Guest browsing (GUEST_ALIAS_REDACTION): owner and borrower aliases and the
+  // owner location are stripped from the payload before it crosses to the
+  // client, so the real strings never reach a guest's browser. Availability
+  // status stays in the payload and is censored at render time inside
+  // ToolDetailClient.
   const isGuest = !session?.user;
   const safeTool = isGuest
     ? {
         ...tool,
-        owner: { ...tool.owner, alias: redactText(tool.owner.alias) },
+        owner: {
+          ...tool.owner,
+          alias: redactText(tool.owner.alias),
+          location: tool.owner.location ? redactText(tool.owner.location) : null,
+        },
         loans: tool.loans.map((loan) => ({
           ...loan,
           borrower: { ...loan.borrower, alias: redactText(loan.borrower.alias) },
