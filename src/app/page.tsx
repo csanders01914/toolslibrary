@@ -77,7 +77,7 @@ export default async function HomePage() {
       where: { status: 'AVAILABLE' },
       include: {
         owner: {
-          select: { id: true, alias: true, trustScore: true },
+          select: { id: true, alias: true, location: true, trustScore: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -86,8 +86,9 @@ export default async function HomePage() {
   ]);
 
   // Guest browsing (GUEST_ALIAS_REDACTION): unauthenticated visitors see
-  // member aliases and availability status masked as red asterisks. Redacting
-  // here, server-side, means the real strings never reach a guest's HTML.
+  // member aliases, locations, and availability status masked as red
+  // asterisks. Redacting here, server-side, means the real strings never
+  // reach a guest's HTML.
   const isGuest = !session?.user;
 
   return (
@@ -195,6 +196,16 @@ export default async function HomePage() {
                       <span className="text-zinc-300">{tool.owner.alias}</span>
                     )}
                   </p>
+                  {tool.owner.location && (
+                    <p>
+                      <span className="text-zinc-500">LOCATION: </span>
+                      {isGuest ? (
+                        <Redacted value={tool.owner.location} />
+                      ) : (
+                        <span className="text-zinc-300">{tool.owner.location}</span>
+                      )}
+                    </p>
+                  )}
                   <p>
                     <span className="text-zinc-500">STATUS: </span>
                     {isGuest ? (

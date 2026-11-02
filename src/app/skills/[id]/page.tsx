@@ -38,7 +38,7 @@ export default async function SkillDetailPage({ params }: PageProps) {
       where: { id },
       include: {
         owner: {
-          select: { id: true, alias: true, trustScore: true, bio: true, createdAt: true },
+          select: { id: true, alias: true, location: true, trustScore: true, bio: true, createdAt: true },
         },
       },
     }),
@@ -48,13 +48,20 @@ export default async function SkillDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Guest browsing (GUEST_ALIAS_REDACTION): the owner alias is stripped from
-  // the payload before it crosses to the client, so the real string never
-  // reaches a guest's browser. Availability is censored at render time inside
-  // SkillDetailClient.
+  // Guest browsing (GUEST_ALIAS_REDACTION): the owner alias and location are
+  // stripped from the payload before it crosses to the client, so the real
+  // strings never reach a guest's browser. Availability is censored at render
+  // time inside SkillDetailClient.
   const isGuest = !session?.user;
   const safeSkill = isGuest
-    ? { ...skill, owner: { ...skill.owner, alias: redactText(skill.owner.alias) } }
+    ? {
+        ...skill,
+        owner: {
+          ...skill.owner,
+          alias: redactText(skill.owner.alias),
+          location: skill.owner.location ? redactText(skill.owner.location) : null,
+        },
+      }
     : skill;
 
   // Wrappers MUST be inline server actions: plain function props cannot cross

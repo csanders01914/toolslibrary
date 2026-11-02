@@ -35,6 +35,7 @@ interface Tool {
   owner: {
     id: string;
     alias: string;
+    location: string | null;
     trustScore: number;
   };
   createdAt: string;
@@ -42,10 +43,10 @@ interface Tool {
 
 interface ToolsClientProps {
   initialTools: Tool[];
-  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases
-  // and availability status render as red asterisks. For guests the server
-  // has already replaced alias strings in the payload; status is masked here
-  // at render time so the AVAILABLE ONLY filter keeps working.
+  // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner aliases,
+  // locations, and availability status render as red asterisks. For guests the
+  // server has already replaced alias/location strings in the payload; status
+  // is masked here at render time so the AVAILABLE ONLY filter keeps working.
   guestView: boolean;
 }
 
@@ -184,6 +185,16 @@ export default function ToolsClient({ initialTools, guestView }: ToolsClientProp
                     <span className="text-zinc-300">{tool.owner.alias}</span>
                   )}
                 </p>
+                {tool.owner.location && (
+                  <p>
+                    <span className="text-zinc-500">LOCATION: </span>
+                    {guestView ? (
+                      <Redacted value={tool.owner.location} />
+                    ) : (
+                      <span className="text-zinc-300">{tool.owner.location}</span>
+                    )}
+                  </p>
+                )}
                 <p>
                   <span className="text-zinc-500">STATUS: </span>
                   {guestView ? (

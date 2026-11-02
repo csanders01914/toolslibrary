@@ -30,6 +30,10 @@ const sendMessageSchema = z.object({
 const updateProfileSchema = z.object({
   alias: z.string().min(2, "Alias must be at least 2 characters").max(32, "Alias must be at most 32 characters"),
   bio: z.string().max(500, "Bio too long (max 500 characters)").optional().nullable(),
+  // Free-text area label (e.g. "Mexico", "NW Columbia") — deliberately not a
+  // dropdown or geocoded field. Guest-redacted on every public surface exactly
+  // like the alias, so it must stay coarse and self-declared.
+  location: z.string().max(64, "Location too long (max 64 characters)").optional().nullable(),
 });
 
 export async function sendMessage(
@@ -115,6 +119,7 @@ export async function updateProfile(
   const rawData = {
     alias: formData.get("alias"),
     bio: formData.get("bio"),
+    location: formData.get("location"),
   };
 
   const parsed = updateProfileSchema.safeParse(rawData);
@@ -122,11 +127,16 @@ export async function updateProfile(
     return { success: false, error: parsed.error.errors[0].message };
   }
 
-  const { alias, bio } = parsed.data;
+  const { alias, bio, location } = parsed.data;
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { alias, bio },
+    data: {
+      alias,
+      bio,
+      // An empty/whitespace location clears the field instead of storing "".
+      location: location && location.trim().length > 0 ? location.trim() : null,
+    },
   });
 
   return { success: true };

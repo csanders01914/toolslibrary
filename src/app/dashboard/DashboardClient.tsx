@@ -56,6 +56,7 @@ interface User {
   username: string;
   alias: string;
   bio: string | null;
+  location: string | null;
   trustScore: number;
   role: string;
   notificationEmail: string | null;
@@ -133,6 +134,7 @@ export default function DashboardClient({
   const [editingProfile, setEditingProfile] = useState(false);
   const [localAlias, setLocalAlias] = useState(user.alias);
   const [localBio, setLocalBio] = useState(user.bio ?? "");
+  const [localLocation, setLocalLocation] = useState(user.location ?? "");
   const [editingEmail, setEditingEmail] = useState(false);
   const [localEmail, setLocalEmail] = useState(user.notificationEmail ?? "");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -380,6 +382,25 @@ export default function DashboardClient({
                   className="w-full resize-none rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
                 />
               </div>
+              <div>
+                <label htmlFor="location" className="mb-2 block font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+                  Location (optional)
+                </label>
+                <input
+                  id="location"
+                  name="location"
+                  type="text"
+                  value={localLocation}
+                  onChange={(e) => setLocalLocation(e.target.value)}
+                  maxLength={64}
+                  placeholder="Your area, e.g. Mexico or NW Columbia"
+                  autoComplete="off"
+                  className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
+                />
+                <p className="mt-1 font-mono text-[11px] text-zinc-500">
+                  Free-text area shown on your tools and skills. Censored from guests, same as your alias.
+                </p>
+              </div>
               <div className="flex gap-3">
                 <button
                   type="submit"
@@ -395,6 +416,7 @@ export default function DashboardClient({
                     setEditingProfile(false);
                     setLocalAlias(user.alias);
                     setLocalBio(user.bio ?? "");
+                    setLocalLocation(user.location ?? "");
                   }}
                   className="cursor-pointer border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white"
                 >
@@ -411,6 +433,10 @@ export default function DashboardClient({
               <p className="font-mono text-xs text-zinc-400">
                 <span className="uppercase tracking-widest text-zinc-500">Bio:</span>{" "}
                 {user.bio || <span className="italic text-zinc-500">No bio yet</span>}
+              </p>
+              <p className="font-mono text-xs text-zinc-400">
+                <span className="uppercase tracking-widest text-zinc-500">Location:</span>{" "}
+                {user.location || <span className="italic text-zinc-500">Not set</span>}
               </p>
             </div>
           )}

@@ -33,6 +33,7 @@ model User {
   mustChangePassword Boolean       @default(false) // Stock seeded credentials force a change on first login
   banned             Boolean       @default(false) // Set by an admin from the console
   bio                String?
+  location           String?       // Self-declared free-text area (e.g. "Mexico", "NW Columbia") — no geocoding, guest-redacted like alias/status
   trustScore         Int           @default(100)
   a11yPrefs          String?       // Anonymous JSON string for synced accessibility prefs
   notificationEmail String?       // PHASE_29: admin-only alert destination for admin alert emails via the local Postfix SMTP relay — the single deliberate PII exception (operator account only, never collected from members)

@@ -33,7 +33,7 @@ export default async function DashboardPage() {
   const [user, toolsLent, toolsOwned, skillsOffered, skillsTotal, incomingRequests, activeLoansAsOwner, activeLoansAsBorrower, vouchableLoans] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, username: true, alias: true, bio: true, trustScore: true, role: true, notificationEmail: true, createdAt: true },
+      select: { id: true, username: true, alias: true, bio: true, location: true, trustScore: true, role: true, notificationEmail: true, createdAt: true },
     }),
     // "Tools Lent" = tools currently out on loan (approved or active), not merely owned.
     prisma.loan.count({ where: { tool: { ownerId: session.user.id }, status: { in: ["APPROVED", "ACTIVE"] } } }),

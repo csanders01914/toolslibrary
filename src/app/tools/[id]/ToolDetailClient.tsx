@@ -39,6 +39,7 @@ interface Tool {
   owner: {
     id: string;
     alias: string;
+    location: string | null;
     trustScore: number;
     bio: string | null;
     createdAt: Date | string;
@@ -59,9 +60,9 @@ interface ManageLoanAction {
 interface ToolDetailClientProps {
   tool: Tool;
   // GUEST_ALIAS_REDACTION: when true (unauthenticated visitor) owner/borrower
-  // aliases and availability status render as red asterisks. For guests the
-  // server has already replaced alias strings in the payload; status is
-  // masked here at render time.
+  // aliases, the owner location, and availability status render as red
+  // asterisks. For guests the server has already replaced alias/location
+  // strings in the payload; status is masked here at render time.
   guestView: boolean;
   manageLoan: ManageLoanAction;
   confirmHandoff: ManageLoanAction;
@@ -386,6 +387,16 @@ export default function ToolDetailClient({ tool, guestView, manageLoan, confirmH
                   <span className="text-zinc-200">{tool.owner.alias}</span>
                 )}
               </p>
+              {tool.owner.location && (
+                <p>
+                  <span className="text-zinc-500">LOCATION: </span>
+                  {guestView ? (
+                    <Redacted value={tool.owner.location} />
+                  ) : (
+                    <span className="text-zinc-200">{tool.owner.location}</span>
+                  )}
+                </p>
+              )}
               <p>
                 <span className="text-zinc-500">MEMBER SINCE: </span>
                 <span className="text-zinc-300">{format(new Date(tool.owner.createdAt), "MMM yyyy")}</span>
