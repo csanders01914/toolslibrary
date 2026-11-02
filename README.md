@@ -137,7 +137,7 @@ graph TB
 
 | Principle | Implementation |
 |-----------|----------------|
-| **Zero PII** | No emails, phones, IPs, or locations from members. An account is a `username` plus a public `alias`; the one exception is an optional notification email on operator accounts |
+| **Zero PII** | No emails, phones, IPs, or street addresses from members. An account is a `username` plus a public `alias`, with an optional self-declared area label; the one exception is an optional notification email on operator accounts |
 | **Local-first** | One SQLite file on a bind-mounted volume; no external database |
 | **Deterministic support** | Replies come from a fixed, reviewed dictionary; routing is pure regex — no external services in the support path |
 | **Abuse resistance** | Token-bucket rate limits and proof-of-work gates on every unauthenticated write surface |
@@ -197,7 +197,7 @@ podman healthcheck run tool-library
 
 | Concept | Summary | Deep Dive |
 |---------|---------|-----------|
-| **Zero-PII** | No emails, phones, or IPs from members. Only `username` and a public `alias` | [Project Overview](wiki/Platform%20Overview/project-overview.md), [Security & Privacy](wiki/System%20Architecture%20&%20Security/security-and-privacy.md) |
+| **Zero-PII** | No emails, phones, or IPs from members. Only `username`, a public `alias`, and an optional self-declared area label | [Project Overview](wiki/Platform%20Overview/project-overview.md), [Security & Privacy](wiki/System%20Architecture%20&%20Security/security-and-privacy.md) |
 | **Intent router** | Priority-ordered regular expressions classify every help message | [Help System & Triage](wiki/Platform%20Administration/help-system-and-triage.md) |
 | **Dual-channel support** | The website help form and the community Matrix server share one triage engine, with an optional standalone helpdesk bot in between | [Help System & Triage](wiki/Platform%20Administration/help-system-and-triage.md) |
 | **Rate limiting + proof of work** | Token buckets and browser puzzles protect login, registration, recovery, and the help form | [Security & Privacy](wiki/System%20Architecture%20&%20Security/security-and-privacy.md) |
@@ -284,7 +284,7 @@ toolslibrary-v2/
 │   │   ├── email.ts           # Admin alert notifications (E2EE: PGP-encrypted bodies)
 │   │   ├── crypto/encryptEmail.ts  # PGP body encryption to the operator's key
 │   │   ├── mail/transporter.ts     # E2EE SMTP dispatch (local Postfix → Resend)
-│   │   ├── redact.ts          # Guest alias/availability masking
+│   │   ├── redact.ts          # Guest alias/location/availability masking
 │   │   ├── crypto.ts          # Recovery code generation + hashing
 │   │   ├── format.ts          # Server-safe date formatting
 │   │   ├── db.ts              # Prisma singleton (WAL pragmas)
@@ -337,7 +337,7 @@ erDiagram
 
 | Entity | Purpose | Key Fields |
 |--------|---------|------------|
-| **User** | Community member | `username`, `alias`, `role`, `trustScore`, `banned`, `notificationEmail` (admin only) |
+| **User** | Community member | `username`, `alias`, `location?` (self-declared area), `role`, `trustScore`, `banned`, `notificationEmail` (admin only) |
 | **Tool** | Lendable item | `name`, `category`, `status` (AVAILABLE/BORROWED/MAINTENANCE) |
 | **Skill** | Offered expertise | `name`, `category`, `available` (OFFERED/PAUSED) |
 | **Loan** | Borrowing lifecycle | `status` (REQUESTED/APPROVED/ACTIVE/RETURNED/REJECTED), `startDate`, `endDate`, `returnCondition` |
