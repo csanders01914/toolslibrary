@@ -55,6 +55,10 @@ const whatIsStored = [
     body: "Tools, skills, loan requests, and messages you create. A lending library cannot run without these records.",
   },
   {
+    title: "Optional Location",
+    body: "A free-text area label you choose, such as a city or region (\"Mexico\", \"NW Columbia\"). It appears with your tools and skills for signed-in members and is masked from guests, the same as your alias. It is never geocoded, never required, and never a street address unless you type one.",
+  },
+  {
     title: "Anonymous Accessibility Preferences",
     body: "Optional JSON (contrast, font size, dyslexia font, spacing) synced to your account so your accessibility settings follow you between devices. It contains no identifying data.",
   },

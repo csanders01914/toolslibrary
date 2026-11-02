@@ -161,7 +161,7 @@ export default function SkillEditClient({ skill }: SkillEditClientProps) {
 
         {/* Privacy Note */}
         <p className="font-mono text-[11px] text-zinc-500 text-center">
-          ZERO-PII: Only your public alias and trust score are shown. No email, phone, or location shared.
+          ZERO-PII: Only your public alias, optional area, and trust score are shown to members. No email or phone is ever shared.
         </p>
       </form>
     </div>
