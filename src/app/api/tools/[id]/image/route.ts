@@ -28,12 +28,14 @@
  * here with a standard fetch instead of invoking the updateTool action.
  *
  * Contract: raw multipart/form-data with the fields name, description,
- * category, removeImage ("true"|"false"), and image (File, optional). The
- * binary file is extracted, validated, persisted to data/uploads, the Prisma
- * SQLite record is updated, and a JSON result is returned. Semantics mirror
- * the former updateTool server action exactly: a new upload supersedes the
- * old file, an explicit removeImage flag clears it, and otherwise the current
- * photo is kept.
+ * category, removeImage ("true"|"false"), image (File, optional), and
+ * imageAlt (optional screen-reader photo description). The binary file is
+ * extracted, validated, persisted to data/uploads, the Prisma SQLite record
+ * is updated, and a JSON result is returned. Semantics mirror the former
+ * updateTool server action exactly: a new upload supersedes the old file, an
+ * explicit removeImage flag clears it, and otherwise the current photo is
+ * kept. imageAlt follows the same edit semantics: non-empty replaces, empty
+ * clears, absent keeps the stored description.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -49,6 +51,10 @@ const updateToolSchema = z.object({
   category: z.string().min(1, "Category is required"),
   image: z.instanceof(File).optional().nullable(),
   removeImage: z.string().optional(), // "true" when the owner clears the existing photo
+  // Screen-reader description of the photo (alt text). The edit form always
+  // sends this field: a non-empty value replaces the stored description, an
+  // empty string clears it, and an absent field (null) keeps the current one.
+  imageAlt: z.string().max(500, "Visual description too long").optional().nullable(),
 });
 
 /**
@@ -96,12 +102,13 @@ export async function POST(
     // Null (absent field) must normalize to undefined for the optional zod
     // schema — FormData.get() yields null, not undefined.
     removeImage: formData.get("removeImage") ?? undefined,
+    imageAlt: formData.get("imageAlt"),
   });
   if (!parsed.success) {
     return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 400 });
   }
 
-  const { name, description, category, image, removeImage } = parsed.data;
+  const { name, description, category, image, removeImage, imageAlt } = parsed.data;
 
   if (!CATEGORIES.includes(category)) {
     return NextResponse.json({ success: false, error: "Invalid category" }, { status: 400 });
@@ -134,9 +141,19 @@ export async function POST(
     imageUrl = null;
   }
 
+  // Visual description semantics: FormData.get() yields null when the field
+  // is absent (unknown client — keep the stored description), an empty string
+  // when the owner cleared it (store null), and the new text otherwise.
+  const nextImageAlt =
+    imageAlt === null || imageAlt === undefined
+      ? tool.imageAlt
+      : imageAlt.trim()
+        ? imageAlt.trim()
+        : null;
+
   const updated = await prisma.tool.update({
     where: { id: tool.id },
-    data: { name, description, category, imageUrl },
+    data: { name, description, category, imageUrl, imageAlt: nextImageAlt },
   });
 
   return NextResponse.json({

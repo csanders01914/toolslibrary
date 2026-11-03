@@ -35,6 +35,7 @@ interface Tool {
   category: string;
   status: string;
   imageUrl: string | null;
+  imageAlt: string | null;
   createdAt: Date | string;
   owner: {
     id: string;
@@ -214,7 +215,7 @@ export default function ToolDetailClient({ tool, guestView, manageLoan, confirmH
         <div className="border border-zinc-800 rounded-none bg-black p-2">
           <img
             src={`/api/uploads/${tool.imageUrl}`}
-            alt={`${tool.name} photo`}
+            alt={tool.imageAlt?.trim() || `${tool.name} photo`}
             className="w-full h-auto object-contain max-h-96"
           />
         </div>

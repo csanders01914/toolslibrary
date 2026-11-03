@@ -356,6 +356,7 @@ export interface HandoffContext {
     name: string;
     status: string;
     imageUrl: string | null;
+    imageAlt: string | null;
   };
   loan: {
     id: string;
@@ -395,6 +396,7 @@ export async function getHandoffContext(toolId: string): Promise<HandoffContext 
       name: tool.name,
       status: tool.status,
       imageUrl: tool.imageUrl,
+      imageAlt: tool.imageAlt,
     },
     loan: loan
       ? {

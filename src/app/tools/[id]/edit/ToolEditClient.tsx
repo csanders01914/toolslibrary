@@ -36,6 +36,7 @@ interface ToolEditClientProps {
     category: string;
     status: string;
     imageUrl: string | null;
+    imageAlt: string | null;
   };
 }
 
@@ -50,6 +51,9 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
   const [imageRemoved, setImageRemoved] = useState(false);
+  // Screen-reader description of the photo (alt text), prefilled from the
+  // stored listing and edited in the PhotoUpload description textarea.
+  const [imageAlt, setImageAlt] = useState(tool.imageAlt ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -76,6 +80,7 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
     formData.append("description", description);
     formData.append("category", category);
     formData.append("removeImage", imageRemoved ? "true" : "false");
+    formData.append("imageAlt", imageAlt.trim());
     if (image) {
       formData.append("image", image);
     }
@@ -207,21 +212,30 @@ export default function ToolEditClient({ tool }: ToolEditClientProps) {
             id="image-upload"
             previewUrl={imagePreview}
             file={image}
+            imageAlt={imageAlt}
+            onImageAltChange={setImageAlt}
             onAccept={(file, previewUrl) => {
               setImage(file);
               setImageRemoved(false);
               setImagePreview(previewUrl);
+              // A replacement photo invalidates the stored description — it
+              // described the old photograph. Start empty so the owner writes
+              // a matching one instead of silently keeping a wrong alt text.
+              setImageAlt("");
             }}
             onClear={() => {
               setImage(null);
               if (image) {
-                // Discarding a newly picked file: fall back to the stored photo.
+                // Discarding a newly picked file: fall back to the stored photo
+                // and its stored description.
                 setImagePreview(tool.imageUrl ? `/api/uploads/${tool.imageUrl}` : null);
                 setImageRemoved(false);
+                setImageAlt(tool.imageAlt ?? "");
               } else {
                 // Removing the stored photo: mark it for deletion on save.
                 setImagePreview(null);
                 setImageRemoved(true);
+                setImageAlt("");
               }
             }}
             clearLabel={image ? "Remove selected photo" : "Remove existing photo"}

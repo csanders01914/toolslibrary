@@ -45,6 +45,7 @@ export default function NewToolPage() {
   const [category, setCategory] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAlt, setImageAlt] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -98,6 +99,7 @@ export default function NewToolPage() {
     formData.append("name", name.trim());
     formData.append("description", description.trim());
     formData.append("category", category);
+    formData.append("imageAlt", imageAlt.trim());
     if (image) {
       formData.append("image", image);
     }
@@ -212,13 +214,18 @@ export default function NewToolPage() {
             id="image-upload"
             previewUrl={imagePreview}
             file={image}
+            imageAlt={imageAlt}
+            onImageAltChange={setImageAlt}
             onAccept={(file, previewUrl) => {
               setImage(file);
               setImagePreview(previewUrl);
+              // A new photo needs its own description; never carry one over.
+              setImageAlt("");
             }}
             onClear={() => {
               setImage(null);
               setImagePreview(null);
+              setImageAlt("");
             }}
             clearLabel="Remove image"
           />
