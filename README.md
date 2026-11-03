@@ -66,6 +66,7 @@ The documentation source lives in [`wiki/`](wiki/) and is published to the self-
 
 | Page | Description | Est. Read |
 |------|-------------|-----------|
+| [Accessibility Statement](wiki/Community%20&%20Guidelines/accessibility-statement.md) | WCAG 2.2 AAA conformance, feature inventory, known limitations, feedback channels | 6 min |
 | [Code of Conduct](wiki/Community%20&%20Guidelines/code-of-conduct.md) | Mutual aid, harassment policy, moderation accountability | 5 min |
 | [Contributing](wiki/Community%20&%20Guidelines/contributing.md) | Dev environment, invariants, coding standards, quality gates | 8 min |
 | [Privacy Policy](wiki/Community%20&%20Guidelines/privacy-policy.md) | The complete inventory of stored data | 5 min |
