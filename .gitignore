@@ -18,7 +18,11 @@ dkim/
 *.key
 *.tsbuildinfo
 next-env.d.ts
+# Agent session documents & tooling — local-only, never publish to GitHub
 AGENTS.md
 CLEANUP_REPORT.md
 IMPLEMENTATION_PLAN.md
+scripts/record-handoff.mjs
+scripts/verify-handoff.mjs
+.kilo/
 wiki
