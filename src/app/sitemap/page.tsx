@@ -188,8 +188,7 @@ export default async function SitemapPage() {
           Sitemap
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm text-zinc-400 sm:text-base leading-relaxed">
-          Every public page on this instance, in one place. Member consoles
-          (dashboard, messages, admin) are intentionally left out.
+          Every public page on this instance, in one place.
         </p>
       </section>
 
