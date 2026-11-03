@@ -33,6 +33,7 @@ import {
   Info,
   ExternalLink,
   LifeBuoy,
+  Map,
 } from "lucide-react";
 
 const sourceLicenseLinks = [
@@ -90,6 +91,11 @@ const navigationLinks = [
     label: "Project Wiki",
     icon: BookOpen,
     external: true,
+  },
+  {
+    href: "/sitemap",
+    label: "Sitemap",
+    icon: Map,
   },
 ];
 
