@@ -55,6 +55,7 @@ export default async function ToolEditPage({ params }: PageProps) {
         category: tool.category,
         status: tool.status,
         imageUrl: tool.imageUrl,
+        imageAlt: tool.imageAlt,
       }}
     />
   );

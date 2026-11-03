@@ -46,6 +46,14 @@ interface PhotoUploadProps {
   /** Optional note rendered under the upload zone. */
   hint?: ReactNode;
   /**
+   * Screen-reader description of the photo (alt text, max 500 chars).
+   * Controlled by the parent so the value is submitted with the form; this
+   * component renders the editor whenever a photo is present and uses the
+   * text as the preview image's alt when non-empty.
+   */
+  imageAlt: string;
+  onImageAltChange: (value: string) => void;
+  /**
    * Called with the validated file and its blob: URL preview. The URL is
    * created and revoked by this component — consumers must only store it.
    */
@@ -72,12 +80,20 @@ interface PhotoUploadProps {
  * Submission: consumers read the validated File from onAccept and append it
  * to their own fetch FormData (see /api/tools/[id]/image); the input is reset
  * on clear/rejection so a removed or rejected file is never re-picked.
+ *
+ * Visual description: whenever a photo is present (newly picked or stored),
+ * an optional "VISUAL DESCRIPTION" textarea is rendered for a screen-reader
+ * description of the entire photograph (alt text). The value is controlled by
+ * the parent (imageAlt/onImageAltChange) so it is submitted with the same
+ * form; when non-empty it also becomes the preview image's alt text.
  */
 export default function PhotoUpload({
   id,
   previewUrl,
   file,
   hint,
+  imageAlt,
+  onImageAltChange,
   onAccept,
   onClear,
   clearLabel,
@@ -153,7 +169,13 @@ export default function PhotoUpload({
           <div className="relative">
             <img
               src={previewUrl}
-              alt={accepted && file ? `Selected photo: ${file.name}` : "Current photo preview"}
+              alt={
+                imageAlt.trim()
+                  ? imageAlt
+                  : accepted && file
+                    ? `Selected photo: ${file.name}`
+                    : "Current photo preview"
+              }
               className="w-full h-auto object-contain max-h-64"
             />
             <button
@@ -220,6 +242,34 @@ export default function PhotoUpload({
           />
         </div>
       </div>
+      {previewUrl && (
+        <div className="mt-3">
+          <label
+            htmlFor={`${id}-alt`}
+            className="block font-mono text-[11px] uppercase tracking-widest text-zinc-500 mb-2"
+          >
+            VISUAL DESCRIPTION (OPTIONAL)
+          </label>
+          <textarea
+            id={`${id}-alt`}
+            name="imageAlt"
+            value={imageAlt}
+            onChange={(e) => onImageAltChange(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="e.g., A yellow cordless drill with a black rubber grip rests on a scarred oak workbench, sawdust settled along the plank seams."
+            className="w-full bg-black border border-zinc-800 rounded-none px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none resize-y min-h-[72px]"
+            aria-describedby={`${id}-alt-hint`}
+          />
+          <p id={`${id}-alt-hint`} className="mt-1 font-mono text-[11px] text-zinc-500">
+            Read aloud by screen readers to describe the photo to blind and low-vision members.
+            Describe the whole picture — the tool, its condition, and its surroundings.
+          </p>
+          <p className="font-mono text-[11px] text-zinc-500 text-right">
+            {imageAlt.length}/500 characters
+          </p>
+        </div>
+      )}
       {hint}
     </div>
   );

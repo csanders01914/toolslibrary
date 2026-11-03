@@ -28,6 +28,8 @@ const createToolSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long"),
   category: z.string().min(1, "Category is required"),
   image: z.instanceof(File).optional().nullable(),
+  // Optional screen-reader description of the photo (alt text). Empty/absent normalizes to null.
+  imageAlt: z.string().max(500, "Visual description too long").optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,6 +44,7 @@ export async function POST(request: NextRequest) {
     description: formData.get("description"),
     category: formData.get("category"),
     image: formData.get("image"),
+    imageAlt: formData.get("imageAlt"),
   };
 
   const parsed = createToolSchema.safeParse(rawData);
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 400 });
   }
 
-  const { name, description, category, image } = parsed.data;
+  const { name, description, category, image, imageAlt } = parsed.data;
 
   if (!CATEGORIES.includes(category)) {
     return NextResponse.json({ success: false, error: "Invalid category" }, { status: 400 });
@@ -65,12 +68,17 @@ export async function POST(request: NextRequest) {
     imageUrl = saved.filename ?? null;
   }
 
+  // Whitespace-only or absent visual descriptions are stored as null so the
+  // display sites fall back to the name-based alt text.
+  const normalizedImageAlt = imageAlt?.trim() ? imageAlt.trim() : null;
+
   const tool = await prisma.tool.create({
     data: {
       name,
       description,
       category,
       imageUrl,
+      imageAlt: normalizedImageAlt,
       ownerId: session.user.id,
     },
   });

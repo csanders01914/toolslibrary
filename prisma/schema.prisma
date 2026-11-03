@@ -72,6 +72,7 @@ model Tool {
   category    String
   status      String   @default("AVAILABLE") // "AVAILABLE" | "BORROWED" | "MAINTENANCE"
   imageUrl    String?
+  imageAlt    String?  // Optional screen-reader description of the photo (alt text, max 500 chars) — describes the entire photograph for blind and low-vision members
   ownerId     String
   owner       User     @relation("OwnerTools", fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
