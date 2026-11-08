@@ -29,6 +29,7 @@ import {
   Plus,
   LifeBuoy,
   Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   updateUserRole,
@@ -428,6 +429,30 @@ export default function AdminClient({
             className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
           >
             Update canary
+          </Link>
+        </div>
+      </section>
+
+      {/* Secret-image publishing (PHASE_45) — ADMIN-only surface (operator
+          directive, 2026-11-08): the member dashboard card was removed and
+          the pages + REST route are role-gated, so this strip is the single
+          console entry point. */}
+      <section aria-label="Secret image publishing">
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-zinc-800 bg-[#0a0a0a] p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <ImageIcon className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+            <span className="font-mono text-xs uppercase tracking-widest text-zinc-400">
+              SECRET IMAGES:
+            </span>
+            <span className="font-mono text-xs text-zinc-500">
+              publish unguessable /i/&lt;token&gt; image links
+            </span>
+          </div>
+          <Link
+            href="/dashboard/images"
+            className="font-mono text-xs uppercase tracking-widest px-3 py-1.5 border border-cyan-500/60 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+          >
+            Manage images
           </Link>
         </div>
       </section>

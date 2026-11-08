@@ -26,10 +26,15 @@ export const dynamic = "force-dynamic";
 
 /**
  * Management dashboard for secret-link images: every image the signed-in
- * member has published, with its title, full share URL, and delete control.
+ * operator has published, with its title, full share URL, and delete control.
  * /dashboard/* is already middleware-gated; the explicit session check keeps
  * the page safe when rendered outside the middleware path (e.g. direct RSC
  * navigation) and matches the other dashboard pages' contract.
+ *
+ * ADMIN-only (operator directive, 2026-11-08): secret-link publishing is an
+ * operator surface, not a member feature — general members are redirected to
+ * /dashboard, and the only entry point is the admin console (/admin). The
+ * REST route /api/images/create carries the same role gate.
  *
  * The share URLs are assembled server-side from the request's host headers
  * (x-forwarded-host first, as set by the trusted edge) so the dashboard shows
@@ -40,6 +45,9 @@ export default async function ImagesPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+  if (session.user.role !== "ADMIN") {
+    redirect("/dashboard");
   }
 
   const [images, h] = await Promise.all([getUserImages(session.user.id), headers()]);
