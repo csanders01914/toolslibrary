@@ -106,6 +106,19 @@ First boot applies the SQL migrations (`prisma migrate deploy`), then boots
 `node server.js`. **Register immediately**: the first account on an empty
 database becomes the `ADMIN`.
 
+**If the build aborts with a Go panic** (`SIGSEGV` inside
+`imagebuildah.(*StageExecutor).Copy`): that is a known buildah race
+(podman-container-tools/buildah #6894, fixed by PR #7141 in buildah 1.47) —
+a failed stage's error is swallowed and a concurrently running stage copies
+from an already-torn-down container, so podman core-dumps instead of printing
+the real failing step. `deploy.sh` passes `--jobs 1` to sidestep it (this
+image's stages are a linear chain, so nothing is lost). If you hit the panic
+anyway: re-run the build (the race is a flake; the retry surfaces the real
+error or succeeds outright), clean the aborted build's stale state
+(`podman builder prune -f`, remove leftover intermediate containers from
+`podman ps -a`), and upgrade the host (`rpm-ostree upgrade` + reboot) once
+Fedora ships a podman vendoring buildah ≥ 1.47.
+
 ## 5. Environment reference
 
 | Variable | Set on | Purpose |
