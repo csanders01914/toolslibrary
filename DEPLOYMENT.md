@@ -362,8 +362,7 @@ never becomes an account-existence oracle). Buckets are in-memory only:
 restarting the container resets all budgets, and a multi-replica deployment
 would enforce budgets per replica (this app is a single container by design).
 
-Client identification: behind a Cloudflare Tunnel the trusted
-`cf-connecting-ip` header is used; otherwise the first `x-forwarded-for`
-hop. With direct exposure and neither header present, all clients share one
-bucket per surface; throttling fails safe (still applies) rather than
-fail-open.
+Client identification: behind the Caddy reverse proxy the first
+`x-forwarded-for` hop is used. With direct exposure and no proxy header
+present, all clients share one bucket per surface; throttling fails safe
+(still applies) rather than fail-open.

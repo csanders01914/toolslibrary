@@ -298,7 +298,7 @@ toolslibrary-v2/
 ├── tools-library-bot/         # Standalone deterministic Matrix helpdesk bot (separate npm project)
 ├── scripts/                   # verify-handoff.mjs, record-handoff.mjs
 ├── deploy/systemd/            # User-level backup timer units
-├── docs/DEPLOY.md             # Self-hosting guide (FCOS, Cloudflare Tunnel)
+├── docs/DEPLOY.md             # Self-hosting guide (FCOS, VPS + WireGuard edge)
 ├── Containerfile              # Multi-stage rootless Podman image
 ├── deploy.sh                  # Idempotent FCOS deployment wrapper
 ├── backup.sh                  # WAL-safe SQLite online backup

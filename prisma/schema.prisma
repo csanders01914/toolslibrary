@@ -49,6 +49,7 @@ model User {
   receivedMsgs Message[]     @relation("ReceivedMessages")
   vouchesGiven    Vouch[]    @relation("VouchesGiven")
   vouchesReceived Vouch[]    @relation("VouchesReceived")
+  images       PublishedImage[] @relation("OwnerImages")
   canaryPending CanaryPending?
 
   @@index([username])
@@ -227,4 +228,22 @@ model CanaryKey {
   publicKey  String   @unique // base64 SPKI DER
   privateKey String // sealed: v1:<iv>:<ciphertext>:<authTag>, AES-256-GCM over the PKCS8 PEM
   createdAt  DateTime @default(now())
+}
+
+// Secret-link image publishing. Each image is reachable ONLY at /i/<token>:
+// a 256-bit CSPRNG hex slug that is never listed, indexed, or linked anywhere
+// on the platform. Possession of the exact URL is the only access control —
+// the serving route returns nothing but the raw image bytes (no HTML chrome,
+// no title, no owner identity). The title exists solely for the owner's
+// management dashboard and is never exposed on the public surface.
+model PublishedImage {
+  id        String   @id @default(cuid())
+  token     String   @unique // 64-char hex secret — the unguessable URL slug
+  title     String // owner-facing label shown only on /dashboard/images
+  filename  String // system-generated file in data/uploads (see lib/uploads.ts)
+  ownerId   String
+  owner     User     @relation("OwnerImages", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
 }

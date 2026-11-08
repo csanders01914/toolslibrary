@@ -65,6 +65,9 @@ export interface RateLimitConfig {
  * - canary: 5 burst / 2 per minute — authenticated admin-only surface
  *   (PHASE_30); throttles canary passphrase checks and staging against
  *   brute force.
+ * - imagePublish: 10 burst / 5 per minute — authenticated member surface;
+ *   throttles secret-link image publishing so a compromised session cannot
+ *   flood data/uploads with binary payloads.
  */
 export const RATE_LIMITS = {
   login: { capacity: 10, refillPerMinute: 5 },
@@ -78,6 +81,7 @@ export const RATE_LIMITS = {
   adminEmail: { capacity: 5, refillPerMinute: 2 },
   adminEmailTest: { capacity: 3, refillPerMinute: 2 },
   canary: { capacity: 5, refillPerMinute: 2 },
+  imagePublish: { capacity: 10, refillPerMinute: 5 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

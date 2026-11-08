@@ -41,6 +41,7 @@ import {
   Send,
   Trash2,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { manageLoan, confirmHandoff } from "@/lib/actions/tools";
 import { vouchForUser, declineVouch } from "@/lib/actions/vouch";
@@ -68,6 +69,7 @@ interface Stats {
   toolsOwned: number;
   skillsOffered: number;
   skillsTotal: number;
+  imagesPublished: number;
   trustScore: number;
 }
 
@@ -249,6 +251,14 @@ export default function DashboardClient({
       hover: "hover:border-purple-500/50",
       href: "/dashboard/skills",
     },
+    {
+      label: "Images Published",
+      value: String(stats.imagesPublished),
+      icon: ImageIcon,
+      accent: "text-sky-400",
+      hover: "hover:border-sky-500/50",
+      href: "/dashboard/images",
+    },
   ];
 
   return (
@@ -277,7 +287,7 @@ export default function DashboardClient({
 
       {/* Stat Row */}
       <section aria-label="Account statistics">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {statCards.map((card) => {
             const Icon = card.icon;
             const body = (
