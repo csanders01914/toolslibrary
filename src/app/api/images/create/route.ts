@@ -63,6 +63,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
   }
 
+  // Admin-only surface (operator directive, 2026-11-08): the publish pages
+  // are role-gated too, so a general member can neither reach the UI nor
+  // call this endpoint directly.
+  if (session.user.role !== "ADMIN") {
+    return NextResponse.json({ success: false, error: "Admin privileges required" }, { status: 403 });
+  }
+
   // Binary write surface: throttle repeat publishing per client
   // (PHASE_23_RATE_LIMITING pattern).
   const limit = await enforceRateLimit("imagePublish");

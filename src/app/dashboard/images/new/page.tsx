@@ -28,11 +28,18 @@ export const dynamic = "force-dynamic";
  * nothing but the image. /dashboard/* is already middleware-gated; the
  * explicit session check keeps the page safe when rendered outside the
  * middleware path and matches the other dashboard pages' contract.
+ *
+ * ADMIN-only (operator directive, 2026-11-08): general members are
+ * redirected to /dashboard; the only entry point is the admin console
+ * (/admin) and the REST route /api/images/create carries the same role gate.
  */
 export default async function NewImagePage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+  if (session.user.role !== "ADMIN") {
+    redirect("/dashboard");
   }
 
   return <NewImageClient />;
