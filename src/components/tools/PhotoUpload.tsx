@@ -49,10 +49,12 @@ interface PhotoUploadProps {
    * Screen-reader description of the photo (alt text, max 500 chars).
    * Controlled by the parent so the value is submitted with the form; this
    * component renders the editor whenever a photo is present and uses the
-   * text as the preview image's alt when non-empty.
+   * text as the preview image's alt when non-empty. Optional: when
+   * onImageAltChange is omitted (surfaces with no alt-text editor, e.g. the
+   * secret-link image publisher) the editor is not rendered at all.
    */
-  imageAlt: string;
-  onImageAltChange: (value: string) => void;
+  imageAlt?: string;
+  onImageAltChange?: (value: string) => void;
   /**
    * Called with the validated file and its blob: URL preview. The URL is
    * created and revoked by this component — consumers must only store it.
@@ -170,7 +172,7 @@ export default function PhotoUpload({
             <img
               src={previewUrl}
               alt={
-                imageAlt.trim()
+                imageAlt?.trim()
                   ? imageAlt
                   : accepted && file
                     ? `Selected photo: ${file.name}`
@@ -242,7 +244,7 @@ export default function PhotoUpload({
           />
         </div>
       </div>
-      {previewUrl && (
+      {previewUrl && onImageAltChange && (
         <div className="mt-3">
           <label
             htmlFor={`${id}-alt`}
@@ -266,7 +268,7 @@ export default function PhotoUpload({
             Describe the whole picture — the tool, its condition, and its surroundings.
           </p>
           <p className="font-mono text-[11px] text-zinc-500 text-right">
-            {imageAlt.length}/500 characters
+            {(imageAlt ?? "").length}/500 characters
           </p>
         </div>
       )}
