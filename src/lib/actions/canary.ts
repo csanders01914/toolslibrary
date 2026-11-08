@@ -20,7 +20,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { z } from "zod";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
@@ -124,7 +124,7 @@ export async function setCanaryPassphraseAction(
         error: "Current canary passphrase is required to change it",
       };
     }
-    const isValid = await bcrypt.compare(
+    const isValid = await bcrypt.verify(
       parsed.data.currentPassphrase,
       user.canaryPassphraseHash
     );

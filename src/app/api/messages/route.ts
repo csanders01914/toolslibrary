@@ -97,8 +97,13 @@ export async function GET(request: NextRequest) {
       sender: { select: { id: true, alias: true } },
       receiver: { select: { id: true, alias: true } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
+    // PHASE_54 (audit P3): bounded history — the newest 200 messages of a
+    // thread are plenty for the popup channel view; reversed to chronological
+    // order for render.
+    take: 200,
   });
+  messages.reverse();
 
   return NextResponse.json({ messages });
 }

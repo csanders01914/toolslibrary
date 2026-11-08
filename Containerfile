@@ -17,8 +17,10 @@
 # Containerfile — multi-stage rootless-Podman image for the ToolsLibrary.
 # Target host: Fedora CoreOS, rootless Podman with --userns=keep-id.
 # Stack: Next.js 15 App Router with `output: 'standalone'` (see next.config.ts),
-# Prisma 5.22 + SQLite (WAL) on a bind-mounted volume, bcryptjs (pure JS — no
-# native toolchain needed on Alpine).
+# Prisma 5.22 + SQLite (WAL) on a bind-mounted volume, @node-rs/bcrypt (native
+# NAPI module — prebuilt musl binaries ship in the npm package, so no native
+# toolchain is needed on Alpine; kept external to the server bundle via
+# serverExternalPackages in next.config.ts).
 # Local host artifacts (secrets, live database, editor backups) are kept out of
 # the build context by .dockerignore — this file never touches host source.
 

@@ -22,7 +22,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { VOUCH_DELTA } from "@/lib/constants";
+import { VOUCH_DELTA, clampTrustScore } from "@/lib/constants";
 
 /**
  * Peer trust vouching (PHASE_25_TRUST_VOUCHING).
@@ -129,20 +129,26 @@ export async function vouchForUser(
   }
 
   try {
-    await prisma.$transaction([
-      prisma.vouch.create({
+    await prisma.$transaction(async (tx) => {
+      await tx.vouch.create({
         data: {
           loanId: context.loanId,
           voucherId: session.user.id,
           voucheeId: context.voucheeId,
           delta: VOUCH_DELTA,
         },
-      }),
-      prisma.user.update({
+      });
+      // Audit S6: bounded trust mutation — read, clamp, write inside the
+      // same transaction instead of a blind increment.
+      const vouchee = await tx.user.findUnique({
         where: { id: context.voucheeId },
-        data: { trustScore: { increment: VOUCH_DELTA } },
-      }),
-    ]);
+        select: { trustScore: true },
+      });
+      await tx.user.update({
+        where: { id: context.voucheeId },
+        data: { trustScore: clampTrustScore((vouchee?.trustScore ?? 0) + VOUCH_DELTA) },
+      });
+    });
   } catch {
     // Unique-constraint race (double submit): treat as already decided.
     return { success: false, error: "You already vouched for this loan" };

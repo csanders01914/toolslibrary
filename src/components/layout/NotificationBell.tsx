@@ -50,7 +50,11 @@ export const NOTIFICATION_COUNTS_EVENT = "toolslibrary:notifications:counts";
 /** Ping to request an immediate re-poll (fired after read/send mutations). */
 export const NOTIFICATION_REFRESH_EVENT = "toolslibrary:notifications:refresh";
 
-const POLL_INTERVAL_MS = 30_000;
+// PHASE_54 (audit P6): 60 s steady-state cadence, and the interval callback
+// skips the fetch entirely while the tab is hidden (the visibilitychange
+// listener below catches up the moment the tab returns) — background tabs
+// previously kept issuing the 5-query counts poll forever.
+const POLL_INTERVAL_MS = 60_000;
 
 interface ActivityRow {
   key: keyof NotificationCounts;
@@ -154,7 +158,9 @@ export function NotificationBell() {
   // Steady-state polling + mutation-driven refresh pings.
   useEffect(() => {
     if (status !== "authenticated") return;
-    const interval = setInterval(fetchCounts, POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") fetchCounts();
+    }, POLL_INTERVAL_MS);
     const onRefresh = () => fetchCounts();
     window.addEventListener(NOTIFICATION_REFRESH_EVENT, onRefresh);
     return () => {

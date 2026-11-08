@@ -61,7 +61,7 @@
  */
 
 import crypto from "node:crypto";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 // Client-safe contract (constants, public shapes, pure functions) lives in
@@ -306,7 +306,7 @@ export async function getCanaryHistory(limit = 6): Promise<CanaryEventPublic[]> 
  * current-passphrase check — this is the write primitive only.
  */
 export async function setCanaryPassphrase(userId: string, passphrase: string): Promise<void> {
-  const hash = await bcrypt.hash(passphrase, BCRYPT_COST);
+  const hash = await bcrypt.hash(passphrase, { cost: BCRYPT_COST });
   await prisma.user.update({
     where: { id: userId },
     data: { canaryPassphraseHash: hash },
@@ -327,7 +327,7 @@ export async function verifyCanaryPassphrase(
     select: { canaryPassphraseHash: true },
   });
   if (!user?.canaryPassphraseHash) return false;
-  return bcrypt.compare(passphrase, user.canaryPassphraseHash);
+  return bcrypt.verify(passphrase, user.canaryPassphraseHash);
 }
 
 /**

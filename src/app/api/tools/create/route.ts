@@ -21,7 +21,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
-import { saveUploadedImage } from "@/lib/uploads";
+import { saveUploadedImage, readCappedForm, PayloadTooLargeError } from "@/lib/uploads";
 
 const createToolSchema = z.object({
   name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
@@ -38,7 +38,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
   }
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    // PHASE_53 (audit P7): real body cap — this route previously buffered
+    // the whole multipart payload with no guard at all.
+    formData = await readCappedForm(request);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
+    }
+    return NextResponse.json({ success: false, error: "Malformed multipart payload" }, { status: 400 });
+  }
   const rawData = {
     name: formData.get("name"),
     description: formData.get("description"),

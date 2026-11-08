@@ -27,18 +27,19 @@
  *
  * Contract: raw multipart/form-data with the fields title (1–100 chars,
  * owner-facing label only) and image (File, required). The file is validated
- * against the shared lib/uploads.ts rules, persisted to data/uploads, and a
- * PublishedImage row is created with a fresh 256-bit CSPRNG token. The
- * response carries the token and its /i/<token> path — the ONLY way the
- * image can ever be reached. No listing, sitemap, or on-page link ever
- * exposes it.
+ * against the shared lib/uploads.ts rules, persisted to data/uploads/secret/
+ * (PHASE_47: an isolated directory served ONLY by /i/<token> — never by the
+ * public /api/uploads route), and a PublishedImage row is created with a
+ * fresh 256-bit CSPRNG token. The response carries the token and its
+ * /i/<token> path — the ONLY way the image can ever be reached. No listing,
+ * sitemap, or on-page link ever exposes it.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
-import { saveUploadedImage } from "@/lib/uploads";
+import { saveSecretImage, readCappedForm, PayloadTooLargeError } from "@/lib/uploads";
 import { generateImageToken } from "@/lib/images";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 
@@ -74,15 +75,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Expected multipart/form-data" }, { status: 415 });
   }
 
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (contentLength > MAX_REQUEST_BYTES) {
-    return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
-  }
-
   let formData: FormData;
   try {
-    formData = await request.formData();
-  } catch {
+    // PHASE_53 (audit P7): real body cap — the declared Content-Length is
+    // spoofable, and a chunked request omits it entirely.
+    formData = await readCappedForm(request, MAX_REQUEST_BYTES);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
+    }
     return NextResponse.json({ success: false, error: "Malformed multipart payload" }, { status: 400 });
   }
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Image is required" }, { status: 400 });
   }
 
-  const saved = await saveUploadedImage(image);
+  const saved = await saveSecretImage(image);
   if (saved.error || !saved.filename) {
     return NextResponse.json({ success: false, error: saved.error ?? "Image could not be saved" }, { status: 400 });
   }

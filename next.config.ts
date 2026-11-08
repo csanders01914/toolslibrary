@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // @node-rs/bcrypt is a native NAPI module (PHASE_48 bcryptjs swap): keep it
+  // external to the server bundle so the prebuilt .node binary is loaded from
+  // node_modules at runtime instead of being traced/bundled by webpack.
+  serverExternalPackages: ['@node-rs/bcrypt'],
   // Server Actions carry the tool-listing photo on /tools/[id]/edit. The
   // default 1MB body limit rejects virtually every real phone photo (2-8MB)
   // with a silent 413 before updateTool runs, so the limit is raised above
@@ -47,11 +51,33 @@ const nextConfig: NextConfig = {
   // confirmation token) cannot reach third-party edge infrastructure via a
   // Referer header. Browsers default to strict-origin-when-cross-origin, but
   // the header is pinned so older or misconfigured clients cannot regress it.
+  //
+  // PHASE_49 (audit S8): the app previously shipped ONLY the Referrer-Policy.
+  // Added: nosniff, framing denial (X-Frame-Options + frame-ancestors), HSTS
+  // (TLS terminates at Caddy on the FCOS host; the header is applied at the
+  // app so it survives any proxy path), and a baseline CSP. The CSP allows
+  // 'unsafe-inline' for script/style because Next.js hydration and the
+  // design system's inline style attributes require it; it still locks the
+  // app to same-origin resources (zero external CDNs by contract), forbids
+  // plugins/embedding, and pins form-action and base-uri to self.
   async headers() {
     return [
       {
         source: '/:path*',
-        headers: [{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' }],
+        headers: [
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'",
+          },
+        ],
       },
     ];
   },

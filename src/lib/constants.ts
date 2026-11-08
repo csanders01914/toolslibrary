@@ -44,3 +44,13 @@ export const SKILL_CATEGORIES = [
 // decline records delta 0. Small enough that colluding aliases cannot farm
 // meaningful trust quickly.
 export const VOUCH_DELTA = 2;
+
+/**
+ * Trust scores are bounded 0-100 everywhere they are written (audit S6):
+ * every mutation path computes the next score through this clamp instead of
+ * a blind increment, so repeated penalties can never push a member negative
+ * and repeated vouches can never exceed the ceiling.
+ */
+export function clampTrustScore(score: number): number {
+  return Math.max(0, Math.min(100, score));
+}
