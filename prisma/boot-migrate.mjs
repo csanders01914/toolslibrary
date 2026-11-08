@@ -118,6 +118,7 @@ async function main() {
       console.log(
         `[boot-migrate] schema for ${migration.name} already exists but is not recorded as applied — marking applied`
       );
+      await prisma.$disconnect();
       execFileSync(process.execPath, [PRISMA_JS, "migrate", "resolve", "--applied", migration.name], {
         stdio: "inherit",
       });
