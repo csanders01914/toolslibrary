@@ -101,7 +101,11 @@ EXPOSE 3000
 # drift fails loudly instead of being force-synced (unlike `db push`, a
 # prototyping command that can silently truncate or drop columns). The
 # Prisma client is generated at build time in the builder stage; `migrate
-# deploy` never regenerates it. Existing databases created by `db push` must
-# be baselined once: prisma migrate resolve --applied 0_init (see
-# DEPLOYMENT.md).
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]
+# deploy` never regenerates it.
+#
+# prisma/boot-migrate.mjs runs FIRST: it reconciles the migration bookkeeping
+# with the schema actually in the volume, so a database created by the old
+# `db push` boot (or restored from a pre-migrations backup) is baselined
+# automatically instead of crashing `migrate deploy` on "table already
+# exists" — the 2026-11-08 outage. See DEPLOYMENT.md section 7.
+CMD ["sh", "-c", "node prisma/boot-migrate.mjs && ./node_modules/.bin/prisma migrate deploy && node server.js"]

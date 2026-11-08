@@ -347,14 +347,25 @@ never destroys data. The old `prisma db push` boot was removed: `db push` is
 a prototyping command that force-syncs the schema and can silently truncate
 or drop columns when it detects drift.
 
-### Existing deployments (database created by `db push`) — one-time baseline
+### Existing deployments (database created by `db push`) — automatic baseline
 
-Before restarting with a new image build, mark the baseline migration as
-already applied so `migrate deploy` does not try to re-create existing
-tables:
+The container entrypoint self-baselines: on every boot,
+`prisma/boot-migrate.mjs` compares each migration's schema footprint (the
+table or column it creates) against what is actually in the volume, and marks
+exactly the already-present migrations as applied via
+`prisma migrate resolve --applied <name>` before `migrate deploy` runs. A
+database created by the old `db push` boot — or restored from a pre-migrations
+backup, or left with a failed-migration row by a crashed deploy — is
+reconciled automatically; fresh volumes and fully migrated volumes are
+untouched no-ops. No manual step is required.
+
+The manual equivalent, if you ever need it (the container must be running for
+`exec`; use a one-shot container against the data volume if it is not):
 
 ```bash
 podman exec tool-library ./node_modules/.bin/prisma migrate resolve --applied 0_init
+# repeat per migration whose schema already exists in the volume — the boot
+# script's log lines list exactly which ones it resolved
 ```
 
 Then rebuild and redeploy as usual. Fresh deployments need no baseline: the
