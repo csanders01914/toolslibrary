@@ -53,3 +53,8 @@ scripts/
 
 # --- Standalone Matrix helpdesk bot (separate npm project, never baked into the platform image) ---
 tools-library-bot/
+
+# Exclude local Postfix configuration
+postfix/
+
+main.cf

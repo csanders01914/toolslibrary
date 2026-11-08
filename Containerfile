@@ -33,7 +33,7 @@ RUN apk add --no-cache openssl libc6-compat
 
 # ---- deps: deterministic, lockfile-driven dependency install ---------------
 FROM base AS deps
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # ---- builder: TypeScript compilation + Prisma client generation ------------
