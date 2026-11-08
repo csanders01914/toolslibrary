@@ -28,8 +28,34 @@ The `Containerfile` builds a Next.js `output: 'standalone'` image on
 server:
 
 ```bash
-podman build -t localhost/tool-library:latest -f Containerfile .
+podman build --jobs 1 -t localhost/tool-library:latest -f Containerfile .
 ```
+
+### If the build dies with a Go panic (SIGSEGV in `StageExecutor.Copy`)
+
+`podman build` can abort with `panic: runtime error: invalid memory address or
+nil pointer dereference` inside `imagebuildah.(*StageExecutor).Copy` — a known
+buildah race (upstream podman-container-tools/buildah issue #6894, fixed by
+PR #7141 in buildah 1.47): when one build stage fails, the error is swallowed
+and a concurrently running stage calls `Copy()` on an already-torn-down
+container, so podman core-dumps **instead of printing the real failing step**.
+`deploy.sh` passes `--jobs 1` to sidestep the race — this Containerfile's
+stages are a linear chain (deps → builder → runner), so serializing them costs
+nothing. If you build manually or hit the panic anyway:
+
+1. Re-run the build. The race is a flake; a retry either succeeds outright
+   (the original failure was transient, e.g. a registry/network hiccup during
+   `npm ci`) or surfaces the real error cleanly.
+2. If it recurs, expose the masked step: `podman build --jobs 1 --log-level
+   debug ...` and read the last `STEP` line before the panic. Also check
+   `journalctl -k` for OOM kills — a RAM-starved `npm run build` stage failure
+   is a common trigger on small hosts.
+3. Clean the aborted build's stale state (a SIGSEGV bypasses normal cleanup):
+   `podman builder prune -f`, then `podman ps -a` and `podman rm` any leftover
+   intermediate build containers.
+4. Durable fix: upgrade the host so podman vendors the patched buildah —
+   `rpm-ostree upgrade` (plus reboot) once Fedora ships a podman with
+   buildah ≥ 1.47; verify with `podman --version`.
 
 ## 3. Run the container (rootless, keep-id)
 

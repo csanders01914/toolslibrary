@@ -114,7 +114,14 @@ else
 fi
 
 echo "==> Building $IMAGE"
-podman build --build-arg "LIBERAPAY_URL=${LIBERAPAY_URL:-}" -t "$IMAGE" -f "$CONTAINERFILE" "$SCRIPT_DIR"
+# --jobs 1: buildah's concurrent stage scheduler has a known race on podman
+# releases vendoring buildah < 1.47 (upstream podman-container-tools/buildah
+# #6894, fixed by PR #7141): when one stage fails, the error is swallowed and
+# a concurrently running stage calls Copy() on an already-torn-down container,
+# so podman dies with a SIGSEGV instead of the real error. This Containerfile's
+# stages are a linear chain (deps -> builder -> runner), so serializing them
+# costs nothing and keeps the clean-error path on vulnerable podman versions.
+podman build --jobs 1 --build-arg "LIBERAPAY_URL=${LIBERAPAY_URL:-}" -t "$IMAGE" -f "$CONTAINERFILE" "$SCRIPT_DIR"
 
 echo "==> Removing previous container (if any)"
 podman rm -f "$APP_NAME" 2>/dev/null || true

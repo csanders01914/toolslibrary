@@ -17,28 +17,43 @@
 */
 
 /**
- * Shared server-side storage for listing photos (data/uploads).
+ * Shared server-side storage for uploaded images.
  *
- * Single source of truth for every write surface that persists a tool photo —
- * the /api/tools/create and /api/tools/[id]/image route handlers — so the
- * validation rules, filename scheme, and deletion guard cannot drift apart.
- * Server-only by construction: the node:fs import fails any client bundle.
+ * Two isolated directories with one shared validation/deletion core:
+ * - data/uploads/          — PUBLIC listing photos (Tool.imageUrl), served by
+ *                            /api/uploads/<filename>, which serves a file only
+ *                            when an existing Tool.imageUrl references it.
+ * - data/uploads/secret/   — secret-link images (PublishedImage), served ONLY
+ *                            by /i/<token> (PHASE_47, audit S1). Never listed,
+ *                            never publicly cached, never reachable through
+ *                            /api/uploads.
+ *
+ * Single source of truth for every write surface that persists an image —
+ * the /api/tools/create and /api/tools/[id]/image route handlers (public) and
+ * /api/images/create (secret) — so the validation rules, filename scheme, and
+ * deletion guards cannot drift apart. Server-only by construction: the
+ * node:fs import fails any client bundle.
  *
  * Security posture:
  * - Size and MIME type are validated BEFORE the bytes are read from the
  *   multipart payload, so an oversized or disallowed upload is never written.
  * - The stored extension is derived from the validated MIME type, never from
- *   the user-supplied filename. The public /api/uploads/<filename> route
- *   serves files by extension (e.g. .svg as image/svg+xml), so a spoofed
- *   filename must never choose the stored extension.
- * - Filenames are system-generated (`<timestamp>-<random><ext>`); deletion
- *   refuses anything else, including path separators and `..`.
+ *   the user-supplied filename, so a spoofed filename can never choose the
+ *   stored extension.
+ * - Filenames are system-generated (`<timestamp>-<CSPRNG hex><ext>`); the
+ *   128-bit random component keeps stored names unguessable and
+ *   non-enumerable. Deletion refuses anything else, including path
+ *   separators and `..`.
  */
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 
 export const UPLOADS_DIR = path.resolve(process.cwd(), "data/uploads");
+
+/** Secret-link images live in an isolated subdirectory of the uploads volume. */
+export const SECRET_UPLOADS_DIR = path.join(UPLOADS_DIR, "secret");
 
 /** Hard cap mirrored by the client-side PhotoUpload validation. */
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -67,23 +82,26 @@ export function validateImageFile(image: File): string | null {
 }
 
 /**
- * Validates and persists an uploaded listing photo into data/uploads.
- * Returns the stored filename, an error string, or no filename when the
- * caller passed an empty file.
+ * Shared persistence core: validates, generates a CSPRNG filename, and writes
+ * the bytes into the given directory. Returns the stored filename, an error
+ * string, or no filename when the caller passed an empty file.
  */
-export async function saveUploadedImage(image: File): Promise<{ filename?: string; error?: string }> {
+async function persistImage(
+  image: File,
+  dir: string
+): Promise<{ filename?: string; error?: string }> {
   const validationError = validateImageFile(image);
   if (validationError) {
     return { error: validationError };
   }
 
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 
   const ext = EXTENSION_BY_TYPE[image.type];
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-  const filePath = path.join(UPLOADS_DIR, filename);
+  const filename = `${Date.now()}-${crypto.randomBytes(16).toString("hex")}${ext}`;
+  const filePath = path.join(dir, filename);
 
   const buffer = Buffer.from(await image.arrayBuffer());
   fs.writeFileSync(filePath, buffer);
@@ -91,11 +109,39 @@ export async function saveUploadedImage(image: File): Promise<{ filename?: strin
   return { filename };
 }
 
-/** Removes a previously stored upload. Filenames are system-generated; anything else is refused. */
-export function deleteUploadedImage(filename: string | null | undefined): void {
+/**
+ * Validates and persists an uploaded PUBLIC listing photo into data/uploads.
+ * The stored filename becomes Tool.imageUrl and is served via
+ * /api/uploads/<filename>.
+ */
+export async function saveUploadedImage(image: File): Promise<{ filename?: string; error?: string }> {
+  return persistImage(image, UPLOADS_DIR);
+}
+
+/**
+ * Validates and persists a SECRET-link image into data/uploads/secret/.
+ * The stored filename becomes PublishedImage.filename and is served ONLY via
+ * /i/<token> — never through the public /api/uploads route.
+ */
+export async function saveSecretImage(image: File): Promise<{ filename?: string; error?: string }> {
+  return persistImage(image, SECRET_UPLOADS_DIR);
+}
+
+/** Shared deletion core. Filenames are system-generated; anything else is refused. */
+function removeStoredImage(dir: string, filename: string | null | undefined): void {
   if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
-  const filePath = path.join(UPLOADS_DIR, filename);
+  const filePath = path.join(dir, filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
+}
+
+/** Removes a previously stored PUBLIC listing photo from data/uploads. */
+export function deleteUploadedImage(filename: string | null | undefined): void {
+  removeStoredImage(UPLOADS_DIR, filename);
+}
+
+/** Removes a previously stored SECRET-link image from data/uploads/secret. */
+export function deleteSecretImage(filename: string | null | undefined): void {
+  removeStoredImage(SECRET_UPLOADS_DIR, filename);
 }
