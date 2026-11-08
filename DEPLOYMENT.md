@@ -310,8 +310,15 @@ failure. Tune directories, schedule, or retention via the `DATA_DIR`,
 `BACKUP_DIR`, and `RETENTION_DAYS` environment overrides in `backup.sh` and
 the `OnCalendar` entry in the timer unit.
 
-`data/uploads/` (user media) is not part of the database snapshot; include it
-in a file-level backup of the host if uploaded photos matter to you.
+Since PHASE_55, each run also writes a
+`tool_library-<stamp>-uploads.tar.gz` (+ `.sha256` manifest) capturing
+`data/uploads/` — listing photos AND secret-link images — and
+`data/.auth_secret`, the AES-256-GCM key-seal root for the warrant canary
+private key. Losing `.auth_secret` bricks canary re-signing even with a
+restored database, and losing `uploads/` destroys every member's pictures,
+so both now prune on the same retention window as the DB snapshot. The
+archive is `chmod 600` (it contains the key-seal root) — protect `BACKUP_DIR`
+accordingly if you sync it anywhere off-host.
 
 ### Restoring from a backup
 
@@ -319,8 +326,10 @@ in a file-level backup of the host if uploaded photos matter to you.
 podman stop tool-library
 cd /var/home/core/srv/tool-library/backups
 sha256sum -c tool_library-<stamp>.db.sha256        # verify the snapshot first
+sha256sum -c tool_library-<stamp>-uploads.tar.gz.sha256
 cp tool_library-<stamp>.db ../data/tool_library.db
 rm -f ../data/tool_library.db-wal ../data/tool_library.db-shm
+tar -xzf tool_library-<stamp>-uploads.tar.gz -C ../data
 cd -
 ./deploy.sh
 ```
@@ -350,6 +359,22 @@ podman exec tool-library ./node_modules/.bin/prisma migrate resolve --applied 0_
 
 Then rebuild and redeploy as usual. Fresh deployments need no baseline: the
 first boot applies `0_init` to the empty volume.
+
+### PHASE_47 secret-image storage split (no required action)
+
+Published secret-link images now live in the isolated `data/uploads/secret/`
+directory, reachable only at `/i/<token>`; the public `/api/uploads/` route
+serves a file only when an existing tool photo (`Tool.imageUrl`) references it.
+Images published before PHASE_47 keep resolving through a legacy-path fallback
+in `/i/<token>` — **no migration step is required**. Optionally consolidate
+old files into the secret directory with the idempotent helper (run inside the
+container, or on any host with the repo + `data/` volume):
+
+```bash
+podman exec tool-library node scripts/migrate-secret-images.mjs
+```
+
+It reports `moved / alreadyMigrated / missing` counts and is safe to re-run.
 
 ### Future schema changes
 

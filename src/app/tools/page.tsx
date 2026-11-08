@@ -37,6 +37,11 @@ export default async function ToolsPage() {
         },
       },
       orderBy: { createdAt: "desc" },
+      // PHASE_54 (audit P3): bounded catalog payload — the newest 500 listings
+      // are delivered to every visitor (the client-side search/filter operates
+      // on what it is given). Behavior is identical at community scale; the
+      // bound caps the payload as the catalog grows.
+      take: 500,
     }),
   ]);
   const isGuest = !session?.user;

@@ -55,7 +55,10 @@ interface ActiveThread {
 
 // Live-tail cadence for the open channel: keeps the popup chat current
 // without any persistent connection (ephemeral, poll-based, zero-PII).
-const CHAT_POLL_INTERVAL_MS = 5000;
+// PHASE_54 (audit P6): 10 s — the poll is visibility-gated and only runs for
+// an OPEN channel, so the wider cadence halves steady-state load with no
+// practical UX cost for a community tool library.
+const CHAT_POLL_INTERVAL_MS = 10_000;
 
 /**
  * Popup messenger. Two in-widget views:

@@ -17,7 +17,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #
-# backup.sh — WAL-safe online backup for the ToolsLibrary SQLite database.
+# backup.sh — WAL-safe online backup for the ToolsLibrary SQLite database,
+# plus the user-media volume and the canary key-seal root (PHASE_55, audit
+# §3.5: a DB-only backup destroyed pictures and bricked canary re-signing on
+# host loss).
 #
 # Uses the native sqlite3 CLI `.backup` command (the SQLite Online Backup
 # API), which produces a consistent, transactionally sound snapshot of the
@@ -25,6 +28,14 @@
 # WAL-mode database can capture a torn state of the -wal/-shm sidecar files
 # and yield a corrupted restore; `.backup` never has that problem and never
 # blocks the running server.
+#
+# Alongside every DB snapshot, a compressed tar archive captures:
+#   data/uploads/        — listing photos AND secret-link images
+#   data/.auth_secret    — the AES-256-GCM key-seal root for the warrant
+#                          canary private key (canary.ts); losing it bricks
+#                          canary re-signing even with the DB restored
+# The archive is chmod 600 (it contains the key-seal root) and gets its own
+# sha256 manifest; both prune on the same retention window as the DB.
 #
 # Runs on the Fedora CoreOS host as the same user that owns the bind-mounted
 # data volume (i.e. scheduled by the user-level systemd timer in
@@ -50,6 +61,7 @@
 #   podman stop tool-library
 #   cp "$BACKUP_DIR"/tool_library-<stamp>.db "$DATA_DIR"/tool_library.db
 #   rm -f "$DATA_DIR"/tool_library.db-wal "$DATA_DIR"/tool_library.db-shm
+#   tar -xzf "$BACKUP_DIR"/tool_library-<stamp>-uploads.tar.gz -C "$DATA_DIR"
 #   ./deploy.sh
 #
 
@@ -112,8 +124,31 @@ mv -f "$TMP" "$TARGET"
 SIZE="$(du -h "$TARGET" | cut -f1)"
 echo "OK: $TARGET ($SIZE, integrity_check: ok, sha256 manifest written)"
 
+# PHASE_55 (audit §3.5): archive the user-media volume and the canary
+# key-seal root alongside the DB snapshot. Either item may legitimately be
+# absent (no uploads yet, canary never initialized) — archive whatever
+# exists; skip silently only when NEITHER does.
+ARCHIVE_TARGET="$BACKUP_DIR/$PREFIX-$STAMP-uploads.tar.gz"
+ARCHIVE_ITEMS=()
+[ -d "$DATA_DIR/uploads" ] && ARCHIVE_ITEMS+=("uploads")
+[ -f "$DATA_DIR/.auth_secret" ] && ARCHIVE_ITEMS+=(".auth_secret")
+
+if [ "${#ARCHIVE_ITEMS[@]}" -gt 0 ]; then
+  tar -czf "$ARCHIVE_TARGET" -C "$DATA_DIR" "${ARCHIVE_ITEMS[@]}"
+  # The archive contains the canary key-seal root: restrict it to the
+  # owning user (the same keep-id user the timer runs as).
+  chmod 600 "$ARCHIVE_TARGET"
+  (cd "$BACKUP_DIR" && sha256sum "$PREFIX-$STAMP-uploads.tar.gz" > "$PREFIX-$STAMP-uploads.tar.gz.sha256")
+  chmod 600 "$BACKUP_DIR/$PREFIX-$STAMP-uploads.tar.gz.sha256"
+  ARCHIVE_SIZE="$(du -h "$ARCHIVE_TARGET" | cut -f1)"
+  echo "OK: $ARCHIVE_TARGET ($ARCHIVE_SIZE, uploads + key-seal root, sha256 manifest written)"
+else
+  echo "NOTE: no uploads/ directory and no .auth_secret file in $DATA_DIR; media archive skipped."
+fi
+
 # Retention: prune snapshots, manifests, and stale temp files past the window.
 find "$BACKUP_DIR" -type f \
-  \( -name "$PREFIX-*.db" -o -name "$PREFIX-*.db.sha256" -o -name "$PREFIX-*.db.tmp" \) \
+  \( -name "$PREFIX-*.db" -o -name "$PREFIX-*.db.sha256" -o -name "$PREFIX-*.db.tmp" \
+     -o -name "$PREFIX-*.tar.gz" -o -name "$PREFIX-*.tar.gz.sha256" \) \
   -mtime "+$RETENTION_DAYS" -delete
 echo "Retention: snapshots older than $RETENTION_DAYS day(s) removed from $BACKUP_DIR"

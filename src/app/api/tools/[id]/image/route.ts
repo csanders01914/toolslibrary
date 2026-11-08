@@ -43,7 +43,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
-import { saveUploadedImage, deleteUploadedImage } from "@/lib/uploads";
+import { saveUploadedImage, deleteUploadedImage, readCappedForm, PayloadTooLargeError } from "@/lib/uploads";
 
 const updateToolSchema = z.object({
   name: z.string().min(1, "Tool name is required").max(100, "Name too long"),
@@ -82,15 +82,16 @@ export async function POST(
     return NextResponse.json({ success: false, error: "Expected multipart/form-data" }, { status: 415 });
   }
 
-  const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (contentLength > MAX_REQUEST_BYTES) {
-    return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
-  }
-
   let formData: FormData;
   try {
-    formData = await request.formData();
-  } catch {
+    // PHASE_53 (audit P7): real body cap — the declared Content-Length is
+    // spoofable, and a chunked request omits it entirely, so the old
+    // header-only guard admitted unbounded RAM buffering.
+    formData = await readCappedForm(request, MAX_REQUEST_BYTES);
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      return NextResponse.json({ success: false, error: "Payload too large" }, { status: 413 });
+    }
     return NextResponse.json({ success: false, error: "Malformed multipart payload" }, { status: 400 });
   }
 

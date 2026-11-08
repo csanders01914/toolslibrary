@@ -336,8 +336,11 @@ Podman)".
 
 - **Backups:** `backup.sh` + the `tool-library-backup.timer` user unit take a
   WAL-safe online snapshot every night (`sqlite3 .backup`), verify it with
-  `PRAGMA integrity_check`, and prune after 14 days. Setup steps and the
-  restore procedure: `DEPLOYMENT.md` section 6.
+  `PRAGMA integrity_check`, and prune after 14 days. Since PHASE_55 each run
+  also archives `data/uploads/` (photos + secret-link images) and
+  `data/.auth_secret` (the canary key-seal root) into a `chmod 600` tarball
+  with its own sha256 manifest, on the same retention window. Setup steps and
+  the restore procedure: `DEPLOYMENT.md` section 6.
 - **Schema changes:** `prisma migrate dev` locally, commit the migration,
   redeploy; `migrate deploy` applies it on boot. Existing `db push`-era
   databases need the one-time baseline: `DEPLOYMENT.md` section 7.

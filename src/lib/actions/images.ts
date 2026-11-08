@@ -22,7 +22,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { deleteUploadedImage } from "@/lib/uploads";
+import { deleteSecretImage } from "@/lib/uploads";
 
 /**
  * Text-only server actions for the secret-link image dashboard
@@ -68,7 +68,7 @@ export async function deleteImage(
   }
 
   await prisma.publishedImage.delete({ where: { id: image.id } });
-  deleteUploadedImage(image.filename);
+  await deleteSecretImage(image.filename);
 
   revalidatePath("/dashboard/images");
 

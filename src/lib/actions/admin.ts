@@ -20,7 +20,9 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "@node-rs/bcrypt";
+import { clampTrustScore } from "@/lib/constants";
+import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
 import { z } from "zod";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
@@ -111,7 +113,7 @@ export async function adjustTrustScore(
     return { success: false, error: "User not found" };
   }
 
-  const nextScore = Math.max(0, Math.min(100, user.trustScore + delta));
+  const nextScore = clampTrustScore(user.trustScore + delta);
 
   await prisma.user.update({
     where: { id: userId },
@@ -204,7 +206,27 @@ export async function deleteUser(
     return { success: false, error: "Cannot delete an administrator — demote to USER first" };
   }
 
+  const ownedImageFiles: string[] = [];
+  const publishedImageFiles: string[] = [];
+
   await prisma.$transaction(async (tx) => {
+    // Audit S9: collect the image filenames the cascade is about to remove
+    // rows for, so the files can be purged from disk after commit — the DB
+    // cascade alone leaves photos publicly retrievable at /api/uploads/<file>
+    // indefinitely.
+    const ownedImages = await tx.tool.findMany({
+      where: { ownerId: userId, imageUrl: { not: null } },
+      select: { imageUrl: true },
+    });
+    ownedImageFiles.push(
+      ...ownedImages.map((t) => t.imageUrl).filter((f): f is string => Boolean(f))
+    );
+    const publishedImages = await tx.publishedImage.findMany({
+      where: { ownerId: userId },
+      select: { filename: true },
+    });
+    publishedImageFiles.push(...publishedImages.map((p) => p.filename));
+
     // Release tools this member currently holds as a borrower so they do not
     // remain locked in BORROWED once the loan rows cascade away.
     const heldLoans = await tx.loan.findMany({
@@ -220,6 +242,11 @@ export async function deleteUser(
 
     await tx.user.delete({ where: { id: userId } });
   });
+
+  // Post-commit file purge (audit S9): the deletion helpers are no-ops for
+  // missing files, so this is idempotent.
+  for (const filename of ownedImageFiles) await deleteUploadedImage(filename);
+  for (const filename of publishedImageFiles) await deleteSecretImage(filename);
 
   return {
     success: true,
@@ -286,7 +313,7 @@ export async function setAdminEmail(
         error: "Current password is required to change the notification email",
       };
     }
-    const isValid = await bcrypt.compare(
+    const isValid = await bcrypt.verify(
       parsed.data.currentPassword,
       user.passwordHash
     );
@@ -379,3 +406,4 @@ export async function sendTestEmail(
   }
   return { success: true };
 }
+

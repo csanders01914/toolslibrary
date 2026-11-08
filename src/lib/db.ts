@@ -37,4 +37,7 @@ prisma.$queryRawUnsafe('PRAGMA journal_mode = WAL;').catch(() => {});
 prisma.$queryRawUnsafe('PRAGMA busy_timeout = 5000;').catch(() => {});
 prisma.$queryRawUnsafe('PRAGMA foreign_keys = ON;').catch(() => {});
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// Audit P5: unconditional singleton. In production the module can be
+// evaluated per bundle chunk; the old NODE_ENV-conditional let each
+// evaluation instantiate another PrismaClient (a connection pool per chunk).
+globalForPrisma.prisma = prisma;

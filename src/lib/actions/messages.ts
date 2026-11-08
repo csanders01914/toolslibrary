@@ -152,6 +152,10 @@ export async function getConversations(userId: string) {
       receiver: { select: { id: true, alias: true, trustScore: true } },
     },
     orderBy: { createdAt: "desc" },
+    // PHASE_54 (audit P3): bounded scan — the newest 500 messages are enough
+    // to build every conversation's latest-message row and unread count;
+    // older history stays reachable inside an open thread.
+    take: 500,
   });
 
   const conversationMap = new Map<string, {

@@ -23,6 +23,7 @@ import { auth } from "@/auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { deleteUploadedImage } from "@/lib/uploads";
+import { clampTrustScore } from "@/lib/constants";
 
 const deleteToolSchema = z.object({
   toolId: z.string().min(1),
@@ -85,7 +86,7 @@ export async function deleteTool(
   }
 
   await prisma.tool.delete({ where: { id: tool.id } });
-  deleteUploadedImage(tool.imageUrl);
+  await deleteUploadedImage(tool.imageUrl);
 
   return { success: true };
 }
@@ -262,14 +263,19 @@ export async function manageLoan(
         data: { status: "AVAILABLE" },
       });
 
-      await tx.user.update({
+      // Audit S6: bounded trust mutation — read, clamp, write inside the
+      // same transaction instead of a blind increment, so the 0-100 score
+      // contract holds even after repeated -15 damaged-return penalties.
+      const borrower = await tx.user.findUnique({
         where: { id: loan.borrowerId },
-        data: {
-          trustScore: {
-            increment: trustAdjustment,
-          },
-        },
+        select: { trustScore: true },
       });
+      if (borrower) {
+        await tx.user.update({
+          where: { id: loan.borrowerId },
+          data: { trustScore: clampTrustScore(borrower.trustScore + trustAdjustment) },
+        });
+      }
     });
 
     revalidateLoanViews(loan.toolId);
@@ -470,6 +476,8 @@ export async function getUserTools(userId: string) {
       },
     },
     orderBy: { createdAt: "desc" },
+    // PHASE_54 (audit P3): bounded dashboard payload.
+    take: 200,
   });
 
   return tools;
@@ -483,6 +491,8 @@ export async function getUserLoans(userId: string) {
         include: { owner: { select: { id: true, alias: true } } },
       },
     },
+    // PHASE_54 (audit P3): bounded dashboard payload.
+    take: 200,
     orderBy: { createdAt: "desc" },
   });
 

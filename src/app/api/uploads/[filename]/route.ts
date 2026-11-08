@@ -18,7 +18,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'node:path';
-import fs from 'node:fs';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { prisma } from '@/lib/db';
 
 export async function GET(
   _request: NextRequest,
@@ -26,30 +29,57 @@ export async function GET(
 ) {
   const { filename } = await params;
   const safeFilename = path.basename(filename);
-  const filePath = path.resolve(process.cwd(), 'data/uploads', safeFilename);
 
-  if (!fs.existsSync(filePath)) {
+  // PHASE_47 (audit S1): this route serves PUBLIC listing photos only. A file
+  // is served only when an existing Tool.imageUrl references exactly this
+  // filename — secret-link images (PublishedImage) live in an isolated
+  // data/uploads/secret/ directory and are reachable exclusively at
+  // /i/<token>, never here.
+  const tool = await prisma.tool.findFirst({
+    where: { imageUrl: safeFilename },
+    select: { id: true },
+  });
+  if (!tool) {
     return new NextResponse('File not found', { status: 404 });
   }
 
-  const fileBuffer = fs.readFileSync(filePath);
+  const filePath = path.resolve(process.cwd(), 'data/uploads', safeFilename);
+
+  // PHASE_53 (audit P1): async stat + streamed response — the hot image path
+  // no longer blocks the event loop with synchronous fs calls, and the bytes
+  // flow to the socket instead of being buffered whole in RAM first.
+  const fileStat = await stat(filePath).catch(() => null);
+  if (!fileStat?.isFile()) {
+    return new NextResponse('File not found', { status: 404 });
+  }
+
   const ext = path.extname(safeFilename).toLowerCase();
 
+  // PHASE_49 (audit S7): the .svg mapping is gone — the upload pipeline can
+  // never produce an .svg file (uploads.ts derives extensions from the
+  // validated MIME allowlist only), and serving a foreign .svg dropped into
+  // the directory would be a stored-XSS surface. Unknown extensions fall
+  // through to application/octet-stream, which browsers refuse to render.
   const mimeTypes: Record<string, string> = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png',
     '.gif': 'image/gif',
     '.webp': 'image/webp',
-    '.svg': 'image/svg+xml',
   };
 
   const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(Readable.toWeb(createReadStream(filePath)) as unknown as ReadableStream, {
     headers: {
       'Content-Type': contentType,
+      'Content-Length': String(fileStat.size),
       'Cache-Control': 'public, max-age=31536000, immutable',
+      // PHASE_49 (audit S8): never MIME-sniff the response into execution.
+      // (The global CSP from next.config.ts also applies to this route —
+      // next.config headers() override a route-level CSP of the same name —
+      // so the sandboxing CSP is deliberately set there, once, app-wide.)
+      'X-Content-Type-Options': 'nosniff',
     },
   });
 }

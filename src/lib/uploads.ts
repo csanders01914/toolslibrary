@@ -37,6 +37,10 @@
  * Security posture:
  * - Size and MIME type are validated BEFORE the bytes are read from the
  *   multipart payload, so an oversized or disallowed upload is never written.
+ * - Every stored image is decoded and re-encoded through sharp (PHASE_49):
+ *   the client-supplied Content-Type is untrusted, metadata (EXIF GPS) is
+ *   stripped, and the written bytes are canonical libvips output rather than
+ *   attacker-controlled originals.
  * - The stored extension is derived from the validated MIME type, never from
  *   the user-supplied filename, so a spoofed filename can never choose the
  *   stored extension.
@@ -46,9 +50,10 @@
  *   separators and `..`.
  */
 
-import fs from "node:fs";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import sharp from "sharp";
 
 export const UPLOADS_DIR = path.resolve(process.cwd(), "data/uploads");
 
@@ -82,9 +87,21 @@ export function validateImageFile(image: File): string | null {
 }
 
 /**
- * Shared persistence core: validates, generates a CSPRNG filename, and writes
- * the bytes into the given directory. Returns the stored filename, an error
- * string, or no filename when the caller passed an empty file.
+ * Shared persistence core: validates, decodes + re-encodes the bytes through
+ * sharp, generates a CSPRNG filename, and writes the result into the given
+ * directory. Returns the stored filename, an error string, or no filename
+ * when the caller passed an empty file.
+ *
+ * The sharp pass (PHASE_49, audit S7) does three jobs at once:
+ * - Magic-byte validation: the client-supplied multipart Content-Type is
+ *   untrusted, so the bytes are actually DECODED — a spoofed type wrapping
+ *   non-image payload throws and is rejected before anything is written.
+ * - Metadata stripping: re-encoding drops ALL container metadata (EXIF GPS
+ *   coordinates, camera identifiers, comments). The platform's privacy
+ *   contract is a coarse self-declared location label only — precise
+ *   coordinates embedded by phone cameras must never survive an upload.
+ * - Canonical re-encode: stored bytes are a clean, libvips-produced image of
+ *   the validated format, never attacker-controlled original bytes.
  */
 async function persistImage(
   image: File,
@@ -95,16 +112,45 @@ async function persistImage(
     return { error: validationError };
   }
 
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  const raw = Buffer.from(await image.arrayBuffer());
+
+  let reencoded: Buffer;
+  try {
+    // rotate() with no arguments bakes the EXIF orientation into the pixels
+    // (so stripped-EXIF output renders upright); animated GIF/WebP keep their
+    // frames via { animated: true }. Metadata is NOT carried over: sharp
+    // strips it unless withMetadata/withExif is explicitly requested.
+    const pipeline = sharp(raw, { failOn: "error", animated: true }).rotate();
+    switch (image.type) {
+      case "image/jpeg":
+        reencoded = await pipeline.jpeg({ quality: 85 }).toBuffer();
+        break;
+      case "image/png":
+        reencoded = await pipeline.png().toBuffer();
+        break;
+      case "image/webp":
+        reencoded = await pipeline.webp().toBuffer();
+        break;
+      case "image/gif":
+        reencoded = await pipeline.gif().toBuffer();
+        break;
+      default:
+        // Unreachable: validateImageFile already gated the allowlist.
+        return { error: "Invalid image type. Use JPEG, PNG, GIF, or WebP" };
+    }
+  } catch {
+    return { error: "Invalid image file" };
   }
+
+  // PHASE_53 (audit P1): async fs — the upload path must never block the
+  // event loop on disk I/O.
+  await fsp.mkdir(dir, { recursive: true });
 
   const ext = EXTENSION_BY_TYPE[image.type];
   const filename = `${Date.now()}-${crypto.randomBytes(16).toString("hex")}${ext}`;
   const filePath = path.join(dir, filename);
 
-  const buffer = Buffer.from(await image.arrayBuffer());
-  fs.writeFileSync(filePath, buffer);
+  await fsp.writeFile(filePath, reencoded);
 
   return { filename };
 }
@@ -128,20 +174,89 @@ export async function saveSecretImage(image: File): Promise<{ filename?: string;
 }
 
 /** Shared deletion core. Filenames are system-generated; anything else is refused. */
-function removeStoredImage(dir: string, filename: string | null | undefined): void {
+async function removeStoredImage(dir: string, filename: string | null | undefined): Promise<void> {
   if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
   const filePath = path.join(dir, filename);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
+  try {
+    await fsp.unlink(filePath);
+  } catch {
+    // ENOENT (already gone) is the expected idempotent case; other failures
+    // are swallowed too — deletion is best-effort cleanup, never a
+    // user-facing failure.
   }
 }
 
 /** Removes a previously stored PUBLIC listing photo from data/uploads. */
-export function deleteUploadedImage(filename: string | null | undefined): void {
-  removeStoredImage(UPLOADS_DIR, filename);
+export async function deleteUploadedImage(filename: string | null | undefined): Promise<void> {
+  await removeStoredImage(UPLOADS_DIR, filename);
 }
 
-/** Removes a previously stored SECRET-link image from data/uploads/secret. */
-export function deleteSecretImage(filename: string | null | undefined): void {
-  removeStoredImage(SECRET_UPLOADS_DIR, filename);
+/**
+ * Removes a previously stored SECRET-link image. Tries the isolated secret
+ * directory first, then the legacy data/uploads/ location used before
+ * PHASE_47, so pre-split rows still clean up fully.
+ */
+export async function deleteSecretImage(filename: string | null | undefined): Promise<void> {
+  if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
+  await removeStoredImage(SECRET_UPLOADS_DIR, filename);
+  await removeStoredImage(UPLOADS_DIR, filename);
+}
+
+/** Hard cap on any multipart request body (10MB image cap + field overhead). */
+export const MAX_MULTIPART_BODY_BYTES = 12 * 1024 * 1024;
+
+/** Thrown by readCappedForm when the request body exceeds the cap. */
+export class PayloadTooLargeError extends Error {}
+
+/**
+ * Audit P7: parse a multipart form under a REAL body cap. request.formData()
+ * RAM-buffers the whole payload bounded only by the client-declared
+ * Content-Length — a spoofable header that a chunked request simply omits.
+ * The declared length is still checked first (cheap fast-fail), then a
+ * streamed body is consumed with a hard byte cap before the multipart
+ * parser ever sees the bytes, so no request can make the server buffer
+ * unbounded input.
+ */
+export async function readCappedForm(
+  request: Request,
+  maxBytes: number = MAX_MULTIPART_BODY_BYTES
+): Promise<FormData> {
+  const declaredLength = request.headers.get("content-length");
+  if (declaredLength !== null) {
+    const declared = Number(declaredLength);
+    if (Number.isFinite(declared) && declared > maxBytes) {
+      throw new PayloadTooLargeError();
+    }
+  }
+
+  if (!request.body) {
+    return request.formData();
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new PayloadTooLargeError();
+    }
+    chunks.push(value);
+  }
+  // Rebuild the request around the capped body: the multipart parser needs
+  // the original Content-Type (boundary), but any stale Content-Length must
+  // go — the runtime recomputes it from the buffered blob.
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  return new Request(request.url, {
+    method: "POST",
+    headers,
+    // The stream chunks are plain Uint8Array views over ordinary ArrayBuffers;
+    // the DOM BlobPart type is narrower than TS's ArrayBufferLike view type,
+    // so the cast documents that no SharedArrayBuffer ever flows here.
+    body: new Blob(chunks as unknown as BlobPart[]),
+  }).formData();
 }

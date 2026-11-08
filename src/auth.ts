@@ -36,7 +36,7 @@ export const { handlers, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         // Dynamic import to avoid bundling Prisma in edge runtime
         const { prisma } = await import("@/lib/db");
-        const bcrypt = (await import("bcryptjs")).default;
+        const bcrypt = await import("@node-rs/bcrypt");
         const { enforceRateLimit } = await import("@/lib/rateLimit");
 
         const parsed = credentialsSchema.safeParse(credentials);
@@ -59,7 +59,7 @@ export const { handlers, signIn, signOut } = NextAuth({
         });
         if (!user) return null;
 
-        const isValid = await bcrypt.compare(password, user.passwordHash);
+        const isValid = await bcrypt.verify(password, user.passwordHash);
         if (!isValid) return null;
 
         // Banned accounts (admin or approved automated ban) cannot authenticate.
