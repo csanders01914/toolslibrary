@@ -346,7 +346,7 @@ podman healthcheck run "$APP_NAME" >/dev/null || {
   exit 1
 }
 
-podman tag "$IMAGE" localhost/tool-library:latest
+podman tag "$IMAGE" "localhost/${APP_NAME}:latest"
 rm -rf -- "$ROLLBACK_DIR/migration-test"
 echo
 printf 'SUCCESS: %s is online at http://127.0.0.1:%s/\n' "$APP_NAME" "$APP_PORT"
