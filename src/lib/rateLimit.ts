@@ -48,8 +48,9 @@ export interface RateLimitConfig {
 /**
  * Budgets per protected surface. Generous enough for humans behind shared
  * NATs, tight enough to make brute force impractical:
- * - login: 10 burst / 5 per minute ≈ 7,200 guesses/day per client — bcrypt
- *   cost 12 makes each guess expensive on the server too.
+ * - login: 10 burst / 5 per minute ≈ 7,200 guesses/day per client — the
+ *   Argon2id/bcrypt password hashes make each guess expensive on the server
+ *   too.
  * - recover: 5 burst / 2 per minute ≈ 2,880 code guesses/day against a
  *   16^8 keyspace of 8 single-use codes.
  * - help: 5 burst / 2 per minute caps webhook and Matrix admin-room flooding.

@@ -35,18 +35,17 @@ export const { handlers, signIn, signOut } = NextAuth({
       ...authConfig.providers[0],
       async authorize(credentials) {
         // Dynamic import to avoid bundling Prisma in edge runtime
-        const { prisma } = await import("@/lib/db");
-        const bcrypt = await import("@node-rs/bcrypt");
         const { enforceRateLimit } = await import("@/lib/rateLimit");
 
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
         // Brute-force gate (PHASE_23_RATE_LIMITING): throttle BEFORE any
-        // database or bcrypt work so exhausted clients cannot burn CPU on
-        // cost-12 hashes. A throttled attempt is indistinguishable from bad
-        // credentials (null) — no account-existence oracle — and the hashed
-        // client key is never logged.
+        // database or password-hash work so exhausted clients cannot burn
+        // CPU on cost-12/Argon2id hashes. A throttled attempt is
+        // indistinguishable from bad credentials (null) — no
+        // account-existence oracle — and the hashed client key is never
+        // logged.
         const limit = await enforceRateLimit("login");
         if (!limit.ok) {
           console.error("[rate-limit] login throttled; credential check rejected");
@@ -54,13 +53,18 @@ export const { handlers, signIn, signOut } = NextAuth({
         }
 
         const { username, password } = parsed.data;
-        const user = await prisma.user.findUnique({
-          where: { username },
-        });
-        if (!user) return null;
 
-        const isValid = await bcrypt.verify(password, user.passwordHash);
-        if (!isValid) return null;
+        // Stage 1 (KILO auth/security plan): credential verification and the
+        // staged bcrypt→Argon2id upgrade live in one testable service. It
+        // verifies Argon2id and legacy bcrypt hashes (fail closed on unknown
+        // formats), never writes on a failed verification, and upgrades a
+        // legacy hash only after an unambiguous verification via a
+        // compare-and-set that a concurrent reset/change can win.
+        const { authenticateAndMaybeUpgrade } = await import(
+          "@/lib/credentialAuth"
+        );
+        const user = await authenticateAndMaybeUpgrade(username, password);
+        if (!user) return null;
 
         // Banned accounts (admin or approved automated ban) cannot authenticate.
         if (user.banned) return null;
@@ -74,7 +78,7 @@ export const { handlers, signIn, signOut } = NextAuth({
           // PHASE_29: forced notification-email setup — ADMIN accounts without
           // a notification email on record are locked to /admin-email by the
           // middleware until one is stored.
-          needsAdminEmail: user.role === "ADMIN" && !user.notificationEmail,
+          needsAdminEmail: user.needsAdminEmail,
         };
       },
     },

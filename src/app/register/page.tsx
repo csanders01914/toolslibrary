@@ -335,14 +335,17 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   aria-describedby="register-password-strength"
                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
-                  placeholder="At least 10 characters"
-                  minLength={10}
+                  placeholder="At least 15 characters"
+                  minLength={15}
                 />
               </div>
               {/* Real-time strength meter: STRONG requires 20+ characters,
                   upper/lower case, a number, and a symbol. Server-side the
-                  register action still enforces its own 10-char minimum. */}
-              <PasswordStrengthMeter value={password} minLength={10} describedById="register-password-strength" />
+                  register action enforces the Stage 1 policy: 15-256
+                  characters (Unicode code points), never truncated. No
+                  maxLength attribute — oversize input is rejected with a
+                  clear error, never silently truncated. */}
+              <PasswordStrengthMeter value={password} minLength={15} describedById="register-password-strength" />
             </div>
 
             {/* Proof-of-work status + explainer */}

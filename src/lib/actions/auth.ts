@@ -20,7 +20,6 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import * as bcrypt from "@node-rs/bcrypt";
 import { z } from "zod";
 import {
   generateRecoveryCodes,
@@ -28,6 +27,11 @@ import {
   hashLegacyRecoveryCode,
   LEGACY_RECOVERY_CODE_LENGTH,
 } from "@/lib/crypto";
+import {
+  hashNewPassword,
+  validateNewPassword,
+  verifyStoredPassword,
+} from "@/lib/passwords";
 import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
@@ -36,13 +40,16 @@ import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
 const registerSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_-]{3,24}$/, "Username must be 3-24 characters, alphanumeric, underscore, or hyphen"),
   alias: z.string().min(2, "Alias must be at least 2 characters").max(32, "Alias must be at most 32 characters"),
-  password: z.string().min(10, "Password must be at least 10 characters"),
+  // Stage 1: presence only — the full Unicode code-point policy
+  // (15..256, NFC, byte bound) is enforced by validateNewPassword below so
+  // the error messages are precise and the server stays authoritative.
+  password: z.string().min(1, "Password is required"),
 });
 
 const recoverSchema = z.object({
   username: z.string().min(1),
   recoveryCode: z.string().min(1),
-  newPassword: z.string().min(10, "Password must be at least 10 characters"),
+  newPassword: z.string().min(1, "New password is required"),
 });
 
 /** Sentinel for the friendly "Username already taken" path (audit S5). */
@@ -120,8 +127,15 @@ export async function registerUser(
 
   const { username, alias, password } = parsed.data;
 
-  // Hash password
-  const passwordHash = await bcrypt.hash(password, { cost: 12 });
+  // Stage 1: enforce the Unicode password policy (15..256 code points, NFC,
+  // byte bound) BEFORE any expensive hashing — invalid input fails cheaply.
+  const passwordPolicyError = validateNewPassword(password);
+  if (passwordPolicyError) {
+    return { success: false, error: passwordPolicyError };
+  }
+
+  // Hash password (Argon2id, pinned parameters — Stage 1)
+  const passwordHash = await hashNewPassword(password);
 
   // Generate recovery codes
   const recoveryCodes = generateRecoveryCodes(8);
@@ -209,6 +223,13 @@ export async function recoverAccount(
 
   const { username, recoveryCode, newPassword } = parsed.data;
 
+  // Stage 1: enforce the Unicode password policy BEFORE any expensive
+  // hashing — an invalid new password fails cheaply and uniformly.
+  const passwordPolicyError = validateNewPassword(newPassword);
+  if (passwordPolicyError) {
+    return { success: false, error: passwordPolicyError };
+  }
+
   // Audit S11: one uniform failure message for both "no such user" and
   // "bad or already used code" — distinct errors were a username-existence
   // oracle for account enumeration.
@@ -233,7 +254,7 @@ export async function recoverAccount(
     normalizedCode.length === LEGACY_RECOVERY_CODE_LENGTH
       ? hashLegacyRecoveryCode(recoveryCode)
       : hashRecoveryCode(recoveryCode);
-  const newPasswordHash = await bcrypt.hash(newPassword, { cost: 12 });
+  const newPasswordHash = await hashNewPassword(newPassword);
 
   // Audit S4: atomic single-use consumption. The usedAt: null predicate
   // makes the update a compare-and-set — two concurrent submissions of the
@@ -306,7 +327,9 @@ export async function claimLoginRecoveryCodes(): Promise<{ codes: string[] | nul
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(10, "New password must be at least 10 characters"),
+  // Stage 1: presence only — the Unicode code-point policy is enforced by
+  // validateNewPassword below (server authoritative).
+  newPassword: z.string().min(1, "New password is required"),
 });
 
 export async function changePassword(
@@ -337,6 +360,12 @@ export async function changePassword(
 
   const { currentPassword, newPassword } = parsed.data;
 
+  // Stage 1: enforce the Unicode password policy before any expensive work.
+  const passwordPolicyError = validateNewPassword(newPassword);
+  if (passwordPolicyError) {
+    return { success: false, error: passwordPolicyError };
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
   });
@@ -344,16 +373,21 @@ export async function changePassword(
     return { success: false, error: "User not found" };
   }
 
-  const isValid = await bcrypt.verify(currentPassword, user.passwordHash);
+  const isValid = await verifyStoredPassword(currentPassword, user.passwordHash);
   if (!isValid) {
     return { success: false, error: "Current password is incorrect" };
   }
 
-  if (await bcrypt.verify(newPassword, user.passwordHash)) {
+  // "New differs from old" generalized to both hash algorithms: verifying
+  // the candidate against the stored hash succeeds only when the candidate
+  // IS the current password (Argon2id compares exactly; legacy bcrypt keeps
+  // its documented 72-byte prefix behavior — a >72-byte candidate sharing
+  // the prefix is rejected as "not different", which is safe).
+  if (await verifyStoredPassword(newPassword, user.passwordHash)) {
     return { success: false, error: "New password must be different from the current password" };
   }
 
-  const newPasswordHash = await bcrypt.hash(newPassword, { cost: 12 });
+  const newPasswordHash = await hashNewPassword(newPassword);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -416,7 +450,7 @@ export async function deleteOwnAccount(
     return { success: false, error: "User not found" };
   }
 
-  const isValid = await bcrypt.verify(parsed.data.password, user.passwordHash);
+  const isValid = await verifyStoredPassword(parsed.data.password, user.passwordHash);
   if (!isValid) {
     return { success: false, error: "Current password is incorrect" };
   }

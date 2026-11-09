@@ -199,8 +199,8 @@ function ChangePasswordForm() {
                   required
                   disabled={isPending}
                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 pr-10 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
-                  placeholder="At least 10 characters"
-                  minLength={10}
+                  placeholder="At least 15 characters"
+                  minLength={15}
                 />
                 <button
                   type="button"
@@ -211,7 +211,7 @@ function ChangePasswordForm() {
                   {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 10 characters. Use a passphrase for best security.</p>
+              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 15 characters. Use a passphrase for best security.</p>
             </div>
 
             <div>
@@ -229,7 +229,7 @@ function ChangePasswordForm() {
                 disabled={isPending}
                 className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none disabled:opacity-40"
                 placeholder="Repeat the new password"
-                minLength={10}
+                minLength={15}
               />
             </div>
 

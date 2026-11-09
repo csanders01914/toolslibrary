@@ -66,6 +66,20 @@ const MIGRATIONS = [
     name: "20261107000000_add_published_image",
     present: (s) => s.tables.has("PublishedImage"),
   },
+  {
+    // Stage 1 reconciliation (KILO auth/security plan): location and
+    // notificationEmail were db-push-era columns missing from the migration
+    // history. On db-push-era volumes both columns already exist, so this
+    // footprint marks the migration applied instead of letting
+    // `migrate deploy` crash on a duplicate column. (20261109000000 is
+    // deliberately NOT listed: recoveryCodesIssuedAt was genuinely new in
+    // every vintage, so deploy applies it everywhere.)
+    name: "20261109120000_add_user_location_notification_email",
+    present: async (s) =>
+      s.tables.has("User") &&
+      (await s.columns("User")).has("location") &&
+      (await s.columns("User")).has("notificationEmail"),
+  },
 ];
 
 async function main() {

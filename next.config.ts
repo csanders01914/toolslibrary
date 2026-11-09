@@ -23,10 +23,12 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
-  // @node-rs/bcrypt is a native NAPI module (PHASE_48 bcryptjs swap): keep it
-  // external to the server bundle so the prebuilt .node binary is loaded from
-  // node_modules at runtime instead of being traced/bundled by webpack.
-  serverExternalPackages: ['@node-rs/bcrypt'],
+  // @node-rs/bcrypt and @node-rs/argon2 are native NAPI modules (PHASE_48
+  // bcryptjs swap; Stage 1 of the KILO auth/security plan added Argon2id):
+  // keep them external to the server bundle so the prebuilt .node binaries
+  // are loaded from node_modules at runtime instead of being traced/bundled
+  // by webpack.
+  serverExternalPackages: ['@node-rs/bcrypt', '@node-rs/argon2'],
   // Server Actions carry the tool-listing photo on /tools/[id]/edit. The
   // default 1MB body limit rejects virtually every real phone photo (2-8MB)
   // with a silent 413 before updateTool runs, so the limit is raised above

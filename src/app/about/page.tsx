@@ -85,7 +85,7 @@ export default function AboutPage() {
           <p>
             The obvious fix is sharing. The hard part is trust: who lends a $400 impact driver to a
             stranger? Our answer is cryptographic. Members are known by a self-chosen handle and a
-            public alias, passwords are bcrypt-hashed, recovery keys are single-use, and a Trust
+            public alias, passwords are Argon2id-hashed, recovery keys are single-use, and a Trust
             Score rises with every on-time return and drops with every damaged one. The score is
             computed from lending behavior and visible to everyone.
           </p>

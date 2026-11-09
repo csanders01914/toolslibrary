@@ -158,11 +158,11 @@ export default function RecoverPage() {
                   autoComplete="new-password"
                   required
                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 font-mono text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
-                  placeholder="At least 10 characters"
-                  minLength={10}
+                  placeholder="At least 15 characters"
+                  minLength={15}
                 />
               </div>
-              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 10 characters. Use a strong passphrase.</p>
+              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Minimum 15 characters. Use a strong passphrase.</p>
             </div>
 
             <button

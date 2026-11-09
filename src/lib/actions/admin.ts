@@ -20,7 +20,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
-import * as bcrypt from "@node-rs/bcrypt";
+import { verifyStoredPassword } from "@/lib/passwords";
 import { clampTrustScore } from "@/lib/constants";
 import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
 import { z } from "zod";
@@ -313,7 +313,7 @@ export async function setAdminEmail(
         error: "Current password is required to change the notification email",
       };
     }
-    const isValid = await bcrypt.verify(
+    const isValid = await verifyStoredPassword(
       parsed.data.currentPassword,
       user.passwordHash
     );

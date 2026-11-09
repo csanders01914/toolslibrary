@@ -44,7 +44,7 @@ const whatIsStored = [
   },
   {
     title: "Password Hash",
-    body: "Your password is hashed with bcrypt at cost factor 12. The plaintext password is never written to disk, logged, or transmitted anywhere except the login request itself.",
+    body: "New and updated passwords are hashed with Argon2id (19 MiB memory, 2 passes). Accounts created before this change verify against legacy bcrypt cost-12 hashes and are transparently upgraded to Argon2id at their next successful sign-in. The plaintext password is never written to disk, logged, or transmitted anywhere except the login request itself.",
   },
   {
     title: "Recovery Key Hashes",

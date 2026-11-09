@@ -352,7 +352,7 @@ erDiagram
 
 | Layer | Mechanism |
 |-------|-----------|
-| **Auth** | bcrypt cost 12, JWT HS256, 1h sliding expiry, CSRF protection |
+| **Auth** | Argon2id (19 MiB, 2 passes) for new/changed/reset passwords; legacy bcrypt cost-12 hashes verified and transparently upgraded at sign-in; JWT HS256, 1h sliding expiry, CSRF protection |
 | **Recovery** | 8 single-use recovery codes (12-character case-sensitive alphanumeric), SHA-256 hashed at rest |
 | **Abuse resistance** | Token-bucket rate limits and proof-of-work gates on unauthenticated write surfaces |
 | **Support** | Deterministic triage: fixed replies, regex routing, escalation to the admin team room and the operator's alert email |
