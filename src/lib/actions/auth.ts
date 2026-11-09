@@ -22,7 +22,12 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import * as bcrypt from "@node-rs/bcrypt";
 import { z } from "zod";
-import { generateRecoveryCodes, hashRecoveryCode } from "@/lib/crypto";
+import {
+  generateRecoveryCodes,
+  hashRecoveryCode,
+  hashLegacyRecoveryCode,
+  LEGACY_RECOVERY_CODE_LENGTH,
+} from "@/lib/crypto";
 import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
@@ -149,6 +154,10 @@ export async function registerUser(
             alias,
             passwordHash,
             role,
+            // The registration set is already the modern 12-character
+            // format, so the account is marked issued and the first sign-in
+            // does not rotate it again.
+            recoveryCodesIssuedAt: new Date(),
           },
         });
 
@@ -214,7 +223,16 @@ export async function recoverAccount(
     return { success: false, error: RECOVERY_FAILURE };
   }
 
-  const codeHash = hashRecoveryCode(recoveryCode);
+  // Format discriminator (RECOVERY_CODES_12_CHAR_UPGRADE): modern codes are
+  // 12 case-sensitive alphanumeric characters, legacy codes were 8 hex
+  // characters — the normalized lengths are disjoint. Legacy codes keep
+  // their original case-insensitive matching until the account is re-issued
+  // a modern set at its next sign-in; modern codes match case-exactly.
+  const normalizedCode = recoveryCode.trim().replace(/[^A-Za-z0-9]/g, "");
+  const codeHash =
+    normalizedCode.length === LEGACY_RECOVERY_CODE_LENGTH
+      ? hashLegacyRecoveryCode(recoveryCode)
+      : hashRecoveryCode(recoveryCode);
   const newPasswordHash = await bcrypt.hash(newPassword, { cost: 12 });
 
   // Audit S4: atomic single-use consumption. The usedAt: null predicate
@@ -241,6 +259,49 @@ export async function recoverAccount(
   }
 
   return { success: true };
+}
+
+/**
+ * RECOVERY_CODES_12_CHAR_UPGRADE: one-time recovery-code rotation delivered
+ * at sign-in. Every account still holding the legacy 8-character code set
+ * (recoveryCodesIssuedAt null) receives a fresh set of 12-character
+ * case-sensitive codes the first time it signs in after the upgrade; the
+ * login page calls this action immediately after a successful credentials
+ * sign-in and displays the returned codes in the recovery-key vault. The
+ * plaintext codes travel only over the authenticated session and are shown
+ * exactly once — only their SHA-256 hashes are persisted, and the legacy
+ * keys are deleted in the same transaction.
+ *
+ * The compare-and-set on recoveryCodesIssuedAt (audit S4 pattern) makes
+ * concurrent claims — e.g. the same member signing in from two tabs — yield
+ * exactly one rotation: the loser observes count 0 and gets null.
+ */
+export async function claimLoginRecoveryCodes(): Promise<{ codes: string[] | null }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { codes: null };
+  }
+
+  const userId = session.user.id;
+  const codes = generateRecoveryCodes(8);
+  const keyHashes = codes.map(hashRecoveryCode);
+
+  const rotated = await prisma.$transaction(async (tx) => {
+    const claim = await tx.user.updateMany({
+      where: { id: userId, recoveryCodesIssuedAt: null },
+      data: { recoveryCodesIssuedAt: new Date() },
+    });
+    if (claim.count === 0) {
+      return false;
+    }
+    await tx.recoveryKey.deleteMany({ where: { userId } });
+    await tx.recoveryKey.createMany({
+      data: keyHashes.map((keyHash) => ({ keyHash, userId })),
+    });
+    return true;
+  });
+
+  return { codes: rotated ? codes : null };
 }
 
 const changePasswordSchema = z.object({

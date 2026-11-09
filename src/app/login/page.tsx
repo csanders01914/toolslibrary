@@ -22,7 +22,19 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, AlertCircle, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
+import {
+  Lock,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Loader2,
+  CheckCircle,
+  Copy,
+  Download,
+  Key,
+  Shield,
+} from "lucide-react";
+import { claimLoginRecoveryCodes } from "@/lib/actions/auth";
 
 function LoginForm() {
   const router = useRouter();
@@ -45,6 +57,35 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState("");
+  // RECOVERY_CODES_12_CHAR_UPGRADE: non-null when this sign-in rotated the
+  // account's legacy 8-character code set — the vault view below displays
+  // the fresh 12-character codes exactly once before the session continues.
+  const [issuedCodes, setIssuedCodes] = useState<string[] | null>(null);
+  const [keysConfirmed, setKeysConfirmed] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const proceedToCallback = () => {
+    router.push(callbackUrl);
+    router.refresh();
+  };
+
+  const handleCopyAll = () => {
+    if (!issuedCodes) return;
+    navigator.clipboard.writeText(issuedCodes.join("\n"));
+    setCopiedIndex(-1);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleDownload = () => {
+    if (!issuedCodes) return;
+    const blob = new Blob([issuedCodes.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "recovery-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +102,20 @@ function LoginForm() {
       if (result?.error) {
         setFormError("Invalid username or password");
       } else {
-        router.push(callbackUrl);
-        router.refresh();
+        // One-time legacy-code rotation: the session cookie is already set,
+        // so the authenticated action can rotate and return the fresh codes.
+        // A failed claim must never block the sign-in — the rotation simply
+        // happens on the next login.
+        try {
+          const claim = await claimLoginRecoveryCodes();
+          if (claim?.codes) {
+            setIssuedCodes(claim.codes);
+            return;
+          }
+        } catch {
+          // Fall through to the normal post-login redirect.
+        }
+        proceedToCallback();
       }
     } catch {
       setFormError("An unexpected error occurred. Please try again.");
@@ -70,6 +123,118 @@ function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  // RECOVERY_CODES_12_CHAR_UPGRADE: post-login vault — the fresh 12-character
+  // case-sensitive codes are shown exactly once, mirroring the registration
+  // vault UX, before the session continues to the callback URL.
+  if (issuedCodes) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="bg-[#0a0a0a] border border-zinc-800 rounded-none p-8">
+            {/* Header */}
+            <div className="mb-8">
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-cyan-400">AUTH // LOGIN</p>
+              <h1 className="mt-2 text-2xl sm:text-4xl font-bold text-white tracking-tight">Recovery Codes Upgraded</h1>
+              <p className="mt-2 text-sm text-zinc-400">
+                Your account now uses 12-character case-sensitive recovery codes. Your previous codes are no longer valid.
+              </p>
+            </div>
+
+            {/* Warning Banner */}
+            <div className="mb-8 flex items-start gap-3 rounded-none border border-red-500/50 bg-red-500/5 p-4 font-mono text-xs text-red-400">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Critical: Save These Keys Offline</p>
+                <p className="mt-1">
+                  There is <strong>no email recovery</strong>, no phone verification, and no admin reset.
+                  These 8 single-use codes are the <strong>only way</strong> to recover your account if you forget your password.
+                  Each code can be used <strong>once</strong>. Codes are <strong>case-sensitive</strong> — save them exactly as shown.
+                </p>
+              </div>
+            </div>
+
+            {/* Recovery Codes Grid */}
+            <div className="mb-8">
+              <h2 className="mb-4 flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-zinc-400">
+                <Key className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+                Your 8 Single-Use Recovery Codes
+              </h2>
+              <div className="grid grid-cols-2 gap-2 bg-black p-4" role="list" aria-label="Recovery codes">
+                {issuedCodes.map((code, index) => (
+                  <div
+                    key={code}
+                    className="group relative border border-zinc-800 bg-black p-4 font-mono text-sm text-emerald-400"
+                    role="listitem"
+                  >
+                    <span className="block text-center tracking-widest select-all">{code}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(code);
+                        setCopiedIndex(index);
+                        setTimeout(() => setCopiedIndex(null), 2000);
+                      }}
+                      className="absolute right-1 top-1 p-1.5 text-zinc-500 transition-colors hover:text-white"
+                      aria-label={`Copy code ${index + 1}`}
+                    >
+                      {copiedIndex === index ? (
+                        <CheckCircle className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                      ) : (
+                        <Copy className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleCopyAll}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white"
+                >
+                  <Copy className="h-4 w-4" aria-hidden="true" />
+                  Copy All Keys
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 border border-zinc-700 px-4 py-2 font-mono text-xs uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-500 hover:text-white"
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Download (.txt)
+                </button>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 border border-zinc-800 bg-black p-4 transition-colors hover:border-zinc-600">
+                <input
+                  type="checkbox"
+                  checked={keysConfirmed}
+                  onChange={(e) => setKeysConfirmed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-500"
+                  required
+                />
+                <div className="font-mono text-xs leading-relaxed text-zinc-400">
+                  <span className="text-emerald-400">I have saved these recovery keys offline.</span>{" "}
+                  I understand there is no email password reset and no account recovery without these keys.
+                </div>
+              </label>
+
+              <button
+                onClick={proceedToCallback}
+                disabled={!keysConfirmed}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Shield className="h-4 w-4" aria-hidden="true" />
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">

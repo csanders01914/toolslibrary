@@ -135,7 +135,8 @@ export default function RegisterPage() {
                 <p className="mt-1">
                   There is <strong>no email recovery</strong>, no phone verification, and no admin reset.
                   These 8 single-use codes are the <strong>only way</strong> to recover your account if you forget your password.
-                  Each code can be used <strong>once</strong>. Store them in a password manager, print them, or write them down.
+                  Each code can be used <strong>once</strong>. Codes are <strong>case-sensitive</strong> — save them exactly as shown.
+                  Store them in a password manager, print them, or write them down.
                 </p>
               </div>
             </div>
