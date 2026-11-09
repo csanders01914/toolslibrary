@@ -41,7 +41,10 @@ import {
   rateLimitMessage,
 } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
-import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
+import {
+  purgeStoredImage,
+  recordPendingFileDeletions,
+} from "@/lib/uploads";
 
 const registerSchema = z.object({
   username: z.string().regex(/^[a-zA-Z0-9_-]{3,24}$/, "Username must be 3-24 characters, alphanumeric, underscore, or hyphen"),
@@ -592,6 +595,14 @@ export async function deleteOwnAccountForUser(
     });
     publishedImageFiles.push(...publishedImages.map((p) => p.filename));
 
+    // Stage 6: durable purge records written INSIDE the transaction — if the
+    // process dies between commit and unlink, the boot-time sweep still
+    // converges the bytes with the zero-PII exit path.
+    await recordPendingFileDeletions(tx, [
+      ...ownedImageFiles.map((filename) => ({ filename, kind: "public" as const })),
+      ...publishedImageFiles.map((filename) => ({ filename, kind: "secret" as const })),
+    ]);
+
     const heldLoans = await tx.loan.findMany({
       where: { borrowerId: user.id, status: { in: ["APPROVED", "ACTIVE"] } },
       select: { toolId: true },
@@ -614,10 +625,12 @@ export async function deleteOwnAccountForUser(
     };
   }
 
-  // Post-commit file purge (audit S9): the deletion helpers are no-ops for
-  // missing files, so this is idempotent.
-  for (const filename of ownedImageFiles) await deleteUploadedImage(filename);
-  for (const filename of publishedImageFiles) await deleteSecretImage(filename);
+  // Post-commit file purge (audit S9 + Stage 6): attempt immediately; on
+  // success the durable record is drained, on failure it stays for the
+  // boot-time sweep. The helpers are no-ops for missing files, so this is
+  // idempotent.
+  for (const filename of ownedImageFiles) await purgeStoredImage(filename, "public");
+  for (const filename of publishedImageFiles) await purgeStoredImage(filename, "secret");
 
   return { success: true };
 }

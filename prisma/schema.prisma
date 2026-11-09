@@ -249,3 +249,20 @@ model PublishedImage {
 
   @@index([ownerId])
 }
+
+// Stage 6 (KILO auth/security plan): durable file-purge reconciliation.
+// Account/tool/image deletion collects the orphan-prone filenames and writes
+// one of these records INSIDE the deletion transaction, then attempts the
+// unlink immediately after commit. If the unlink fails (fs error), the record
+// survives and the boot-time sweep (drainPendingFileDeletions, wired in
+// src/instrumentation.ts) retries idempotently until the bytes are actually
+// gone — the zero-PII exit path must remove the bytes, not merely the rows.
+// Filenames are the system-generated CSPRNG stored names; the deletion
+// helpers refuse anything else (path-traversal guard).
+model PendingFileDeletion {
+  id        String   @id @default(cuid())
+  filename  String   @unique
+  kind      String   @default("public") // "public" = data/uploads, "secret" = data/uploads/secret (with the legacy pre-PHASE_47 fallback)
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+}

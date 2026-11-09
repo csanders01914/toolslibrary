@@ -54,6 +54,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import type { Prisma } from "@prisma/client";
 
 export const UPLOADS_DIR = path.resolve(process.cwd(), "data/uploads");
 
@@ -173,22 +174,32 @@ export async function saveSecretImage(image: File): Promise<{ filename?: string;
   return persistImage(image, SECRET_UPLOADS_DIR);
 }
 
-/** Shared deletion core. Filenames are system-generated; anything else is refused. */
-async function removeStoredImage(dir: string, filename: string | null | undefined): Promise<void> {
-  if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
-  const filePath = path.join(dir, filename);
+/**
+ * Shared deletion core. Filenames are system-generated; anything else is
+ * refused (path-traversal guard — Stage 6: the sweep reuses this exact
+ * guard, so a poisoned purge record can never address an arbitrary path).
+ *
+ * Returns true when the file is GONE or there was nothing to do (refused
+ * name, already deleted); false only on a real fs failure, which the
+ * durable purge record (Stage 6) keeps alive for the boot-time sweep to
+ * retry. Deletion is never a user-facing failure, but it is no longer
+ * silently swallowed while claiming removal.
+ */
+async function removeStoredImage(dir: string, filename: string | null | undefined): Promise<boolean> {
+  if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return true;
   try {
-    await fsp.unlink(filePath);
-  } catch {
-    // ENOENT (already gone) is the expected idempotent case; other failures
-    // are swallowed too — deletion is best-effort cleanup, never a
-    // user-facing failure.
+    await fsp.unlink(path.join(dir, filename));
+    return true;
+  } catch (error) {
+    // ENOENT (already gone) is the expected idempotent case.
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return true;
+    return false;
   }
 }
 
 /** Removes a previously stored PUBLIC listing photo from data/uploads. */
-export async function deleteUploadedImage(filename: string | null | undefined): Promise<void> {
-  await removeStoredImage(UPLOADS_DIR, filename);
+export async function deleteUploadedImage(filename: string | null | undefined): Promise<boolean> {
+  return removeStoredImage(UPLOADS_DIR, filename);
 }
 
 /**
@@ -196,10 +207,96 @@ export async function deleteUploadedImage(filename: string | null | undefined): 
  * directory first, then the legacy data/uploads/ location used before
  * PHASE_47, so pre-split rows still clean up fully.
  */
-export async function deleteSecretImage(filename: string | null | undefined): Promise<void> {
-  if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return;
-  await removeStoredImage(SECRET_UPLOADS_DIR, filename);
-  await removeStoredImage(UPLOADS_DIR, filename);
+export async function deleteSecretImage(filename: string | null | undefined): Promise<boolean> {
+  if (!filename || filename.includes("..") || !/^[a-zA-Z0-9._-]+$/.test(filename)) return true;
+  const removedFromSecret = await removeStoredImage(SECRET_UPLOADS_DIR, filename);
+  if (removedFromSecret) return true;
+  return removeStoredImage(UPLOADS_DIR, filename);
+}
+
+/**
+ * Stage 6: writes durable purge records INSIDE the caller's deletion
+ * transaction, so the bytes-outlived-the-process failure mode (process dies
+ * between commit and unlink) still converges: the boot-time sweep drains
+ * whatever the immediate purge could not. Duplicate filenames (two tools
+ * referencing one stored file) are collapsed — the filename is unique here
+ * and one unlink covers all references.
+ */
+export async function recordPendingFileDeletions(
+  tx: Prisma.TransactionClient,
+  files: { filename: string | null | undefined; kind: "public" | "secret" }[]
+): Promise<void> {
+  const seen = new Set<string>();
+  const records = files.filter((f) => {
+    if (!f.filename || seen.has(f.filename)) return false;
+    seen.add(f.filename);
+    return true;
+  });
+  if (records.length === 0) return;
+  await tx.pendingFileDeletion.createMany({
+    data: records.map((f) => ({ filename: f.filename as string, kind: f.kind })),
+  });
+}
+
+/**
+ * Stage 6: the post-commit purge used by the deletion actions. Attempts the
+ * unlink immediately (the common case — no wait for the sweep); on success
+ * the durable record is drained; on failure the record stays and the
+ * boot-time sweep retries. Never throws for fs reasons — the record is the
+ * durability guarantee, not this call's outcome.
+ */
+export async function purgeStoredImage(
+  filename: string | null | undefined,
+  kind: "public" | "secret"
+): Promise<void> {
+  if (!filename) return;
+  const ok =
+    kind === "secret" ? await deleteSecretImage(filename) : await deleteUploadedImage(filename);
+  if (ok) {
+    const { prisma } = await import("@/lib/db");
+    await prisma.pendingFileDeletion.deleteMany({ where: { filename } });
+  }
+}
+
+/**
+ * Stage 6: the boot-time sweep (wired in src/instrumentation.ts). Drains
+ * pending purge records idempotently: a missing file counts as removed
+ * (already gone), a guard-refused filename is drained with an error log
+ * (it can never be a stored name — retrying would loop forever), and a
+ * real fs failure keeps the record with an incremented attempt counter for
+ * the next boot. Bounded per invocation so a large backlog cannot block
+ * boot; the next boot continues the drain.
+ */
+export async function drainPendingFileDeletions(
+  limit = 200
+): Promise<{ removed: number; failed: number }> {
+  const { prisma } = await import("@/lib/db");
+  const pending = await prisma.pendingFileDeletion.findMany({
+    take: limit,
+    orderBy: { createdAt: "asc" },
+  });
+  let removed = 0;
+  let failed = 0;
+  for (const record of pending) {
+    const ok =
+      record.kind === "secret"
+        ? await deleteSecretImage(record.filename)
+        : await deleteUploadedImage(record.filename);
+    if (ok) {
+      await prisma.pendingFileDeletion.delete({ where: { id: record.id } });
+      removed += 1;
+    } else {
+      await prisma.pendingFileDeletion.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
+      failed += 1;
+      console.error(
+        `[file-purge] unlink failed; record kept for retry: kind=${record.kind} filename=${record.filename} attempts=${record.attempts + 1}`
+      );
+    }
+  }
+  return { removed, failed };
 }
 
 /** Hard cap on any multipart request body (10MB image cap + field overhead). */

@@ -22,8 +22,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import type { Session } from "next-auth";
 import { verifyStoredPassword } from "@/lib/passwords";
+import {
+  purgeStoredImage,
+  recordPendingFileDeletions,
+} from "@/lib/uploads";
 import { clampTrustScore } from "@/lib/constants";
-import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
 import { z } from "zod";
 import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
@@ -236,11 +239,31 @@ export async function deleteUser(
   prevState: AdminActionState,
   formData: FormData
 ): Promise<AdminActionState> {
-  const session = await auth();
+  // auth() reads the request through next/headers and throws outside a
+  // request scope; treat that as unauthenticated (same pattern as the
+  // Stage 2/4 wrappers — keeps the action test-exercisable).
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   if (session?.user?.role !== "ADMIN") {
     return { success: false, error: "Admin privileges required" };
   }
+  return deleteUserForCaller(session.user.id, formData);
+}
 
+/**
+ * The admin-deletion body, split from the session wrapper so the
+ * integration tests can exercise the real logic against a disposable
+ * database with synthetic caller/target ids (the NextAuth session does not
+ * exist in tests).
+ */
+export async function deleteUserForCaller(
+  callerId: string,
+  formData: FormData
+): Promise<AdminActionState> {
   const parsed = deleteUserSchema.safeParse({
     userId: formData.get("userId"),
   });
@@ -250,8 +273,18 @@ export async function deleteUser(
 
   const { userId } = parsed.data;
 
-  if (userId === session.user.id) {
+  if (userId === callerId) {
     return { success: false, error: "Cannot delete your own account" };
+  }
+
+  // Stage 4: re-verify the caller's role from the DATABASE, not just the
+  // JWT claim (stale-token window — see updateUserRoleForCaller).
+  const caller = await prisma.user.findUnique({
+    where: { id: callerId },
+    select: { role: true },
+  });
+  if (caller?.role !== "ADMIN") {
+    return { success: false, error: "Admin privileges required" };
   }
 
   const user = await prisma.user.findUnique({
@@ -289,6 +322,14 @@ export async function deleteUser(
     });
     publishedImageFiles.push(...publishedImages.map((p) => p.filename));
 
+    // Stage 6: durable purge records written INSIDE the transaction — if the
+    // process dies between commit and unlink, the boot-time sweep still
+    // converges the bytes with the zero-PII exit path.
+    await recordPendingFileDeletions(tx, [
+      ...ownedImageFiles.map((filename) => ({ filename, kind: "public" as const })),
+      ...publishedImageFiles.map((filename) => ({ filename, kind: "secret" as const })),
+    ]);
+
     // Release tools this member currently holds as a borrower so they do not
     // remain locked in BORROWED once the loan rows cascade away.
     const heldLoans = await tx.loan.findMany({
@@ -305,10 +346,12 @@ export async function deleteUser(
     await tx.user.delete({ where: { id: userId } });
   });
 
-  // Post-commit file purge (audit S9): the deletion helpers are no-ops for
-  // missing files, so this is idempotent.
-  for (const filename of ownedImageFiles) await deleteUploadedImage(filename);
-  for (const filename of publishedImageFiles) await deleteSecretImage(filename);
+  // Post-commit file purge (audit S9 + Stage 6): attempt immediately; on
+  // success the durable record is drained, on failure it stays for the
+  // boot-time sweep. The helpers are no-ops for missing files, so this is
+  // idempotent.
+  for (const filename of ownedImageFiles) await purgeStoredImage(filename, "public");
+  for (const filename of publishedImageFiles) await purgeStoredImage(filename, "secret");
 
   return {
     success: true,

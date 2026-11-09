@@ -21,11 +21,23 @@
  *
  * Runs once when a new server instance boots. In the Node.js runtime it
  * starts the deterministic Matrix long-polling listener so the community
- * chat server and the website share one support pipeline.
+ * chat server and the website share one support pipeline, and drains the
+ * durable file-purge queue (Stage 6 of the KILO auth/security plan): any
+ * deletion whose post-commit unlink failed outlives the process in
+ * PendingFileDeletion and is retried here, idempotently, until the bytes
+ * are actually gone.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { startMatrixBotListener } = await import("./lib/matrixListener");
     startMatrixBotListener();
+
+    const { drainPendingFileDeletions } = await import("./lib/uploads");
+    // Fire-and-forget with a logged failure: the boot must not block on
+    // disk I/O, and a failed sweep leaves the records for the next boot —
+    // nothing is silently lost.
+    drainPendingFileDeletions().catch((error) => {
+      console.error("[file-purge] boot sweep failed:", error);
+    });
   }
 }
