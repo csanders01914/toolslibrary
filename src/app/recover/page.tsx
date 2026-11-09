@@ -85,7 +85,9 @@ export default function RecoverPage() {
             <div>
               <p className="font-semibold">Zero-PII Recovery System</p>
               <p className="mt-1">
-                No email, no phone, no admin override. Enter one of your 8 single-use <code className="border border-zinc-800 bg-black px-1.5 py-0.5 font-mono text-cyan-400">XXXX-XXXX</code> codes.
+                No email, no phone, no admin override. Enter one of your 8 single-use recovery codes —
+                12 characters, case-sensitive (<code className="border border-zinc-800 bg-black px-1.5 py-0.5 font-mono text-cyan-400">XXXX-XXXX-XXXX</code>).
+                Codes issued before the upgrade (<code className="border border-zinc-800 bg-black px-1.5 py-0.5 font-mono text-cyan-400">XXXX-XXXX</code>) still work until your next sign-in.
                 Each code works <strong>once</strong>. Used codes are permanently invalidated.
               </p>
             </div>
@@ -133,13 +135,15 @@ export default function RecoverPage() {
                   autoComplete="one-time-code"
                   required
                   className="w-full rounded-none border border-zinc-800 bg-black px-3 py-2 text-center font-mono text-sm tracking-widest text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-500 focus:outline-none"
-                  placeholder="XXXX-XXXX"
-                  maxLength={9}
-                  pattern="[A-Z0-9]{4}-[A-Z0-9]{4}"
-                  title="Format: XXXX-XXXX (8 alphanumeric characters)"
+                  placeholder="XXXX-XXXX-XXXX"
+                  maxLength={14}
+                  pattern="[A-Za-z0-9]{4}-[A-Za-z0-9]{4}(-[A-Za-z0-9]{4})?"
+                  title="Format: XXXX-XXXX-XXXX (12 characters, case-sensitive). Legacy XXXX-XXXX codes are also accepted."
                 />
               </div>
-              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">Enter one of your 8 single-use recovery codes (format: XXXX-XXXX)</p>
+              <p className="mt-1.5 font-mono text-[11px] text-zinc-500">
+                Format: XXXX-XXXX-XXXX (12 characters, case-sensitive). Pre-upgrade XXXX-XXXX codes are also accepted.
+              </p>
             </div>
 
             <div>

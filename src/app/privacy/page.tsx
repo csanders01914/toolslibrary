@@ -48,7 +48,7 @@ const whatIsStored = [
   },
   {
     title: "Recovery Key Hashes",
-    body: "Eight single-use recovery codes are generated at registration. Only their SHA-256 hashes are stored; the plaintext codes are shown exactly once and exist nowhere else.",
+    body: "Eight single-use recovery codes (12 characters, case-sensitive) are generated at registration. Only their SHA-256 hashes are stored; the plaintext codes are shown exactly once and exist nowhere else.",
   },
   {
     title: "Listing & Loan Data",

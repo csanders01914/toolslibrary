@@ -353,7 +353,7 @@ erDiagram
 | Layer | Mechanism |
 |-------|-----------|
 | **Auth** | bcrypt cost 12, JWT HS256, 1h sliding expiry, CSRF protection |
-| **Recovery** | 8 single-use recovery codes, SHA-256 hashed at rest |
+| **Recovery** | 8 single-use recovery codes (12-character case-sensitive alphanumeric), SHA-256 hashed at rest |
 | **Abuse resistance** | Token-bucket rate limits and proof-of-work gates on unauthenticated write surfaces |
 | **Support** | Deterministic triage: fixed replies, regex routing, escalation to the admin team room and the operator's alert email |
 | **Warrant canary** | Ed25519-signed append-only event log; staging requires a dedicated passphrase plus an emailed single-use token |
