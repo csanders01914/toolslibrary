@@ -466,6 +466,23 @@ export default function DashboardClient({
                 Change Password
               </Link>
             </div>
+            {/* Stage 2 (KILO auth/security plan): self-service recovery-code
+                regeneration — password-gated on the server, codes shown once. */}
+            <div className="border-t border-zinc-900 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="font-mono text-xs text-zinc-400">Recovery Codes</p>
+                <p className="font-mono text-[11px] text-zinc-500 mt-1">
+                  Lost your codes? Regenerate all 8 — the old ones stop working immediately.
+                </p>
+              </div>
+              <Link
+                href="/dashboard/recovery-codes"
+                className="inline-flex items-center gap-2 self-start border border-cyan-500/60 px-4 py-2 font-mono text-xs uppercase tracking-widest text-cyan-400 transition-colors hover:bg-cyan-500/10 sm:self-auto"
+              >
+                <KeyRound className="h-4 w-4" aria-hidden="true" />
+                Regenerate Codes
+              </Link>
+            </div>
             {/* PHASE_29: admin-only notification email — the single deliberate
                 PII exception, stored on the operator account only. Changing an
                 existing address re-prompts for the current password (server

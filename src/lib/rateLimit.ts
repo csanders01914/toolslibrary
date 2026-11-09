@@ -69,6 +69,11 @@ export interface RateLimitConfig {
  * - imagePublish: 10 burst / 5 per minute — authenticated member surface;
  *   throttles secret-link image publishing so a compromised session cannot
  *   flood data/uploads with binary payloads.
+ * - recoveryRegen: 5 burst / 2 per minute — authenticated member surface
+ *   (Stage 2 of the KILO auth/security plan); throttles self-service
+ *   recovery-code regeneration, which is gated by a fresh current-password
+ *   verification, so a hijacked session cannot endlessly rotate the
+ *   account's codes.
  */
 export const RATE_LIMITS = {
   login: { capacity: 10, refillPerMinute: 5 },
@@ -83,6 +88,7 @@ export const RATE_LIMITS = {
   adminEmailTest: { capacity: 3, refillPerMinute: 2 },
   canary: { capacity: 5, refillPerMinute: 2 },
   imagePublish: { capacity: 10, refillPerMinute: 5 },
+  recoveryRegen: { capacity: 5, refillPerMinute: 2 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

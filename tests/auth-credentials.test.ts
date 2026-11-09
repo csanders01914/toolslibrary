@@ -17,8 +17,9 @@
 */
 
 /**
- * Integration tests for credential authentication and the staged
- * bcrypt→Argon2id migration (Stage 1 of the KILO auth/security plan).
+ * Integration tests for credential authentication, the staged
+ * bcrypt-to-Argon2id migration, and self-service recovery-code
+ * regeneration (Stages 1-2 of the KILO auth/security plan).
  *
  * Runs against a DISPOSABLE SQLite database (data/test-auth-stage1.db,
  * gitignored) provisioned with the real version-controlled migrations via
@@ -27,8 +28,10 @@
  * 10-character bcrypt login without forced reset, exactly-once upgrade on
  * valid login, wrong-login-never-writes, fail-closed malformed hashes,
  * the 72-byte no-auto-migration rule, the concurrent-reset compare-and-set
- * guard, and Argon2id issuance through the real registration and recovery
- * server actions.
+ * guard, Argon2id issuance through the real registration and recovery
+ * server actions, and the Stage 2 regeneration flow (session requirement,
+ * fresh password verification, transactional rotation, legacy-account
+ * direct rotation, rate limiting).
  *
  * Not covered here (documented in the Stage 1 handoff): changePassword and
  * deleteOwnAccount require an Auth.js request session (auth()) that does
@@ -47,6 +50,8 @@ import type { AuthenticatedUser } from "../src/lib/credentialAuth";
 import type {
   registerUser as registerUserType,
   recoverAccount as recoverAccountType,
+  regenerateRecoveryCodes as regenerateRecoveryCodesType,
+  regenerateRecoveryCodesForUser as regenerateRecoveryCodesForUserType,
 } from "../src/lib/actions/auth";
 import type {
   issueChallenge as issueChallengeType,
@@ -75,9 +80,12 @@ let verifyStoredPassword: (
 let isArgon2idHash: (storedHash: string | null | undefined) => boolean;
 let isLegacyBcryptHash: (storedHash: string | null | undefined) => boolean;
 let hashRecoveryCode: (code: string) => string;
+let hashLegacyRecoveryCode: (code: string) => string;
 let bcryptMod: typeof import("@node-rs/bcrypt");
 let registerUser: typeof registerUserType;
 let recoverAccount: typeof recoverAccountType;
+let regenerateRecoveryCodes: typeof regenerateRecoveryCodesType;
+let regenerateRecoveryCodesForUser: typeof regenerateRecoveryCodesForUserType;
 let issueChallenge: typeof issueChallengeType;
 let getRequestClientHash: typeof getRequestClientHashType;
 
@@ -101,11 +109,15 @@ before(async () => {
   verifyStoredPassword = pw.verifyStoredPassword;
   isArgon2idHash = pw.isArgon2idHash;
   isLegacyBcryptHash = pw.isLegacyBcryptHash;
-  hashRecoveryCode = (await import("../src/lib/crypto")).hashRecoveryCode;
+  const cryptoMod = await import("../src/lib/crypto");
+  hashRecoveryCode = cryptoMod.hashRecoveryCode;
+  hashLegacyRecoveryCode = cryptoMod.hashLegacyRecoveryCode;
   bcryptMod = await import("@node-rs/bcrypt");
   const actions = await import("../src/lib/actions/auth");
   registerUser = actions.registerUser;
   recoverAccount = actions.recoverAccount;
+  regenerateRecoveryCodes = actions.regenerateRecoveryCodes;
+  regenerateRecoveryCodesForUser = actions.regenerateRecoveryCodesForUser;
   const pow = await import("../src/lib/pow");
   issueChallenge = pow.issueChallenge;
   getRequestClientHash = pow.getRequestClientHash;
@@ -318,5 +330,133 @@ describe("server actions issue Argon2id", () => {
       where: { user: { username: "recover2" } },
     });
     assert.equal(key?.usedAt ?? null, null, "a rejected reset must not consume the code");
+  });
+});
+
+describe("self-service recovery-code regeneration (Stage 2)", () => {
+  function regenForm(password: string): FormData {
+    const fd = new FormData();
+    fd.set("currentPassword", password);
+    return fd;
+  }
+
+  test("the action requires a valid session", async () => {
+    // Outside a Next.js request scope auth() throws; the wrapper must treat
+    // that as unauthenticated rather than leaking an error.
+    const result = await regenerateRecoveryCodes(undefined, regenForm("whatever"));
+    assert.equal(result?.success, false);
+    assert.equal(result?.error, "Authentication required");
+  });
+
+  test("a wrong current password fails without rotating anything", async () => {
+    const keyHash = hashRecoveryCode("Aa1b-Bc2d-Cd3e");
+    const user = await prisma.user.create({
+      data: {
+        username: "regenwrong",
+        alias: "Regen Wrong",
+        passwordHash: await hashNewPassword("RegenerationPass15!"),
+        recoveryCodesIssuedAt: new Date(),
+        recoveryKeys: { create: [{ keyHash }] },
+      },
+    });
+
+    const result = await regenerateRecoveryCodesForUser(user.id, regenForm("WrongPass16!y"));
+    assert.equal(result?.success, false);
+    assert.equal(result?.error, "Current password is incorrect");
+
+    const keys = await prisma.recoveryKey.findMany({ where: { userId: user.id } });
+    assert.equal(keys.length, 1, "a failed attempt must not touch the codes");
+    assert.equal(keys[0].keyHash, keyHash);
+  });
+
+  test("rotation is transactional: old codes die, 8 new codes live, shown once", async () => {
+    const oldCode = "OlDc-OdE1-OlD2";
+    const user = await prisma.user.create({
+      data: {
+        username: "regen1",
+        alias: "Regen One",
+        passwordHash: await hashNewPassword("RegenerationPass15!"),
+        recoveryCodesIssuedAt: new Date(),
+        recoveryKeys: { create: [{ keyHash: hashRecoveryCode(oldCode) }] },
+      },
+    });
+    const issuedBefore = user.recoveryCodesIssuedAt!;
+
+    const result = await regenerateRecoveryCodesForUser(user.id, regenForm("RegenerationPass15!"));
+    assert.equal(result?.success, true);
+    assert.equal(result?.recoveryCodes?.length, 8);
+
+    const keys = await prisma.recoveryKey.findMany({ where: { userId: user.id } });
+    assert.equal(keys.length, 8, "the account holds exactly 8 codes after rotation");
+    const storedHashes = new Set(keys.map((k) => k.keyHash));
+    // The returned plaintext codes match the stored hashes (shown once, hashed at rest)…
+    for (const code of result?.recoveryCodes ?? []) {
+      assert.ok(storedHashes.has(hashRecoveryCode(code)));
+    }
+    // …and the old code is gone.
+    assert.ok(!storedHashes.has(hashRecoveryCode(oldCode)));
+
+    const after = await prisma.user.findUnique({ where: { id: user.id } });
+    assert.ok(after!.recoveryCodesIssuedAt! > issuedBefore, "issuedAt must advance");
+
+    // The old code can no longer recover the account (uniform failure).
+    const fdOld = new FormData();
+    fdOld.set("username", "regen1");
+    fdOld.set("recoveryCode", oldCode);
+    fdOld.set("newPassword", "AnotherPass15!x");
+    const replay = await recoverAccount(undefined, fdOld);
+    assert.equal(replay?.success, false);
+    assert.equal(replay?.error, "Invalid username or recovery code");
+  });
+
+  test("an account still holding the legacy code set regenerates directly", async () => {
+    const legacyHash = hashLegacyRecoveryCode("ABCD1234");
+    const user = await prisma.user.create({
+      data: {
+        username: "regenlegacy",
+        alias: "Regen Legacy",
+        passwordHash: await hashNewPassword("LegacyRegenPass15!"),
+        recoveryCodesIssuedAt: null,
+        recoveryKeys: { create: [{ keyHash: legacyHash }] },
+      },
+    });
+
+    const result = await regenerateRecoveryCodesForUser(user.id, regenForm("LegacyRegenPass15!"));
+    assert.equal(result?.success, true, "legacy accounts must not be forced through login rotation first");
+    assert.equal(result?.recoveryCodes?.length, 8);
+
+    const after = await prisma.user.findUnique({ where: { id: user.id } });
+    assert.ok(after!.recoveryCodesIssuedAt, "the account is marked modern after regeneration");
+    const keys = await prisma.recoveryKey.findMany({ where: { userId: user.id } });
+    assert.equal(keys.length, 8);
+    assert.ok(!keys.some((k) => k.keyHash === legacyHash), "the legacy key is purged");
+  });
+
+  test("the recoveryRegen rate limit holds", async () => {
+    const user = await prisma.user.create({
+      data: {
+        username: "regenratelimit",
+        alias: "Regen Rate Limit",
+        passwordHash: await hashNewPassword("RateLimitPass15!"),
+        recoveryCodesIssuedAt: new Date(),
+      },
+    });
+
+    // The shared "unknown" client bucket may already hold spent tokens from
+    // earlier tests in this file, so consume until throttled (bounded loop):
+    // the invariant is that the bucket throttles well before 12 consecutive
+    // attempts (capacity 5, refill 2/min).
+    let throttled = false;
+    let successes = 0;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const result = await regenerateRecoveryCodesForUser(user.id, regenForm("RateLimitPass15!"));
+      if (result?.error?.startsWith("Too many requests")) {
+        throttled = true;
+        break;
+      }
+      if (result?.success) successes += 1;
+    }
+    assert.ok(throttled, "the recoveryRegen bucket must throttle consecutive attempts");
+    assert.ok(successes >= 1, "legitimate attempts succeed until the bucket empties");
   });
 });

@@ -20,6 +20,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import type { Session } from "next-auth";
 import { z } from "zod";
 import {
   generateRecoveryCodes,
@@ -506,4 +507,117 @@ export async function deleteOwnAccount(
   for (const filename of publishedImageFiles) await deleteSecretImage(filename);
 
   return { success: true };
+}
+
+const regenerateCodesSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+});
+
+export interface RegenerateCodesState {
+  success?: boolean;
+  error?: string;
+  recoveryCodes?: string[];
+}
+
+/**
+ * Stage 2 (KILO auth/security plan): self-service recovery-code
+ * regeneration.
+ *
+ * Until now a member who closed the one-time code display without saving
+ * had no way back in except a recovery code they may not hold. This flow
+ * lets an authenticated member rotate their 8 codes at will, gated by a
+ * FRESH current-password verification (a live session alone is not enough
+ * — a hijacked session must not be able to lock the real owner out of
+ * recovery), rate-limited, and transactional:
+ *
+ * - All existing RecoveryKey rows are deleted and 8 new hashed codes are
+ *   written in one transaction; the plaintext codes leave the server
+ *   exactly once, in this action's return value.
+ * - A compare-and-set on `recoveryCodesIssuedAt` makes a concurrent
+ *   rotation (another tab's regeneration, or the login-time legacy
+ *   rotation) win and this attempt stand down instead of double-rotating.
+ * - Accounts still holding the legacy 8-character set (issuedAt null)
+ *   rotate directly — no forced login detour.
+ * - Routine logins never rotate codes; only this explicit flow and the
+ *   one-time legacy login rotation do.
+ */
+export async function regenerateRecoveryCodes(
+  _prevState: RegenerateCodesState | undefined,
+  formData: FormData
+): Promise<RegenerateCodesState> {
+  // auth() reads the request through next/headers and throws outside a
+  // request scope; treat that as unauthenticated (this also keeps the
+  // action exercisable by the integration tests).
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required" };
+  }
+  return regenerateRecoveryCodesForUser(session.user.id, formData);
+}
+
+/**
+ * The regeneration body, split from the session wrapper so the integration
+ * tests can exercise the real logic against a disposable database with a
+ * synthetic user id (the NextAuth session does not exist in tests).
+ */
+export async function regenerateRecoveryCodesForUser(
+  userId: string,
+  formData: FormData
+): Promise<RegenerateCodesState> {
+  const limit = await enforceRateLimit("recoveryRegen");
+  if (!limit.ok) {
+    return { success: false, error: rateLimitMessage(limit.retryAfterSeconds) };
+  }
+
+  const parsed = regenerateCodesSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+  });
+  if (!parsed.success) {
+    return { success: false, error: "Current password is required" };
+  }
+  const { currentPassword } = parsed.data;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true, recoveryCodesIssuedAt: true },
+  });
+  if (!user) {
+    return { success: false, error: "User not found" };
+  }
+
+  const isValid = await verifyStoredPassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    return { success: false, error: "Current password is incorrect" };
+  }
+
+  const codes = generateRecoveryCodes(8);
+  const keyHashes = codes.map((code) => hashRecoveryCode(code));
+  const issuedAt = new Date();
+
+  const rotated = await prisma.$transaction(async (tx) => {
+    const claim = await tx.user.updateMany({
+      where: { id: user.id, recoveryCodesIssuedAt: user.recoveryCodesIssuedAt },
+      data: { recoveryCodesIssuedAt: issuedAt },
+    });
+    if (claim.count !== 1) return false;
+    await tx.recoveryKey.deleteMany({ where: { userId: user.id } });
+    await tx.recoveryKey.createMany({
+      data: keyHashes.map((keyHash) => ({ userId: user.id, keyHash })),
+    });
+    return true;
+  });
+
+  if (!rotated) {
+    return {
+      success: false,
+      error: "Your recovery codes were just regenerated in another session. Refresh and try again.",
+    };
+  }
+
+  return { success: true, recoveryCodes: codes };
 }
