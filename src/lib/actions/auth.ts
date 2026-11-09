@@ -34,7 +34,12 @@ import {
   verifyStoredPassword,
 } from "@/lib/passwords";
 import { getRequestClientHash, recordFailure, verifySolution } from "@/lib/pow";
-import { enforceRateLimit, rateLimitMessage } from "@/lib/rateLimit";
+import {
+  consumeToken,
+  enforceRateLimit,
+  hashClient,
+  rateLimitMessage,
+} from "@/lib/rateLimit";
 import { notifyAdmins } from "@/lib/email";
 import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
 
@@ -48,8 +53,12 @@ const registerSchema = z.object({
 });
 
 const recoverSchema = z.object({
-  username: z.string().min(1),
-  recoveryCode: z.string().min(1),
+  // Stage 3: bounded inputs — the username keys the per-account bucket and
+  // the code feeds the hash lookup, so both get cheap DoS ceilings (real
+  // usernames are 3-24 chars; codes are 8 or 12 alnum characters plus
+  // separators).
+  username: z.string().min(1).max(64),
+  recoveryCode: z.string().min(1).max(32),
   newPassword: z.string().min(1, "New password is required"),
 });
 
@@ -224,6 +233,24 @@ export async function recoverAccount(
 
   const { username, recoveryCode, newPassword } = parsed.data;
 
+  // Stage 3: PER-ACCOUNT throttle, keyed by the submitted username, so a
+  // distributed attack (many clients, one target) is bounded by the same
+  // budget a single client faces. Consumed before any lookup; idle buckets
+  // are swept by the limiter so fake usernames cannot grow memory without
+  // bound. The tradeoff — a flood against one username temporarily delays
+  // THAT account's recovery — is accepted: the modern code keyspace (62^12)
+  // makes offline guessing hopeless and the login itself is never blocked.
+  const accountVerdict = consumeToken(
+    "recoverAccount",
+    hashClient(`account-recovery:${username}`)
+  );
+  if (!accountVerdict.allowed) {
+    return {
+      success: false,
+      error: rateLimitMessage(accountVerdict.retryAfterSeconds),
+    };
+  }
+
   // Stage 1: enforce the Unicode password policy BEFORE any expensive
   // hashing — an invalid new password fails cheaply and uniformly.
   const passwordPolicyError = validateNewPassword(newPassword);
@@ -255,6 +282,22 @@ export async function recoverAccount(
     normalizedCode.length === LEGACY_RECOVERY_CODE_LENGTH
       ? hashLegacyRecoveryCode(recoveryCode)
       : hashRecoveryCode(recoveryCode);
+
+  // Stage 3: CHEAP pre-check before any password hashing. The previous
+  // order hashed the attacker-controlled new password (a full Argon2id/
+  // bcrypt computation) before looking at the code, so invalid-code spam
+  // burned server CPU. Now an invalid, unknown, or already-consumed code
+  // fails after one indexed lookup and never reaches the hash. The
+  // remaining timing asymmetry between "no such user" and "bad code" is a
+  // single indexed query — bounded by design; no artificial delays.
+  const unusedKey = await prisma.recoveryKey.findFirst({
+    where: { keyHash: codeHash, userId: user.id, usedAt: null },
+    select: { id: true },
+  });
+  if (!unusedKey) {
+    return { success: false, error: RECOVERY_FAILURE };
+  }
+
   const newPasswordHash = await hashNewPassword(newPassword);
 
   // Audit S4: atomic single-use consumption. The usedAt: null predicate

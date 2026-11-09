@@ -30,10 +30,15 @@
  *   the salt regenerates on every restart, so stored hashes (if any leaked)
  *   would be unlinkable anyway. Buckets are swept when idle.
  *
- * Deployment note: `cf-connecting-ip` (set by a trusted Cloudflare Tunnel) is
- * preferred, then the first `x-forwarded-for` hop. With direct exposure and
- * neither header present, every client shares one bucket per action —
- * fail-safe (throttling still applies) rather than fail-open.
+ * Deployment note: `cf-connecting-ip` (set by a trusted edge) is preferred,
+ * then the LAST `x-forwarded-for` hop — the remote address the edge proxy
+ * itself appended. Caddy (the production edge) APPENDS the real client
+ * address to any client-supplied X-Forwarded-For, so earlier hops are
+ * attacker-controlled: trusting the first hop let a spoofed header rotate
+ * per-client buckets (fixed in Stage 3 of the KILO auth/security plan).
+ * With direct exposure and neither header present, every client shares one
+ * bucket per action — fail-safe (throttling still applies) rather than
+ * fail-open.
  */
 
 import crypto from "node:crypto";
@@ -74,6 +79,14 @@ export interface RateLimitConfig {
  *   recovery-code regeneration, which is gated by a fresh current-password
  *   verification, so a hijacked session cannot endlessly rotate the
  *   account's codes.
+ * - recoverAccount: 20 burst / 5 per minute ≈ 7,200 attempts/day — PER-
+ *   ACCOUNT bucket (Stage 3 of the KILO auth/security plan), keyed by the
+ *   submitted username, bounding distributed per-client bypasses against a
+ *   single account. Generous for a human (a recovery needs 1-3 attempts);
+ *   the tradeoff is that a flood against one username temporarily locks
+ *   THAT account's recovery path — accepted because the modern code
+ *   keyspace (62^12) makes offline guessing hopeless anyway and the
+ *   bucket only delays, never blocks, the login itself.
  */
 export const RATE_LIMITS = {
   login: { capacity: 10, refillPerMinute: 5 },
@@ -89,6 +102,7 @@ export const RATE_LIMITS = {
   canary: { capacity: 5, refillPerMinute: 2 },
   imagePublish: { capacity: 10, refillPerMinute: 5 },
   recoveryRegen: { capacity: 5, refillPerMinute: 2 },
+  recoverAccount: { capacity: 20, refillPerMinute: 5 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
@@ -141,6 +155,32 @@ export function hashClient(clientIdentifier: string): string {
     .update(SALT)
     .update(clientIdentifier)
     .digest("hex");
+}
+
+/**
+ * Client identifier from request headers (Stage 3 of the KILO auth/security
+ * plan): `cf-connecting-ip` when a trusted edge provides it, otherwise the
+ * LAST `x-forwarded-for` hop — the remote address the edge proxy itself
+ * appended. Caddy (the production edge) APPENDS the real client address to
+ * any client-supplied X-Forwarded-For, so earlier hops are attacker-
+ * controlled and the previous first-hop derivation was spoofable; the last
+ * hop is the only value the edge vouches for. With direct exposure (no
+ * proxy headers) this returns the shared fail-safe "unknown" identity:
+ * throttling still applies, just to one shared bucket.
+ */
+export function clientIdentifierFromHeaders(h: Headers): string {
+  const cf = h.get("cf-connecting-ip")?.trim();
+  if (cf) return cf;
+  const xff = h.get("x-forwarded-for");
+  if (xff) {
+    const hops = xff
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0);
+    const last = hops[hops.length - 1];
+    if (last) return last;
+  }
+  return "unknown";
 }
 
 export interface TokenVerdict {
@@ -201,11 +241,7 @@ async function getClientHash(): Promise<string> {
     // this module be exercised outside a Next.js request scope (tests).
     const { headers } = await import("next/headers");
     const h = await headers();
-    const clientIdentifier =
-      h.get("cf-connecting-ip")?.trim() ||
-      h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
-    return hashClient(clientIdentifier);
+    return hashClient(clientIdentifierFromHeaders(h));
   } catch {
     // No request scope (or no proxy headers): shared fail-safe bucket.
     return hashClient("unknown");

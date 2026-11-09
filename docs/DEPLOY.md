@@ -303,9 +303,14 @@ sudo iptables -t nat -L -n -v
 
 Notes that matter for this application:
 
-- **Trusted client IP:** Caddy sets `x-forwarded-for`, and the rate limiter
-  (`src/lib/rateLimit.ts`) reads its first hop, so per-IP throttling of
-  login/recovery/help routes works correctly.
+- **Trusted client IP:** Caddy sets `x-forwarded-for` by APPENDING the real
+  client address to any client-supplied header, and the rate limiter
+  (`src/lib/rateLimit.ts`) reads the LAST hop — the address the edge itself
+  appended — so per-IP throttling of login/recovery/help routes works
+  correctly even when a client spoofs `x-forwarded-for`. (Stage 3 of the
+  KILO auth/security plan: the previous first-hop derivation trusted
+  attacker-controlled input. If the live Caddyfile ever overrides XFF
+  handling, re-check `clientIdentifierFromHeaders` against it.)
 - **HTTPS origin:** Caddy terminates TLS, and `x-forwarded-proto: https` flows
   through, so the printable QR handoff labels encode the public `https://` URL
   automatically.

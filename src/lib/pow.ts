@@ -430,21 +430,20 @@ export function difficultyForTier(tier: 0 | 1 | 2 | 3): number {
 
 /**
  * Hashed client identifier for the current request, computed exactly like the
- * rate limiter's: cf-connecting-ip, then the first x-forwarded-for hop, then
- * a shared fail-safe "unknown" bucket. The raw identifier never leaves this
- * function and the hash is never logged.
+ * rate limiter's: cf-connecting-ip, then the LAST x-forwarded-for hop (the
+ * remote address the edge proxy appended — earlier hops are client-supplied
+ * and spoofable under Caddy's append semantics), then a shared fail-safe
+ * "unknown" bucket. The raw identifier never leaves this function and the
+ * hash is never logged.
  */
 export async function getRequestClientHash(): Promise<string> {
   try {
     // Dynamic import: keeps next/headers out of non-request bundles and lets
     // this module be exercised outside a Next.js request scope.
     const { headers } = await import("next/headers");
+    const { clientIdentifierFromHeaders } = await import("@/lib/rateLimit");
     const h = await headers();
-    const clientIdentifier =
-      h.get("cf-connecting-ip")?.trim() ||
-      h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
-    return hashClient(clientIdentifier);
+    return hashClient(clientIdentifierFromHeaders(h));
   } catch {
     // No request scope (or no proxy headers): shared fail-safe bucket.
     return hashClient("unknown");
