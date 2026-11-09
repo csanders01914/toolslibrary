@@ -20,6 +20,7 @@
 
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
+import type { Session } from "next-auth";
 import { verifyStoredPassword } from "@/lib/passwords";
 import { clampTrustScore } from "@/lib/constants";
 import { deleteUploadedImage, deleteSecretImage } from "@/lib/uploads";
@@ -57,11 +58,31 @@ export async function updateUserRole(
   prevState: AdminActionState,
   formData: FormData
 ): Promise<AdminActionState> {
-  const session = await auth();
+  // auth() reads the request through next/headers and throws outside a
+  // request scope; treat that as unauthenticated (same pattern as the
+  // Stage 2/4 wrappers — keeps the action test-exercisable).
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   if (session?.user?.role !== "ADMIN") {
     return { success: false, error: "Admin privileges required" };
   }
+  return updateUserRoleForCaller(session.user.id, formData);
+}
 
+/**
+ * The role-change body, split from the session wrapper so the integration
+ * tests can exercise the real logic against a disposable database with
+ * synthetic caller/target ids (the NextAuth session does not exist in
+ * tests).
+ */
+export async function updateUserRoleForCaller(
+  callerId: string,
+  formData: FormData
+): Promise<AdminActionState> {
   const parsed = roleSchema.safeParse({
     userId: formData.get("userId"),
     role: formData.get("role"),
@@ -72,13 +93,50 @@ export async function updateUserRole(
 
   const { userId, role } = parsed.data;
 
-  if (userId === session.user.id) {
+  if (userId === callerId) {
     return { success: false, error: "Cannot change your own role" };
+  }
+
+  // Stage 4: re-verify the caller's role from the DATABASE, not just the
+  // JWT claim — a demoted admin's token still says ADMIN until the
+  // session-revocation work lands (Stage 5); this closes the stale-role
+  // window for role changes specifically.
+  const caller = await prisma.user.findUnique({
+    where: { id: callerId },
+    select: { role: true },
+  });
+  if (caller?.role !== "ADMIN") {
+    return { success: false, error: "Admin privileges required" };
   }
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return { success: false, error: "User not found" };
+  }
+
+  // Stage 4: last-admin demotion guard, enforced inside the transaction —
+  // two admins demoting each other concurrently are serialized by SQLite,
+  // and the second transaction observes count 1 and refuses, so the
+  // platform can never reach zero administrators through this path.
+  if (user.role === "ADMIN" && role !== "ADMIN") {
+    const demoted = await prisma.$transaction(async (tx) => {
+      const adminCount = await tx.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+        return false;
+      }
+      await tx.user.update({
+        where: { id: userId },
+        data: { role },
+      });
+      return true;
+    });
+    if (!demoted) {
+      return {
+        success: false,
+        error: "Cannot demote the last administrator — promote another member first",
+      };
+    }
+    return { success: true };
   }
 
   await prisma.user.update({

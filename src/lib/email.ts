@@ -73,7 +73,10 @@ export async function getAdminNotificationEmails(): Promise<string[]> {
  * Operational alert payloads. A discriminated union so `notifyAdmins` can
  * render the right minimal copy and route to the right recipients:
  * - help_escalation: a public help ticket was triaged into the admin queue.
- * - registration: a new account was created (first account becomes ADMIN).
+ * - registration: a new account was created (the operator promotes the
+ *   owner's account to ADMIN out-of-band via scripts/bootstrap-admin.mjs —
+ *   registration itself never grants ADMIN, Stage 4 of the KILO
+ *   auth/security plan).
  * - email_changed: the admin notification email itself was replaced — `to`
  *   is the OLD address, which must be alerted so a hijacked session cannot
  *   silently redirect operational alerts to an attacker-controlled inbox.

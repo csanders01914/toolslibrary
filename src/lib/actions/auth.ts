@@ -154,10 +154,11 @@ export async function registerUser(
   // Audit S5: the existence check, the first-user ADMIN election, and the
   // create are serialized through the in-process registration lock. SQLite
   // transactions begin deferred, so a bare $transaction does NOT make the
-  // read-then-create atomic — two concurrent first registrations could both
-  // observe count 0 and both elect ADMIN. The lock makes the check-then-act
-  // sequence atomic within the only writer process; the P2002 catch below
-  // stays as defense for any future multi-process deployment.
+  // read-then-create atomic — two concurrent registrations could both pass
+  // the uniqueness check and race the create. The lock makes the
+  // check-then-act sequence atomic within the only writer process; the
+  // P2002 catch below stays as defense for any future multi-process
+  // deployment.
   try {
     await withRegistrationLock(() =>
       prisma.$transaction(async (tx) => {
@@ -168,9 +169,13 @@ export async function registerUser(
           throw new UsernameTakenError();
         }
 
-        // Check if this is the first user (becomes ADMIN)
-        const userCount = await tx.user.count();
-        const role = userCount === 0 ? "ADMIN" : "USER";
+        // Stage 4 (KILO auth/security plan): registration NEVER grants
+        // ADMIN. The old first-registered-user election let a fresh public
+        // deployment be hijacked by the first stranger to register. The
+        // operator promotes their own account after registering with
+        // `node scripts/bootstrap-admin.mjs <username> --yes` (single-use,
+        // operator-run, no web surface).
+        const role = "USER";
 
         const user = await tx.user.create({
           data: {
@@ -463,11 +468,30 @@ export async function deleteOwnAccount(
   prevState: { success?: boolean; error?: string } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
+  // auth() reads the request through next/headers and throws outside a
+  // request scope; treat that as unauthenticated (same pattern as the
+  // Stage 2 regeneration wrapper — keeps the action test-exercisable).
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   if (!session?.user?.id) {
     return { success: false, error: "Authentication required" };
   }
+  return deleteOwnAccountForUser(session.user.id, formData);
+}
 
+/**
+ * The deletion body, split from the session wrapper so the integration
+ * tests can exercise the real logic against a disposable database with a
+ * synthetic user id (the NextAuth session does not exist in tests).
+ */
+export async function deleteOwnAccountForUser(
+  userId: string,
+  formData: FormData
+): Promise<{ success?: boolean; error?: string }> {
   // Destructive + password-verified: throttle repeat attempts
   // (PHASE_23_RATE_LIMITING).
   const limit = await enforceRateLimit("deleteAccount");
@@ -489,7 +513,7 @@ export async function deleteOwnAccount(
     return { success: false, error: "You must acknowledge the permanent deletion notice" };
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return { success: false, error: "User not found" };
   }
@@ -499,20 +523,25 @@ export async function deleteOwnAccount(
     return { success: false, error: "Current password is incorrect" };
   }
 
-  if (user.role === "ADMIN") {
-    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
-    if (adminCount <= 1) {
-      return {
-        success: false,
-        error: "Cannot delete the last administrator account — promote another member first",
-      };
-    }
-  }
-
   const ownedImageFiles: string[] = [];
   const publishedImageFiles: string[] = [];
 
-  await prisma.$transaction(async (tx) => {
+  const deleted = await prisma.$transaction(async (tx) => {
+    // Stage 4: the last-admin invariant is enforced INSIDE the transaction
+    // that performs the deletion — the previous pre-transaction count check
+    // raced concurrent role changes (two simultaneous last-admin deletions
+    // could both observe count 2 and both proceed). SQLite serializes
+    // writers, so the in-transaction count is authoritative for the delete
+    // that follows it in the same transaction.
+    if (user.role === "ADMIN") {
+      const adminCount = await tx.user.count({ where: { role: "ADMIN" } });
+      if (adminCount <= 1) {
+        // Refusal: the transaction commits empty (no work done) and the
+        // caller turns this into the friendly error below.
+        return false;
+      }
+    }
+
     // Audit S9: collect the image filenames the cascade is about to remove
     // rows for, so the files can be purged from disk after commit — the DB
     // cascade alone leaves photos publicly retrievable at /api/uploads/<file>
@@ -542,7 +571,15 @@ export async function deleteOwnAccount(
     }
 
     await tx.user.delete({ where: { id: user.id } });
+    return true;
   });
+
+  if (!deleted) {
+    return {
+      success: false,
+      error: "Cannot delete the last administrator account — promote another member first",
+    };
+  }
 
   // Post-commit file purge (audit S9): the deletion helpers are no-ops for
   // missing files, so this is idempotent.

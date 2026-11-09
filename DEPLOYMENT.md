@@ -194,8 +194,18 @@ podman logs -f tool-library        # watch prisma migrate deploy + server boot
 curl -s http://localhost:3000      # landing page HTML
 ```
 
-The first account registered on an empty database automatically receives the
-`ADMIN` role. Register immediately after the first boot to claim it.
+Registration never grants the `ADMIN` role (Stage 4 of the KILO auth/security
+plan — a fresh public deployment can no longer be hijacked via first
+registration). After the first boot, register your account normally, then
+promote it from the server:
+
+```bash
+podman exec -it tool-library node scripts/bootstrap-admin.mjs <your-username> --yes
+```
+
+The script is operator-run, single-use per invocation, idempotent, and never
+demotes anyone. The promoted account is then locked to `/admin-email` until a
+notification email is on record.
 
 ### Post-deploy verification checklist (run on the live FCOS server)
 
@@ -217,8 +227,9 @@ podman exec tool-library ./node_modules/.bin/prisma migrate status
 
 **Loan lifecycle walkthrough (two real member accounts):**
 
-1. Register member A (on a fresh volume this account becomes ADMIN) and list
-   a real tool from `/tools/new`.
+1. Register member A (on a fresh volume, promote it with
+   `podman exec -it tool-library node scripts/bootstrap-admin.mjs <username> --yes`)
+   and list a real tool from `/tools/new`.
 2. As A, open the tool page and open `QR HANDOFF LABEL` from Quick Actions;
    the printable label must render a QR encoding the public handoff URL.
 3. Register member B (second device, or after signing out) and request the

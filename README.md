@@ -190,7 +190,7 @@ curl -s http://localhost:3000
 podman healthcheck run tool-library
 ```
 
-**First admin:** the first account registered on an empty database receives the `ADMIN` role automatically, and is locked to `/admin-email` until a notification email is on record.
+**First admin:** registration never grants the `ADMIN` role — the operator promotes their own account after registering with `node scripts/bootstrap-admin.mjs <username> --yes` (operator-run, single-use, idempotent). The promoted account is locked to `/admin-email` until a notification email is on record.
 
 ---
 

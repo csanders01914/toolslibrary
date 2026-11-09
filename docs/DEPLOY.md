@@ -103,8 +103,9 @@ environment variable you export before calling it is forwarded into the
 container; see the reference table below.
 
 First boot applies the SQL migrations (`prisma migrate deploy`), then boots
-`node server.js`. **Register immediately**: the first account on an empty
-database becomes the `ADMIN`.
+`node server.js`. **Register, then bootstrap**: registration never grants
+`ADMIN` (Stage 4 of the KILO auth/security plan) — promote your account with
+`podman exec -it tool-library node scripts/bootstrap-admin.mjs <username> --yes`.
 
 **If the build aborts with a Go panic** (`SIGSEGV` inside
 `imagebuildah.(*StageExecutor).Copy`): that is a known buildah race

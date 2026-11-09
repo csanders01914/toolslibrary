@@ -17,10 +17,10 @@
 # Containerfile — multi-stage rootless-Podman image for the ToolsLibrary.
 # Target host: Fedora CoreOS, rootless Podman with --userns=keep-id.
 # Stack: Next.js 15 App Router with `output: 'standalone'` (see next.config.ts),
-# Prisma 5.22 + SQLite (WAL) on a bind-mounted volume, @node-rs/bcrypt (native
-# NAPI module — prebuilt musl binaries ship in the npm package, so no native
-# toolchain is needed on Alpine; kept external to the server bundle via
-# serverExternalPackages in next.config.ts).
+# Prisma 5.22 + SQLite (WAL) on a bind-mounted volume, @node-rs/argon2 +
+# @node-rs/bcrypt (native NAPI modules — prebuilt musl binaries ship in the
+# npm packages, so no native toolchain is needed on Alpine; kept external to
+# the server bundle via serverExternalPackages in next.config.ts).
 # Local host artifacts (secrets, live database, editor backups) are kept out of
 # the build context by .dockerignore — this file never touches host source.
 
@@ -82,6 +82,10 @@ COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/prisma ./prisma
+# Operator maintenance tooling (Stage 4 of the KILO auth/security plan):
+# registration never grants ADMIN, so the fresh-install bootstrap runs via
+# `podman exec -it tool-library node scripts/bootstrap-admin.mjs <user> --yes`.
+COPY --from=builder --chown=node:node /app/scripts/bootstrap-admin.mjs ./scripts/bootstrap-admin.mjs
 
 # OCI metadata (AGPLv3 compliance visibility).
 LABEL org.opencontainers.image.title="tool-library" \
