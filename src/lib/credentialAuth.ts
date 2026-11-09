@@ -57,6 +57,8 @@ export interface AuthenticatedUser {
   mustChangePassword: boolean;
   needsAdminEmail: boolean;
   banned: boolean;
+  /** Stamped into the JWT at sign-in; the revocation check compares it against database truth. */
+  sessionVersion: number;
 }
 
 /**
@@ -104,7 +106,38 @@ export async function authenticateAndMaybeUpgrade(
     mustChangePassword: user.mustChangePassword,
     needsAdminEmail: user.role === "ADMIN" && !user.notificationEmail,
     banned: user.banned,
+    sessionVersion: user.sessionVersion,
   };
+}
+
+/**
+ * Stage 5: central session-revocation check. The JWT carries the
+ * `sessionVersion` it was issued with; this compares it against database
+ * truth. A mismatch — or a deleted account — means the token is dead:
+ * password resets revoke ALL sessions, password changes and role changes
+ * revoke every session of the account, and deletion kills sessions
+ * immediately. Tokens issued before the sessionVersion migration carry no
+ * version and are treated as version 0, so the deploy does not mass-
+ * invalidate sessions (every pre-migration account is genuinely at
+ * version 0); only bumped accounts are revoked.
+ *
+ * Runs on every jwt-callback invocation in the Node runtime (one indexed
+ * primary-key lookup per auth() call) — the cost of revocation under the
+ * JWT strategy. The edge middleware cannot query SQLite and keeps its
+ * existing route-gating behavior; every Node-runtime auth() — server
+ * components, server actions, API routes — passes through here.
+ */
+export async function isSessionRevoked(session: {
+  userId: string;
+  sessionVersion: number | undefined;
+}): Promise<boolean> {
+  const { prisma } = await import("@/lib/db");
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { sessionVersion: true },
+  });
+  if (!user) return true;
+  return user.sessionVersion !== (session.sessionVersion ?? 0);
 }
 
 /**

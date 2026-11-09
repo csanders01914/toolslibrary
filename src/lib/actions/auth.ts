@@ -319,7 +319,10 @@ export async function recoverAccount(
     }
     await tx.user.update({
       where: { id: user.id },
-      data: { passwordHash: newPasswordHash },
+      // Stage 5: the reset revokes ALL sessions of the account — anyone
+      // holding an old token (e.g. an attacker who stole it) is locked out
+      // by the central sessionVersion check on their next request.
+      data: { passwordHash: newPasswordHash, sessionVersion: { increment: 1 } },
     });
     return true;
   });
@@ -385,11 +388,31 @@ export async function changePassword(
   prevState: { success?: boolean; error?: string } | undefined,
   formData: FormData
 ) {
-  const session = await auth();
+  // auth() reads the request through next/headers and throws outside a
+  // request scope; treat that as unauthenticated (same pattern as the
+  // Stage 2/4 wrappers — keeps the action test-exercisable).
+  let session: Session | null;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
   if (!session?.user?.id) {
     return { success: false, error: "Authentication required" };
   }
+  return changePasswordForUser(session.user.id, formData);
+}
 
+/**
+ * The password-change body, split from the session wrapper so the
+ * integration tests can exercise the real logic against a disposable
+ * database with a synthetic user id (the NextAuth session does not exist
+ * in tests).
+ */
+export async function changePasswordForUser(
+  userId: string,
+  formData: FormData
+): Promise<{ success?: boolean; error?: string }> {
   // Current-password verification is a brute-force surface even when
   // authenticated (PHASE_23_RATE_LIMITING).
   const limit = await enforceRateLimit("changePassword");
@@ -416,7 +439,7 @@ export async function changePassword(
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
   });
   if (!user) {
     return { success: false, error: "User not found" };
@@ -438,11 +461,21 @@ export async function changePassword(
 
   const newPasswordHash = await hashNewPassword(newPassword);
 
+  // Stage 5: bumping sessionVersion revokes EVERY session of this account
+  // (including the current one) — the defined change-password behavior is
+  // full re-authentication with the new password. The success panel keeps
+  // its explicit sign-out button so the browser password manager can save
+  // the new password before the cookie is cleared; navigating away without
+  // it also ends the session, because the revoked token fails the central
+  // check. This also fixes the stale mustChangePassword flag: the forced
+  // flag lived in the old token until re-issue, and the re-login now
+  // always issues a fresh token.
   await prisma.user.update({
     where: { id: user.id },
     data: {
       passwordHash: newPasswordHash,
       mustChangePassword: false,
+      sessionVersion: { increment: 1 },
     },
   });
 

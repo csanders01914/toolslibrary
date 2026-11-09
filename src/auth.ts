@@ -79,6 +79,10 @@ export const { handlers, signIn, signOut } = NextAuth({
           // a notification email on record are locked to /admin-email by the
           // middleware until one is stored.
           needsAdminEmail: user.needsAdminEmail,
+          // Stage 5: stamped into the JWT by the shared jwt callback; the
+          // Node-runtime jwt callback compares it against database truth on
+          // every session access (central revocation check).
+          sessionVersion: user.sessionVersion,
         };
       },
     },
@@ -88,17 +92,33 @@ export const { handlers, signIn, signOut } = NextAuth({
     async jwt(params) {
       // Shared sign-in logic first (pure, edge-safe).
       const token = await authConfig.callbacks!.jwt!(params);
-      if (params.trigger === "update" && token) {
-        // PHASE_29: session.update() payloads are client-supplied and never
-        // trusted — re-derive the forced-email flag from database truth.
-        // (A hijacked session must not be able to flip the gate off by
-        // calling useSession().update({ needsAdminEmail: false }).)
-        const { prisma } = await import("@/lib/db");
+      if (!token) return token;
+
+      const { prisma } = await import("@/lib/db");
+
+      // Stage 5: central session-revocation check. Every jwt invocation
+      // except the sign-in that just stamped sessionVersion compares the
+      // token's version against database truth; a mismatch — or a deleted
+      // account — returns null, which invalidates the session everywhere
+      // auth() runs in the Node runtime (server components, server actions,
+      // API routes). The edge middleware cannot query SQLite and keeps its
+      // existing route-gating behavior. Tokens issued before the
+      // sessionVersion migration carry no version and are treated as
+      // version 0, so the deploy does not mass-invalidate sessions.
+      // AUTH_SECRET is never rotated for revocation.
+      if (params.trigger !== "signIn") {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, notificationEmail: true },
+          select: { sessionVersion: true, role: true, notificationEmail: true },
         });
-        if (dbUser) {
+        if (!dbUser || dbUser.sessionVersion !== token.sessionVersion) {
+          return null;
+        }
+        if (params.trigger === "update") {
+          // PHASE_29: session.update() payloads are client-supplied and never
+          // trusted — re-derive the forced-email flag from database truth.
+          // (A hijacked session must not be able to flip the gate off by
+          // calling useSession().update({ needsAdminEmail: false }).)
           token.needsAdminEmail =
             dbUser.role === "ADMIN" && !dbUser.notificationEmail;
         }

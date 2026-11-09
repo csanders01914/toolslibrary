@@ -39,6 +39,7 @@ model User {
   notificationEmail String?       // PHASE_29: admin-only alert destination for admin alert emails via the local Postfix SMTP relay — the single deliberate PII exception (operator account only, never collected from members)
   canaryPassphraseHash String?       // PHASE_30: separate canary passphrase (bcrypt cost 12), independent of the login password; required to stage warrant-canary updates
   recoveryCodesIssuedAt DateTime?    // Set when the current 12-character case-sensitive recovery-code set was issued (registration, or the one-time sign-in rotation); null = the account still holds the legacy 8-character set
+  sessionVersion       Int @default(0) // Stage 5 session revocation: bumped on password reset/change and role changes; JWTs carry the value they were issued with and are rejected when it no longer matches (also kills sessions of deleted accounts)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 

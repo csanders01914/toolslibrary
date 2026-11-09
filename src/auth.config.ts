@@ -53,6 +53,10 @@ export const authConfig = {
         // src/auth.ts re-derives this on session.update() — client payloads
         // are never trusted.
         token.needsAdminEmail = user.needsAdminEmail ?? false;
+        // Stage 5: the session version this token was issued at. The Node
+        // bundle's jwt callback compares it against database truth on every
+        // invocation and kills the token on mismatch (session revocation).
+        token.sessionVersion = user.sessionVersion ?? 0;
       }
       return token;
     },

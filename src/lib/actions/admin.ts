@@ -118,6 +118,10 @@ export async function updateUserRoleForCaller(
   // two admins demoting each other concurrently are serialized by SQLite,
   // and the second transaction observes count 1 and refuses, so the
   // platform can never reach zero administrators through this path.
+  // Stage 5: every role change also bumps the target's sessionVersion, so
+  // their existing JWT — which still carries the old role — dies at the
+  // central revocation check and the next sign-in issues a token with the
+  // new role. This closes the stale-role escalation window.
   if (user.role === "ADMIN" && role !== "ADMIN") {
     const demoted = await prisma.$transaction(async (tx) => {
       const adminCount = await tx.user.count({ where: { role: "ADMIN" } });
@@ -126,7 +130,7 @@ export async function updateUserRoleForCaller(
       }
       await tx.user.update({
         where: { id: userId },
-        data: { role },
+        data: { role, sessionVersion: { increment: 1 } },
       });
       return true;
     });
@@ -141,7 +145,7 @@ export async function updateUserRoleForCaller(
 
   await prisma.user.update({
     where: { id: userId },
-    data: { role },
+    data: { role, sessionVersion: { increment: 1 } },
   });
 
   return { success: true };

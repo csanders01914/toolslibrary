@@ -36,5 +36,6 @@ declare module "next-auth" {
     role: string;
     mustChangePassword: boolean;
     needsAdminEmail: boolean;
+    sessionVersion: number;
   }
 }

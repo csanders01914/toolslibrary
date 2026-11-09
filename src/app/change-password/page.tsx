@@ -86,7 +86,9 @@ function ChangePasswordForm() {
               Password Updated
             </h1>
             <p className="mt-3 text-sm text-zinc-400">
-              Your new password is active. If your browser offers to save it, accept the prompt — there is no email recovery.
+              Your new password is active and every session of this account was signed out —
+              sign in again with the new password. If your browser offers to save it, accept the
+              prompt; there is no email recovery.
             </p>
             {/* PHASE_29: the forced-email flag is computed at sign-in, so this
                 heads-up is precise for the stock-credential first-login flow. */}
@@ -104,7 +106,8 @@ function ChangePasswordForm() {
               Sign Out &amp; Continue to Login
             </button>
             <p className="mt-3 font-mono text-[11px] text-zinc-500">
-              You will sign in with the new password you just set.
+              The sign-out below clears this browser's session cookie; all other sessions were
+              already revoked server-side.
             </p>
           </div>
         </div>
