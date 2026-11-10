@@ -50,7 +50,8 @@ Containerfile
 deploy.sh
 backup.sh
 deploy/
-scripts/
+scripts/*
+!scripts/bootstrap-admin.mjs
 
 # --- Standalone Matrix helpdesk bot (separate npm project, never baked into the platform image) ---
 tools-library-bot/
@@ -60,3 +61,4 @@ postfix/
 
 main.cf
 wiki/
+docs/
