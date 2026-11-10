@@ -21,6 +21,7 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import type { Session } from "next-auth";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import {
   generateRecoveryCodes,
@@ -94,6 +95,82 @@ function withRegistrationLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * SQLite advisory lock for cross-process registration safety
+ * (SEC_REVIEW_HIGH_4_ADVISORY_LOCK defense-in-depth).
+ *
+ * SQLite doesn't have native advisory locks like PostgreSQL, but we can
+ * implement a mutex using a dedicated table with a single row. The lock is
+ * acquired by starting an IMMEDIATE transaction and updating the row — this
+ * acquires a reserved lock on the database that blocks other IMMEDIATE
+ * transactions. The lock is released when the transaction commits or rolls
+ * back.
+ *
+ * This is defense-in-depth for any future multi-process deployment that
+ * cannot be avoided. The in-process promise-chain mutex (withRegistrationLock)
+ * remains the primary guard; this advisory lock adds cross-process safety.
+ */
+async function withAdvisoryRegistrationLock<T>(fn: () => Promise<T>): Promise<T> {
+  // Use a dedicated advisory lock table. We create it on first use.
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS _advisory_lock (
+      name TEXT PRIMARY KEY,
+      holder TEXT NOT NULL,
+      acquired_at INTEGER NOT NULL
+    )
+  `);
+
+  const lockName = "registration";
+  const holderId = `${process.pid}-${Math.random().toString(36).slice(2)}`;
+
+  // Try to acquire the lock with a timeout
+  const maxWaitMs = 30_000; // 30 second timeout
+  const startTime = Date.now();
+
+  while (true) {
+    try {
+      // Attempt to acquire lock in an IMMEDIATE transaction
+      await prisma.$transaction(async (tx) => {
+        // Try to insert or update the lock row
+        const result = await tx.$executeRawUnsafe(`
+          INSERT INTO _advisory_lock (name, holder, acquired_at)
+          VALUES (?, ?, ?)
+          ON CONFLICT(name) DO UPDATE SET
+            holder = CASE WHEN holder = ? THEN ? ELSE holder END,
+            acquired_at = CASE WHEN holder = ? THEN ? ELSE acquired_at END
+          WHERE name = ? AND (holder = ? OR acquired_at < ?)
+        `, lockName, holderId, Date.now(), holderId, holderId, holderId, Date.now(), lockName, holderId, Date.now() - maxWaitMs);
+
+        // Check if we got the lock
+        const lockRow = await tx.$queryRawUnsafe<{ holder: string }[]>(`
+          SELECT holder FROM _advisory_lock WHERE name = ?
+        `, lockName);
+
+        if (!lockRow.length || lockRow[0].holder !== holderId) {
+          throw new Error("Could not acquire advisory lock");
+        }
+      });
+
+      // Lock acquired, run the function
+      try {
+        return await fn();
+      } finally {
+        // Release the lock
+        await prisma.$executeRawUnsafe(`
+          DELETE FROM _advisory_lock WHERE name = ? AND holder = ?
+        `, lockName, holderId);
+      }
+    } catch (error) {
+      // Check if we should retry
+      if (Date.now() - startTime >= maxWaitMs) {
+        throw new Error(`Advisory lock timeout after ${maxWaitMs}ms`);
+      }
+      // Wait a bit before retrying
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+}
+
 export async function registerUser(
   prevState: { success?: boolean; error?: string; recoveryCodes?: string[] } | undefined,
   formData: FormData
@@ -162,44 +239,51 @@ export async function registerUser(
   // check-then-act sequence atomic within the only writer process; the
   // P2002 catch below stays as defense for any future multi-process
   // deployment.
+  //
+  // SEC_REVIEW_HIGH_4_ADVISORY_LOCK: defense-in-depth advisory lock for
+  // cross-process safety. The in-process lock is the primary guard; the
+  // advisory lock adds protection if multiple Node processes ever write to
+  // the same SQLite database (violating the single-writer contract).
   try {
     await withRegistrationLock(() =>
-      prisma.$transaction(async (tx) => {
-        const existingUser = await tx.user.findUnique({
-          where: { username },
-        });
-        if (existingUser) {
-          throw new UsernameTakenError();
-        }
+      withAdvisoryRegistrationLock(() =>
+        prisma.$transaction(async (tx) => {
+          const existingUser = await tx.user.findUnique({
+            where: { username },
+          });
+          if (existingUser) {
+            throw new UsernameTakenError();
+          }
 
-        // Stage 4 (KILO auth/security plan): registration NEVER grants
-        // ADMIN. The old first-registered-user election let a fresh public
-        // deployment be hijacked by the first stranger to register. The
-        // operator promotes their own account after registering with
-        // `node scripts/bootstrap-admin.mjs <username> --yes` (single-use,
-        // operator-run, no web surface).
-        const role = "USER";
+          // Stage 4 (KILO auth/security plan): registration NEVER grants
+          // ADMIN. The old first-registered-user election let a fresh public
+          // deployment be hijacked by the first stranger to register. The
+          // operator promotes their own account after registering with
+          // `node scripts/bootstrap-admin.mjs <username> --yes` (single-use,
+          // operator-run, no web surface).
+          const role = "USER";
 
-        const user = await tx.user.create({
-          data: {
-            username,
-            alias,
-            passwordHash,
-            role,
-            // The registration set is already the modern 12-character
-            // format, so the account is marked issued and the first sign-in
-            // does not rotate it again.
-            recoveryCodesIssuedAt: new Date(),
-          },
-        });
+          const user = await tx.user.create({
+            data: {
+              username,
+              alias,
+              passwordHash,
+              role,
+              // The registration set is already the modern 12-character
+              // format, so the account is marked issued and the first sign-in
+              // does not rotate it again.
+              recoveryCodesIssuedAt: new Date(),
+            },
+          });
 
-        await tx.recoveryKey.createMany({
-          data: recoveryKeyHashes.map((keyHash) => ({
-            keyHash,
-            userId: user.id,
-          })),
-        });
-      })
+          await tx.recoveryKey.createMany({
+            data: recoveryKeyHashes.map((keyHash) => ({
+              keyHash,
+              userId: user.id,
+            })),
+          });
+        })
+      )
     );
   } catch (error) {
     if (error instanceof UsernameTakenError || isUniqueConstraintViolation(error)) {
@@ -253,6 +337,16 @@ export async function recoverAccount(
     hashClient(`account-recovery:${username}`)
   );
   if (!accountVerdict.allowed) {
+    // SEC_REVIEW_HIGH_3_RECOVERY_ALERTING: alert admins when the per-account
+    // recovery bucket is exhausted — indicates a targeted DoS against one
+    // account's recovery path. Fire-and-forget; never blocks the response.
+    const clientHash = await getRequestClientHash();
+    void notifyAdmins({
+      type: "recovery_bucket_exhausted",
+      username,
+      clientHash,
+      retryAfterSeconds: accountVerdict.retryAfterSeconds,
+    });
     return {
       success: false,
       error: rateLimitMessage(accountVerdict.retryAfterSeconds),
@@ -466,13 +560,9 @@ export async function changePasswordForUser(
 
   // Stage 5: bumping sessionVersion revokes EVERY session of this account
   // (including the current one) — the defined change-password behavior is
-  // full re-authentication with the new password. The success panel keeps
-  // its explicit sign-out button so the browser password manager can save
-  // the new password before the cookie is cleared; navigating away without
-  // it also ends the session, because the revoked token fails the central
-  // check. This also fixes the stale mustChangePassword flag: the forced
-  // flag lived in the old token until re-issue, and the re-login now
-  // always issues a fresh token.
+  // full re-authentication with the new password. Also clear the session
+  // cookie immediately so the current session cannot be used even before the
+  // next request hits the central revocation check.
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -481,6 +571,27 @@ export async function changePasswordForUser(
       sessionVersion: { increment: 1 },
     },
   });
+
+  // Immediately invalidate the current session cookie so an attacker who
+  // stole the session cannot continue using it. The cookie name follows
+  // NextAuth v5 defaults: "next-auth.session-token" (production) or
+  // "__Host-next-auth.session-token" (development with secure prefix).
+  // Wrapped in try/catch because cookies() throws outside a request scope
+  // (e.g., in integration tests that call the action directly).
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete("next-auth.session-token");
+    cookieStore.delete("__Host-next-auth.session-token");
+    // Also clear the callback URL and CSRF cookies for completeness
+    cookieStore.delete("next-auth.callback-url");
+    cookieStore.delete("__Host-next-auth.callback-url");
+    cookieStore.delete("next-auth.csrf-token");
+    cookieStore.delete("__Host-next-auth.csrf-token");
+  } catch {
+    // Outside request scope (tests) — sessionVersion bump still revokes
+    // the token on next request; cookie clearing is a defense-in-depth
+    // measure for production request contexts only.
+  }
 
   return { success: true };
 }

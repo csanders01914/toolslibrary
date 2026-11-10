@@ -22,7 +22,7 @@ import type { MatrixClient } from "matrix-bot-sdk";
 import { config } from "../config";
 import { markWebhookListening } from "../runtime";
 import { routeInboundMessage } from "../triage/triageEngine";
-import { isSecretValid, isRateAllowed } from "./guards";
+import { isSecretValid, isRateAllowed, clientIdentifierFromHeaders } from "./guards";
 
 /**
  * Website integration — lightweight webhook server.
@@ -55,15 +55,31 @@ function readString(value: unknown, maxLength: number): string {
 }
 
 export function startWebhook(client: MatrixClient): Server {
+  // SEC_REVIEW_MEDIUM_3_BOT_WEBHOOK_SECRET: require WEBHOOK_SECRET in production.
+  // Fail fast at startup if the secret is missing in a production environment.
+  if (process.env.NODE_ENV === "production" && config.webhookSecret.length === 0) {
+    throw new Error(
+      "WEBHOOK_SECRET is required in production. Set it in the bot's .env file. " +
+      "See .env.example for details."
+    );
+  }
+
   const app = express();
   app.disable("x-powered-by");
+  // SEC_REVIEW_MEDIUM_4_BOT_TRUST_PROXY: trust the reverse proxy (Caddy) so
+  // req.ip and req.headers['x-forwarded-for'] are populated correctly.
+  // The rate limiter uses clientIdentifierFromHeaders which reads
+  // cf-connecting-ip → last x-forwarded-for hop (Caddy append semantics).
+  app.set("trust proxy", true);
   app.use(express.json({ limit: "16kb" }));
 
   app.post("/api/web-support", (req: Request, res: Response): void => {
     void (async (): Promise<void> => {
       // Access control: shared secret (when configured) and a per-IP rate
       // limit, so the webhook cannot be used to flood the admin room.
-      const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+      // SEC_REVIEW_MEDIUM_4_BOT_TRUST_PROXY: use the same client identification
+      // logic as the main app (cf-connecting-ip → last x-forwarded-for hop).
+      const ip = clientIdentifierFromHeaders(req.headers);
       if (!isSecretValid(req.headers["x-webhook-secret"])) {
         res.status(401).json({ success: false, error: "unauthorized" });
         return;

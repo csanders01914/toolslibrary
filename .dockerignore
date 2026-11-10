@@ -34,6 +34,7 @@ next-env.d.ts
 .handoff/
 nppBackup/
 *.bak
+CONTEXT.md
 CLEANUP_REPORT.md
 IMPLEMENTATION_PLAN.md
 AGENTS.md
@@ -58,3 +59,4 @@ tools-library-bot/
 postfix/
 
 main.cf
+wiki/

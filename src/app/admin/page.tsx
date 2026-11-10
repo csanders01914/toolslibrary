@@ -22,6 +22,7 @@ import { redirect } from "next/navigation";
 import { getCanaryState } from "@/lib/canary";
 import AdminClient from "./AdminClient";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {

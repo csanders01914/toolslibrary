@@ -14,14 +14,18 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useAccessibility } from "@/context/AccessibilityContext";
 
-export function ReadingGuide() {
+interface ReadingGuideProps {
+  nonce?: string;
+}
+
+export function ReadingGuide({ nonce }: ReadingGuideProps) {
   const { prefs, ready } = useAccessibility();
   const [y, setY] = useState(0);
   const [visible, setVisible] = useState(false);
@@ -59,17 +63,22 @@ export function ReadingGuide() {
 
   if (!ready || !prefs.readingGuide) return null;
 
+  // SEC_REVIEW_LOW_2_NONCE_CSP: use nonce for inline styles
+  const styleNonce = nonce ? { nonce } : {};
+
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none fixed left-0 right-0 z-[9999]"
       style={{ top: y - 1, opacity: visible ? 1 : 0, transition: "opacity 120ms ease" }}
+      {...styleNonce}
     >
       <div
         className="h-[2px] w-full"
         style={{
           background: "#FFE600",
         }}
+        {...styleNonce}
       />
     </div>
   );

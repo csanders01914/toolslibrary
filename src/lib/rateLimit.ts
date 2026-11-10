@@ -103,6 +103,9 @@ export const RATE_LIMITS = {
   imagePublish: { capacity: 10, refillPerMinute: 5 },
   recoveryRegen: { capacity: 5, refillPerMinute: 2 },
   recoverAccount: { capacity: 20, refillPerMinute: 5 },
+  // Per-alias rate limit for chat token minting (SEC_REVIEW_HIGH_1_CHAT_TOKEN_VERIFY):
+  // bounds credential-stuffing attempts against a single Matrix alias.
+  chatTokenAlias: { capacity: 10, refillPerMinute: 5 },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

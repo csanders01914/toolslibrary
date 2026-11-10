@@ -23,6 +23,7 @@ import { redirect } from "next/navigation";
 import { getCanaryKeyFingerprint, getCanaryState } from "@/lib/canary";
 import CanaryClient from "./CanaryClient";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {

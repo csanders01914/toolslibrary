@@ -115,6 +115,17 @@ export async function POST(request: NextRequest) {
       recordFailure("chat", clientHash);
       return NextResponse.json({ error: "Invalid alias or password." }, { status: 401 });
     }
+    if (result.reason === "alias_not_found") {
+      // Uniform error message to prevent alias enumeration
+      recordFailure("chat", clientHash);
+      return NextResponse.json({ error: "Invalid alias or password." }, { status: 401 });
+    }
+    if (result.reason === "rate_limited") {
+      return NextResponse.json(
+        { error: "Too many attempts for this alias. Try again shortly." },
+        { status: 429 }
+      );
+    }
     if (result.reason === "unconfigured") {
       return NextResponse.json(
         { error: "The chat server is not configured." },

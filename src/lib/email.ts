@@ -97,6 +97,15 @@ export type AdminNotification =
       newEmail: string;
       changedBy: string;
     }
+  // SEC_REVIEW_HIGH_3_RECOVERY_ALERTING: recovery bucket exhaustion alert.
+  // Fired when the per-account recoverAccount bucket (20 burst / 5 per min)
+  // is exhausted by a distributed attack against a single username.
+  | {
+      type: "recovery_bucket_exhausted";
+      username: string;
+      clientHash: string;
+      retryAfterSeconds: number;
+    }
   // PHASE_30_CANARY_SIGNING: warrant-canary lifecycle alerts. canary_staged
   // is the out-of-band approval half of the two-factor gate — it routes to
   // the staging admin's OWN notification address (like email_changed) and
@@ -235,6 +244,22 @@ export function renderAdminNotification(notification: AdminNotification): {
         `Enrolled by: ${notification.alias}`,
         "",
         "A canary passphrase was set for this admin account — first enrollment needs no current passphrase by definition. If this wasn't you, a hijacked session may be enrolling its own canary credentials: rotate credentials immediately.",
+      ].join("\n");
+      break;
+    }
+    case "recovery_bucket_exhausted": {
+      subject = "Recovery bucket exhausted — targeted DoS";
+      body = [
+        "Per-account recovery bucket exhausted",
+        "",
+        `Target username: ${notification.username}`,
+        `Client hash: ${notification.clientHash}`,
+        `Retry after: ${notification.retryAfterSeconds} seconds`,
+        "",
+        "The per-account recoverAccount bucket (20 burst / 5 per minute) was exhausted.",
+        "This indicates a distributed attack against a single account's recovery path.",
+        "The login itself is never blocked — only that account's recovery is delayed.",
+        "The modern code keyspace (62^12) makes offline guessing hopeless.",
       ].join("\n");
       break;
     }

@@ -33,10 +33,10 @@ const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_TRACKED_IPS = 1000;
 
-/** Timing-safe secret check; always true when no secret is configured. */
+/** Timing-safe secret check; returns false when no secret is configured (fail closed). */
 export function isSecretValid(presented: unknown): boolean {
   const expected = config.webhookSecret;
-  if (expected.length === 0) return true; // No secret configured: allow (trusted setup).
+  if (expected.length === 0) return false; // No secret configured: reject (fail closed).
   if (typeof presented !== "string" || presented.length === 0) return false;
 
   const a = Buffer.from(expected, "utf8");
@@ -47,6 +47,33 @@ export function isSecretValid(presented: unknown): boolean {
     return false;
   }
   return timingSafeEqual(a, b);
+}
+
+/**
+ * Client identifier from request headers (SEC_REVIEW_MEDIUM_4_BOT_TRUST_PROXY):
+ * `cf-connecting-ip` when a trusted edge provides it, otherwise the
+ * LAST `x-forwarded-for` hop — the remote address the edge proxy itself
+ * appended. Caddy (the production edge) APPENDS the real client address to
+ * any client-supplied X-Forwarded-For, so earlier hops are attacker-
+ * controlled and the previous first-hop derivation was spoofable; the last
+ * hop is the only value the edge vouches for. With direct exposure (no
+ * proxy headers) this returns the shared fail-safe "unknown" identity:
+ * throttling still applies, just to one shared bucket.
+ */
+export function clientIdentifierFromHeaders(h: Record<string, string | string[] | undefined>): string {
+  const cf = (h["cf-connecting-ip"] as string | undefined)?.trim();
+  if (cf) return cf;
+  const xff = h["x-forwarded-for"] as string | string[] | undefined;
+  if (xff) {
+    const xffStr = Array.isArray(xff) ? xff[0] : xff;
+    const hops = xffStr
+      .split(",")
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0);
+    const last = hops[hops.length - 1];
+    if (last) return last;
+  }
+  return "unknown";
 }
 
 const hits = new Map<string, number[]>();

@@ -30,24 +30,51 @@
  * style as src/lib/matrix.ts.
  */
 
+import { prisma } from "@/lib/db";
+import { consumeToken, hashClient } from "@/lib/rateLimit";
+
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export type MatrixTokenResult =
   | { ok: true; loginToken: string; expiresInMs: number }
-  | { ok: false; reason: "unconfigured" | "credentials" | "unavailable" };
+  | { ok: false; reason: "unconfigured" | "credentials" | "unavailable" | "alias_not_found" | "rate_limited" };
 
 /**
  * Mints a one-time Matrix login token for `alias` / `password`.
  *
  * Returns a discriminated union instead of throwing: "credentials" means the
  * Synapse server rejected the login, "unconfigured" means the homeserver URL
- * is absent, and "unavailable" covers network failures, timeouts, 5xx
- * responses, and malformed responses.
+ * is absent, "alias_not_found" means the alias does not exist in the local
+ * User table, "rate_limited" means the per-alias bucket is exhausted, and
+ * "unavailable" covers network failures, timeouts, 5xx responses, and
+ * malformed responses.
  */
 export async function mintChatLoginToken(
   alias: string,
   password: string
 ): Promise<MatrixTokenResult> {
+  // SEC_REVIEW_HIGH_1_CHAT_TOKEN_VERIFY: verify alias exists locally before
+  // forwarding credentials to Synapse. This prevents credential stuffing
+  // against external Synapse and enumeration of valid Matrix accounts.
+  const localUser = await prisma.user.findFirst({
+    where: { alias },
+    select: { id: true },
+  });
+  if (!localUser) {
+    return { ok: false, reason: "alias_not_found" };
+  }
+
+  // Per-alias rate limiting: bounds credential-stuffing attempts against a
+  // single Matrix alias. Keyed by the alias (hashed) so distributed attacks
+  // against one account are bounded by the same budget.
+  const aliasVerdict = consumeToken(
+    "chatTokenAlias",
+    hashClient(`chat-alias:${alias}`)
+  );
+  if (!aliasVerdict.allowed) {
+    return { ok: false, reason: "rate_limited" };
+  }
+
   const homeserverUrl = process.env.MATRIX_HOMESERVER_URL;
   if (!homeserverUrl) {
     console.error("[chat-token] MATRIX_HOMESERVER_URL is not configured; token minting disabled");

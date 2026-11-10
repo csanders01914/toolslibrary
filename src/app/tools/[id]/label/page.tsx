@@ -18,6 +18,7 @@
 
 import { auth } from "@/auth";
 import { headers } from "next/headers";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import QRCode from "qrcode";
@@ -75,9 +76,14 @@ export default async function ToolLabelPage({ params }: PageProps) {
     errorCorrectionLevel: "M",
   });
 
+  // SEC_REVIEW_LOW_2_NONCE_CSP: read CSP nonce from cookie set by middleware
+  const cookieStore = await cookies();
+  const nonce = cookieStore.get("csp-nonce")?.value ?? "";
+  const nonceAttr = nonce ? { nonce } : {};
+
   return (
     <div className="mx-auto max-w-xl px-4 py-8 space-y-6">
-      <style>{`
+      <style {...nonceAttr}>{`
         @media print {
           body * { visibility: hidden; }
           #print-label, #print-label * { visibility: visible; }
@@ -109,6 +115,7 @@ export default async function ToolLabelPage({ params }: PageProps) {
           role="img"
           aria-label={`QR code linking to the handoff page for ${tool.name}`}
           dangerouslySetInnerHTML={{ __html: qrSvg }}
+          {...nonceAttr}
         />
         <p className="mt-4 font-mono text-xs uppercase tracking-widest text-black/70">
           Scan during handoff to update the loan

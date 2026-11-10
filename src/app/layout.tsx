@@ -14,10 +14,11 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 import './globals.css';
 import type { ReactNode } from 'react';
+import { cookies } from 'next/headers';
 import { SessionProvider } from 'next-auth/react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/footer/Footer';
@@ -32,33 +33,40 @@ export const metadata = {
   icons: { icon: '/icon.png' },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // SEC_REVIEW_LOW_2_NONCE_CSP: read CSP nonce from cookie set by middleware
+  const cookieStore = await cookies();
+  const nonce = cookieStore.get('csp-nonce')?.value ?? '';
+
   return (
     <html lang="en" className="bg-workshop-canvas bg-[#050505] text-zinc-100 antialiased relative overflow-x-hidden">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                try {
-                  var m = document.cookie.match(/(?:^|; )a11y_prefs=([^;]+)/);
-                  if (m) {
-                    var p = JSON.parse(decodeURIComponent(m[1]));
-                    var d = document.documentElement;
-                    if (p.contrast) d.setAttribute('data-contrast', p.contrast);
-                    if (p.fontSize) d.setAttribute('data-font-size', p.fontSize);
-                    if (p.dyslexic) d.setAttribute('data-dyslexic', 'true');
-                    if (p.textSpacing) d.setAttribute('data-text-spacing', 'true');
-                    if (p.focusIndicators) d.setAttribute('data-focus-indicators', 'true');
-                    if (p.reducedMotion) d.setAttribute('data-reduced-motion', 'true');
-                    if (p.bigCursor) d.setAttribute('data-big-cursor', 'true');
-                    if (p.underlineLinks) d.setAttribute('data-underline-links', 'true');
-                  }
-                } catch(e) {}
-              })();
-            `,
-          }}
-        />
+        {nonce && (
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function(){
+                  try {
+                    var m = document.cookie.match(/(?:^|; )a11y_prefs=([^;]+)/);
+                    if (m) {
+                      var p = JSON.parse(decodeURIComponent(m[1]));
+                      var d = document.documentElement;
+                      if (p.contrast) d.setAttribute('data-contrast', p.contrast);
+                      if (p.fontSize) d.setAttribute('data-font-size', p.fontSize);
+                      if (p.dyslexic) d.setAttribute('data-dyslexic', 'true');
+                      if (p.textSpacing) d.setAttribute('data-text-spacing', 'true');
+                      if (p.focusIndicators) d.setAttribute('data-focus-indicators', 'true');
+                      if (p.reducedMotion) d.setAttribute('data-reduced-motion', 'true');
+                      if (p.bigCursor) d.setAttribute('data-big-cursor', 'true');
+                      if (p.underlineLinks) d.setAttribute('data-underline-links', 'true');
+                    }
+                  } catch(e) {}
+                })();
+              `,
+            }}
+          />
+        )}
       </head>
       <body className="min-h-screen flex flex-col">
         <SessionProvider>
@@ -76,7 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Footer />
             <MessengerWidget />
             <AccessibilityMenu />
-            <ReadingGuide />
+            <ReadingGuide nonce={nonce} />
           </AccessibilityProvider>
         </SessionProvider>
       </body>

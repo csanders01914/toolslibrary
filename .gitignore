@@ -20,9 +20,12 @@ dkim/
 next-env.d.ts
 # Agent session documents & tooling — local-only, never publish to GitHub
 AGENTS.md
+CONTEXT.md
 CLEANUP_REPORT.md
 IMPLEMENTATION_PLAN.md
 scripts/record-handoff.mjs
 scripts/verify-handoff.mjs
 .kilo/
-wiki
+wiki/
+docs//DEPLOYMENT.md
+/KILO_AUTH_SECURITY_IMPLEMENTATION_PLAN.md

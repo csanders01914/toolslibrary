@@ -22,6 +22,7 @@ import { redirect } from "next/navigation";
 import { inspectCanaryToken } from "@/lib/canary";
 import ConfirmClient from "./ConfirmClient";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {

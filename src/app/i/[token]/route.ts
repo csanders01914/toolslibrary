@@ -79,6 +79,16 @@ export async function GET(
   // — still unreachable publicly, because /api/uploads serves only filenames
   // referenced by an existing Tool.imageUrl.
   const safeFilename = path.basename(published.filename);
+
+  // SEC_REVIEW_MEDIUM_2_PATH_TRAVERSAL: validate filename against the same
+  // allowlist used by the deletion helpers (uploads.ts:189) before any
+  // filesystem access. Defense in depth — the filename comes from the DB
+  // (PublishedImage.filename), but if it were ever poisoned via SQL injection
+  // or admin compromise, this guard prevents path traversal.
+  if (!/^[a-zA-Z0-9._-]+$/.test(safeFilename)) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   const secretPath = path.resolve(SECRET_UPLOADS_DIR, safeFilename);
   const legacyPath = path.resolve(UPLOADS_DIR, safeFilename);
   // PHASE_53 (audit P1): async fs on the hot path — no synchronous stat/read.

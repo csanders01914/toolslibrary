@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+ */
 
 import path from 'node:path';
 import type { NextConfig } from 'next';
@@ -57,11 +57,8 @@ const nextConfig: NextConfig = {
   // PHASE_49 (audit S8): the app previously shipped ONLY the Referrer-Policy.
   // Added: nosniff, framing denial (X-Frame-Options + frame-ancestors), HSTS
   // (TLS terminates at Caddy on the FCOS host; the header is applied at the
-  // app so it survives any proxy path), and a baseline CSP. The CSP allows
-  // 'unsafe-inline' for script/style because Next.js hydration and the
-  // design system's inline style attributes require it; it still locks the
-  // app to same-origin resources (zero external CDNs by contract), forbids
-  // plugins/embedding, and pins form-action and base-uri to self.
+  // app so it survives any proxy path). CSP is now set dynamically in
+  // middleware with a per-request nonce (SEC_REVIEW_LOW_2_NONCE_CSP).
   async headers() {
     return [
       {
@@ -73,11 +70,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
-          },
-          {
-            key: 'Content-Security-Policy',
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'",
           },
         ],
       },

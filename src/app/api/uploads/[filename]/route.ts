@@ -30,6 +30,14 @@ export async function GET(
   const { filename } = await params;
   const safeFilename = path.basename(filename);
 
+  // SEC_REVIEW_MEDIUM_2_PATH_TRAVERSAL: validate filename against the same
+  // allowlist used by the deletion helpers (uploads.ts:189) before any
+  // filesystem access. Rejects path traversal attempts (.., slashes) and
+  // any characters outside the system-generated CSPRNG filename alphabet.
+  if (!/^[a-zA-Z0-9._-]+$/.test(safeFilename)) {
+    return new NextResponse('File not found', { status: 404 });
+  }
+
   // PHASE_47 (audit S1): this route serves PUBLIC listing photos only. A file
   // is served only when an existing Tool.imageUrl references exactly this
   // filename — secret-link images (PublishedImage) live in an isolated

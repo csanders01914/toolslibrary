@@ -361,7 +361,7 @@ export async function deleteUserForCaller(
 
 const adminEmailSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254, "Email too long (max 254 characters)"),
-  currentPassword: z.string().optional(),
+  currentPassword: z.string().min(1, "Current password is required"),
 });
 
 /**
@@ -369,11 +369,12 @@ const adminEmailSchema = z.object({
  * deliberate PII exception on the platform, stored on ADMIN accounts only as
  * the destination for operational alert emails. Replacing an existing
  * destination requires the current password (a hijacked session must not be
- * able to silently redirect alerts); first-time setup skips that re-prompt
- * because the forced /admin-email flow runs seconds after a full password
- * rotation and a fresh sign-in. That decision is derived from DATABASE state
- * (`user.notificationEmail` is null or not) — never from client input — so a
- * forged form field cannot bypass the password check.
+ * able to silently redirect alerts); first-time setup ALSO requires the
+ * current password (SEC_REVIEW_MEDIUM_1_ADMIN_EMAIL_PASSWORD) — a hijacked
+ * session must not be able to set the notification email to an attacker-
+ * controlled address without password verification. The decision is derived
+ * from DATABASE state (`user.notificationEmail` is null or not) — never from
+ * client input — so a forged form field cannot bypass the password check.
  */
 export async function setAdminEmail(
   prevState: { success?: boolean; error?: string; email?: string } | undefined,
@@ -409,23 +410,17 @@ export async function setAdminEmail(
     return { success: false, error: "User not found" };
   }
 
-  const oldEmail = user.notificationEmail;
-  const isChange = Boolean(oldEmail);
-  if (isChange) {
-    if (!parsed.data.currentPassword) {
-      return {
-        success: false,
-        error: "Current password is required to change the notification email",
-      };
-    }
-    const isValid = await verifyStoredPassword(
-      parsed.data.currentPassword,
-      user.passwordHash
-    );
-    if (!isValid) {
-      return { success: false, error: "Current password is incorrect" };
-    }
+  // SEC_REVIEW_MEDIUM_1_ADMIN_EMAIL_PASSWORD: always require current password
+  // for notificationEmail writes — both first-time setup and changes.
+  const isValid = await verifyStoredPassword(
+    parsed.data.currentPassword,
+    user.passwordHash
+  );
+  if (!isValid) {
+    return { success: false, error: "Current password is incorrect" };
   }
+
+  const oldEmail = user.notificationEmail;
 
   await prisma.user.update({
     where: { id: user.id },
